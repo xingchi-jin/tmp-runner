@@ -7,9 +7,9 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/drone/go-task/delegateshell/client"
-	"github.com/drone/go-task/delegateshell/heartbeat"
-	"github.com/drone/go-task/delegateshell/poller"
+	"github.com/harness/runner/delegateshell/client"
+	"github.com/harness/runner/delegateshell/heartbeat"
+	"github.com/harness/runner/delegateshell/poller"
 )
 
 func main() {

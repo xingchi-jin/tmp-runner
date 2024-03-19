@@ -17,7 +17,7 @@ import (
 	pb "google.golang.org/protobuf/proto"
 
 	"github.com/cenkalti/backoff/v4"
-	"github.com/drone/go-task/delegateshell/delegate"
+	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/sirupsen/logrus"
 
 	"github.com/wings-software/dlite/logger"

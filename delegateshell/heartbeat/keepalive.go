@@ -9,7 +9,7 @@ import (
 	"time"
 
 	"github.com/icrowley/fake"
-	"github.com/drone/go-task/delegateshell/client"
+	"github.com/harness/runner/delegateshell/client"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
