@@ -75,7 +75,6 @@ func (p *EventsServer) PollRunnerEvents(ctx context.Context, n int, id string, i
 				case <-ctx.Done():
 					return
 				case task := <-events:
-					logrus.Info(*task)
 					err := p.queueRunnerRequest(ctx, id, *task)
 					if err != nil {
 						logrus.WithError(err).WithField("task_id", task.TaskID).Errorf("[Thread %d]: delegate [%s] could not queue runner request", i, id)
@@ -96,7 +95,6 @@ func (p *EventsServer) queueRunnerRequest(ctx context.Context, delegateID string
 	}
 	defer p.m.Delete(taskID)
 	payloads, err := p.Client.GetExecutionPayload(ctx, delegateID, taskID)
-	logrus.Info(payloads.Requests)
 	if err != nil {
 		return errors.Wrap(err, "failed to get payload")
 	}
