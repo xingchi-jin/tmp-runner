@@ -2,6 +2,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"fmt"
 	"net/http"
 	"time"
 
@@ -10,6 +12,7 @@ import (
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
+	"github.com/harness/runner/tasks"
 )
 
 func main() {
@@ -38,6 +41,20 @@ func main() {
 			select {
 			case req := <-requestsChan:
 				logrus.Info("new task request")
+				fmt.Println("task type: ", req.Task.Type)
+				if req.Task.Type == "local_init" {
+					logrus.Info("local init task")
+					// unmarshal req.Task.Data into tasks.SetupRequest
+					var setupRequest tasks.SetupRequest
+					err := json.Unmarshal(req.Task.Data, &setupRequest)
+					if err != nil {
+						logrus.Error("Error occurred during unmarshalling. %w", err)
+					}
+					err = tasks.HandleSetup(ctx, setupRequest)
+					if err != nil {
+						logrus.Error("could not handle setup request: %w", err)
+					}
+				}
 				logrus.Info(string(req.Task.Data))
 			case <-ctx.Done():
 				logrus.Info("exit")
