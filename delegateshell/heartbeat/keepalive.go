@@ -8,8 +8,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/icrowley/fake"
 	"github.com/harness/runner/delegateshell/client"
+	"github.com/icrowley/fake"
 
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
@@ -97,6 +97,7 @@ func (p *KeepAlive) register(ctx context.Context, interval time.Duration, ip, ho
 		IP:       ip,
 		// SupportedTaskTypes: p.Router.Routes(),  // Ignore this because for new Runner tasks, this SupportedTaskTypes feature doesn't apply
 		Tags:              p.Tags,
+		Version:           "v0.1",
 		HeartbeatAsObject: true,
 	}
 	resp, err := p.Client.Register(ctx, req)

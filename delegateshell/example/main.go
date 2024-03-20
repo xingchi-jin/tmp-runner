@@ -14,12 +14,12 @@ import (
 
 func main() {
 	// Create a delegate client
-	managerClient := client.New("https://localhost:9090", "kmpySmUISimoRrJL6NL73w" /* account id */, "use your token", true, "")
+	managerClient := client.New("https://localhost:9090", "kmpySmUISimoRrJL6NL73w" /* account id */, "2f6b0988b6fb3370073c3d0505baee59", true, "")
 
 	// The poller needs a client that interacts with the task management system and a router to route the tasks
-	keepAlive := heartbeat.New("kmpySmUISimoRrJL6NL73w"/* account id */, "use your token", "new-runner", []string{"k8s-runner"}, managerClient)
+	keepAlive := heartbeat.New("kmpySmUISimoRrJL6NL73w", "2f6b0988b6fb3370073c3d0505baee59", "runner", []string{"macos-arm64"}, managerClient)
 
-	// // Register the poller
+	// Register the poller
 	ctx := context.Background()
 	info, _ := keepAlive.Register(ctx)
 
@@ -31,6 +31,19 @@ func main() {
 	eventsServer := poller.New(managerClient, requestsChan)
 	// TODO: we don't need hb if we poll for task. Isn't it ? : )
 	eventsServer.PollRunnerEvents(ctx, 3, info.ID, time.Second*10)
+
+	logrus.Info("Read from chan")
+	go func() {
+		for {
+			select {
+			case req := <-requestsChan:
+				logrus.Info("new task request")
+				logrus.Info(string(req.Task.Data))
+			case <-ctx.Done():
+				logrus.Info("exit")
+			}
+		}
+	}()
 
 	// Just to keep it running
 	http.HandleFunc("/hello", func(w http.ResponseWriter, r *http.Request) {

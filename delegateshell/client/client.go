@@ -9,8 +9,8 @@ import (
 type (
 	// Taken from existing manager API
 	RegisterRequest struct {
-		AccountID  string `json:"accountId,omitempty"`
-		RunnerName string `json:"delegateName,omitempty"`
+		AccountID         string   `json:"accountId,omitempty"`
+		RunnerName        string   `json:"delegateName,omitempty"`
 		LastHeartbeat     int64    `json:"lastHeartBeat,omitempty"`
 		ID                string   `json:"delegateId,omitempty"`
 		Type              string   `json:"delegateType,omitempty"`
@@ -22,6 +22,7 @@ type (
 		IP                string   `json:"ip,omitempty"`
 		Tags              []string `json:"tags,omitempty"`
 		HeartbeatAsObject bool     `json:"heartbeatAsObject,omitempty"` // TODO: legacy to remove
+		Version           string   `json:"version,omitempty"`
 	}
 
 	// Used in the java codebase :'(

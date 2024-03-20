@@ -42,7 +42,7 @@ func (p *EventsServer) SetFilter(filter FilterFn) {
 
 // Poll continually asks the task server for tasks to execute.
 func (p *EventsServer) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
-	var wg sync.WaitGroup
+	//	var wg sync.WaitGroup
 	events := make(chan *client.RunnerEvent, n)
 	// Task event poller
 	go func() {
@@ -69,12 +69,10 @@ func (p *EventsServer) PollRunnerEvents(ctx context.Context, n int, id string, i
 	}()
 	// Task event processor. Start n threads to process events from the channel
 	for i := 0; i < n; i++ {
-		wg.Add(1)
 		go func(i int) {
 			for {
 				select {
 				case <-ctx.Done():
-					wg.Done()
 					return
 				case task := <-events:
 					logrus.Info(*task)
@@ -87,7 +85,6 @@ func (p *EventsServer) PollRunnerEvents(ctx context.Context, n int, id string, i
 		}(i)
 	}
 	logrus.Infof("initialized %d threads successfully and starting polling for tasks", n)
-	wg.Wait()
 	return nil
 }
 
@@ -99,7 +96,6 @@ func (p *EventsServer) queueRunnerRequest(ctx context.Context, delegateID string
 	}
 	defer p.m.Delete(taskID)
 	payloads, err := p.Client.GetExecutionPayload(ctx, delegateID, taskID)
-	logrus.Info("hey here")
 	logrus.Info(payloads.Requests)
 	if err != nil {
 		return errors.Wrap(err, "failed to get payload")
