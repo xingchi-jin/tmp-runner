@@ -9,15 +9,15 @@ import (
 	"github.com/harness/lite-engine/engine/spec"
 )
 
-type destroyRequest struct {
-	PipelineConfig spec.PipelineConfig `json:"pipeline_config"`
-	api.DestroyRequest
+type DestroyRequest struct {
+	PipelineConfig     spec.PipelineConfig `json:"pipeline_config"`
+	api.DestroyRequest `json:"destroy_request"`
 }
 
 // sampleDestroyRequest(id) creates a DestroyRequest object with the given id.
-func sampleDestroyRequest(stageID string) destroyRequest {
+func sampleDestroyRequest(stageID string) DestroyRequest {
 	fmt.Printf("in destroy request, id is: %s", stageID)
-	return destroyRequest{
+	return DestroyRequest{
 		DestroyRequest: api.DestroyRequest{
 			StageRuntimeID: stageID,
 		},
@@ -29,6 +29,6 @@ func sampleDestroyRequest(stageID string) destroyRequest {
 	}
 }
 
-func HandleDestroy(ctx context.Context, s destroyRequest) error {
+func HandleDestroy(ctx context.Context, s DestroyRequest) error {
 	return engine.DestroyPipeline(ctx, engine.Opts{}, &s.PipelineConfig, internalStageLabel, s.StageRuntimeID)
 }

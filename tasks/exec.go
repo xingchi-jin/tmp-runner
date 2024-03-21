@@ -16,18 +16,18 @@ var (
 	internalStageLabel = "internal_stage_label"
 )
 
-type execRequest struct {
+type ExecRequest struct {
 	// PipelineConfig is optional pipeline-level configuration which will be
 	// used for step execution if specified.
-	PipelineConfig spec.PipelineConfig `json:"pipeline_config"`
-	api.StartStepRequest
+	PipelineConfig       spec.PipelineConfig `json:"pipeline_config"`
+	api.StartStepRequest `json:"exec_request"`
 }
 
 // sampleExecRequest(id) creates a ExecRequest object with the given id.
 // It sets the network as the same ID (stage runtime ID which is unique)
-func sampleExecRequest(stepID, stageID string, command []string) execRequest {
+func sampleExecRequest(stepID, stageID string, command []string) ExecRequest {
 	fmt.Printf("in exec request, id is: %s", stepID)
-	return execRequest{
+	return ExecRequest{
 		PipelineConfig: spec.PipelineConfig{
 			// This can be used from the step directly as well.
 			Network: spec.Network{
@@ -61,7 +61,7 @@ func sampleExecRequest(stepID, stageID string, command []string) execRequest {
 	}
 }
 
-func HandleExec(ctx context.Context, s execRequest) (*api.PollStepResponse, error) {
+func HandleExec(ctx context.Context, s ExecRequest) (api.VMTaskExecutionResponse, error) {
 	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 		s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 	}
@@ -73,7 +73,7 @@ func HandleExec(ctx context.Context, s execRequest) (*api.PollStepResponse, erro
 	s.Labels[internalStageLabel] = s.StageRuntimeID
 	resp, err := stepExecutor.Run(ctx, &s.StartStepRequest, &s.PipelineConfig)
 	if err != nil {
-		return nil, err
+		return api.VMTaskExecutionResponse{}, err
 	}
 	return resp, nil
 }

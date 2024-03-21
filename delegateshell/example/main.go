@@ -9,6 +9,7 @@ import (
 
 	"github.com/sirupsen/logrus"
 
+	"github.com/harness/lite-engine/api"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
@@ -35,11 +36,21 @@ func main() {
 	// TODO: we don't need hb if we poll for task. Isn't it ? : )
 	eventsServer.PollRunnerEvents(ctx, 3, info.ID, time.Second*10)
 
+	// add a map which can store the taskID to prevent getting duplicates in the request channel
+	m := make(map[string]bool)
+
 	logrus.Info("Read from chan")
 	go func() {
 		for {
 			select {
 			case req := <-requestsChan:
+				fmt.Println("task id: ", req.TaskId)
+				if _, ok := m[req.TaskId]; ok {
+					logrus.Info("task already exists")
+					continue
+				}
+				m[req.TaskId] = true
+
 				logrus.Info("new task request")
 				fmt.Println("task type: ", req.Task.Type)
 				if req.Task.Type == "local_init" {
@@ -53,6 +64,65 @@ func main() {
 					err = tasks.HandleSetup(ctx, setupRequest)
 					if err != nil {
 						logrus.Error("could not handle setup request: %w", err)
+						panic(err)
+					}
+					respBytes, err := json.Marshal(api.VMTaskExecutionResponse{CommandExecutionStatus: api.Success})
+					if err != nil {
+						panic(err)
+					}
+					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{Type: "INITIALIZATION_PHASE", Code: "OK", Data: respBytes})
+					if err != nil {
+						logrus.Error("could not return back status: %w", err)
+						panic(err)
+					}
+				} else if req.Task.Type == "local_execute" {
+					logrus.Info("local init task")
+
+					// unmarshal req.Task.Data into tasks.SetupRequest
+					var executeRequest tasks.ExecRequest
+					err := json.Unmarshal(req.Task.Data, &executeRequest)
+					if err != nil {
+						logrus.Error("Error occurred during unmarshalling. %w", err)
+					}
+					fmt.Printf("execute request: %+v", executeRequest)
+					resp, err := tasks.HandleExec(ctx, executeRequest)
+					if err != nil {
+						logrus.Error("could not handle setup request: %w", err)
+						panic(err)
+					}
+					// convert resp to bytes
+					respBytes, err := json.Marshal(resp)
+					if err != nil {
+						panic(err)
+					}
+					fmt.Println("info.ID: ")
+					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{Type: "CI_EXECUTE_STEP", Code: "OK", Data: respBytes})
+					if err != nil {
+						logrus.Error("could not return back status: %w", err)
+						panic(err)
+					}
+				} else if req.Task.Type == "local_cleanup" {
+					logrus.Info("local cleanup task")
+					// unmarshal req.Task.Data into tasks.SetupRequest
+					var destroyRequest tasks.DestroyRequest
+					err := json.Unmarshal(req.Task.Data, &destroyRequest)
+					if err != nil {
+						logrus.Error("Error occurred during unmarshalling. %w", err)
+					}
+					fmt.Printf("destroy request: %+v", destroyRequest)
+					err = tasks.HandleDestroy(ctx, destroyRequest)
+					if err != nil {
+						logrus.Error("could not handle destroy request: %w", err)
+						panic(err)
+					}
+					respBytes, err := json.Marshal(api.VMTaskExecutionResponse{CommandExecutionStatus: api.Success})
+					if err != nil {
+						panic(err)
+					}
+					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{Type: "CI_CLEANUP", Code: "OK", Data: respBytes})
+					if err != nil {
+						logrus.Error("could not return back status: %w", err)
+						panic(err)
 					}
 				}
 				logrus.Info(string(req.Task.Data))

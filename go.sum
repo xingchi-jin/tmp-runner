@@ -79,6 +79,8 @@ github.com/harness/lite-engine v0.5.63 h1:EkpKYC7ANqWuM2iKAYSwCCE5BXRRtGx0CbcmBv
 github.com/harness/lite-engine v0.5.63/go.mod h1:vc/0o9yDC6mDcPRrSpWLV+94weYKPMtHE0gzGMXL/wM=
 github.com/harness/lite-engine v0.5.64-0.20240320011911-459655ec8602 h1:fTGwRzi0ygqdHNqLgiQkaS9PhDwMImXqxlQak4laRhI=
 github.com/harness/lite-engine v0.5.64-0.20240320011911-459655ec8602/go.mod h1:vc/0o9yDC6mDcPRrSpWLV+94weYKPMtHE0gzGMXL/wM=
+github.com/harness/lite-engine v0.5.64-0.20240321140140-add991d4e5e0 h1:m9xjglW1tYRMFxJ+XtptCgPQOwz98u1R2NzOJiLUczs=
+github.com/harness/lite-engine v0.5.64-0.20240321140140-add991d4e5e0/go.mod h1:vc/0o9yDC6mDcPRrSpWLV+94weYKPMtHE0gzGMXL/wM=
 github.com/harness/ti-client v0.0.0-20240216043745-fe05f3995dfb h1:7sh7OVun/krN1RT0bL5cVw3i3RcupVuSqoRgpxzsGJ0=
 github.com/harness/ti-client v0.0.0-20240216043745-fe05f3995dfb/go.mod h1:/ow4f34mPgr5KPkzKxmBUB4cC09OjzStcLX6R8+43TI=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=

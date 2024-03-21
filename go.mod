@@ -45,7 +45,7 @@ require (
 	github.com/golang/mock v1.6.0 // indirect
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
-	github.com/harness/lite-engine v0.5.64-0.20240320011911-459655ec8602 // indirect
+	github.com/harness/lite-engine v0.5.64-0.20240321142839-3cbff2dc176e // indirect
 	github.com/harness/ti-client v0.0.0-20240216043745-fe05f3995dfb // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
