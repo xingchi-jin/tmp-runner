@@ -42,3 +42,5 @@ A way to use this client would be:
 6. Add error library for all places 
 7. Central Config: implement a global context where it has all the delegate configurations
 8. CI local pipeline requires delegate to be tagged macos-arm64, we should remove this additional burden from customer's config 
+9. mTLS support
+10. Liveness

@@ -1,3 +1,8 @@
+// Copyright 2021 Harness Inc. All rights reserved.
+// Use of this source code is governed by the PolyForm Shield 1.0.0 license
+// that can be found in the licenses directory at the root of this repository, also available at
+// https://polyformproject.org/wp-content/uploads/2020/06/PolyForm-Shield-1.0.0.txt.
+
 package heartbeat
 
 import (
@@ -25,12 +30,11 @@ var (
 type FilterFn func(*client.TaskEvent) bool
 
 type KeepAlive struct {
-	AccountID     string
-	AccountSecret string
-	Name          string   // name of the runner
-	Tags          []string // list of tags that the runner accepts
-	Client        client.Client
-	Filter        FilterFn
+	AccountID string
+	Name      string   // name of the runner
+	Tags      []string // list of tags that the runner accepts
+	Client    client.Client
+	Filter    FilterFn
 	// The Harness manager allows two task acquire calls with the same delegate ID to go through (by design).
 	// We need to make sure two different threads do not acquire the same task.
 	// This map makes sure Acquire() is called only once per task ID. The mapping is removed once the status
@@ -45,14 +49,13 @@ type DelegateInfo struct {
 	Name string
 }
 
-func New(accountID, accountSecret, name string, tags []string, c client.Client) *KeepAlive {
+func New(accountID, name string, tags []string, c client.Client) *KeepAlive {
 	return &KeepAlive{
-		AccountID:     accountID,
-		AccountSecret: accountSecret,
-		Tags:          tags,
-		Name:          name,
-		Client:        c,
-		m:             sync.Map{},
+		AccountID: accountID,
+		Tags:      tags,
+		Name:      name,
+		Client:    c,
+		m:         sync.Map{},
 	}
 }
 
@@ -67,7 +70,7 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 	if err != nil {
 		return nil, errors.Wrap(err, "could not get host name")
 	}
-	host = "dlite-" + strings.ReplaceAll(host, " ", "-")
+	host = "runner-" + strings.ReplaceAll(host, " ", "-")
 	ip := getOutboundIP()
 	id, err := p.register(ctx, hearbeatInterval, ip, host)
 	if err != nil {
