@@ -2,12 +2,36 @@ package tasks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 
+	runner_tasks "github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
+	"github.com/sirupsen/logrus"
 )
+
+type DestroyHandler struct{}
+
+func (h *DestroyHandler) Handle(ctx context.Context, req *runner_tasks.Request) runner_tasks.Response {
+	var destroyRequest DestroyRequest
+	err := json.Unmarshal(req.Task.Data, &destroyRequest)
+	if err != nil {
+		logrus.Error("Error occurred during unmarshalling. %w", err)
+	}
+	fmt.Printf("destroy request: %+v", destroyRequest)
+	resp, err := HandleDestroy(ctx, destroyRequest)
+	if err != nil {
+		logrus.Error("could not handle destroy request: %w", err)
+		panic(err)
+	}
+	respBytes, err := json.Marshal(resp)
+	if err != nil {
+		panic(err)
+	}
+	return runner_tasks.Respond(respBytes)
+}
 
 type DestroyRequest struct {
 	PipelineConfig     spec.PipelineConfig `json:"pipeline_config"`

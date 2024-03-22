@@ -2,12 +2,15 @@ package tasks
 
 import (
 	"context"
+	"encoding/json"
 	"fmt"
 	"runtime"
 
+	runner_tasks "github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine/spec"
 	run "github.com/harness/lite-engine/pipeline/runtime"
+	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -16,9 +19,28 @@ var (
 	internalStageLabel = "internal_stage_label"
 )
 
-type ExecStepRequest struct {
-	api.StartStepRequest `json:"start_step_request"`
-	StageRuntimeID       string `json:"stage_runtime_id"`
+type ExecHandler struct{}
+
+func (h *ExecHandler) Handle(ctx context.Context, req *runner_tasks.Request) runner_tasks.Response {
+	// unmarshal req.Task.Data into tasks.SetupRequest
+	var executeRequest ExecRequest
+	err := json.Unmarshal(req.Task.Data, &executeRequest)
+	if err != nil {
+		logrus.Error("Error occurred during unmarshalling. %w", err)
+	}
+	fmt.Printf("execute request: %+v", executeRequest)
+	resp, err := HandleExec(ctx, executeRequest)
+	if err != nil {
+		logrus.Error("could not handle setup request: %w", err)
+		panic(err)
+	}
+	// convert resp to bytes
+	respBytes, err := json.Marshal(resp)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("info.ID: ")
+	return runner_tasks.Respond(respBytes)
 }
 
 type ExecRequest struct {
@@ -26,6 +48,11 @@ type ExecRequest struct {
 	// used for step execution if specified.
 	PipelineConfig  spec.PipelineConfig `json:"pipeline_config"`
 	ExecStepRequest `json:"exec_request"`
+}
+
+type ExecStepRequest struct {
+	api.StartStepRequest `json:"start_step_request"`
+	StageRuntimeID       string `json:"stage_runtime_id"`
 }
 
 // sampleExecRequest(id) creates a ExecRequest object with the given id.

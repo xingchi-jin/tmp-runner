@@ -13,10 +13,11 @@ import (
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
+	"github.com/harness/runner/delegateshell/router"
 	"github.com/sirupsen/logrus"
 )
 
-func Start(ctx context.Context, config *delegate.Config, requestsChan chan<- *client.RunnerRequest) (*heartbeat.DelegateInfo, error) {
+func Start(ctx context.Context, config *delegate.Config, router router.Router) (*heartbeat.DelegateInfo, error) {
 	// Create a delegate client
 	managerClient := client.New(config.Delegate.ManagerEndpoint, config.Delegate.AccountID, config.Delegate.DelegateToken, true, "")
 
@@ -30,10 +31,13 @@ func Start(ctx context.Context, config *delegate.Config, requestsChan chan<- *cl
 		return info, err
 	}
 
+	// TODO: remove this after delegate id no longer needed from setup request
+	ctx = context.WithValue(ctx, "delegate_id", info.ID)
+
 	logrus.Info("Runner registered", info)
 	// Start polling for bijou events
-	eventsServer := poller.New(managerClient, requestsChan)
-	// TODO: we don't need hb if we poll for task. Isn't it ? : )
+	eventsServer := poller.New(managerClient, router)
+	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
 	if err = eventsServer.PollRunnerEvents(ctx, 3, info.ID, time.Second*10); err != nil {
 		logrus.WithError(err).Errorln("Error when polling task events")
