@@ -18,6 +18,17 @@ type SetupRequest struct {
 	api.SetupRequest `json:"setup_request"`
 }
 
+type DelegateMetaInfo struct {
+	ID string `json:"id"`
+}
+
+type SetupResponse struct {
+	IPAddress        string           `json:"ip_address"`
+	DelegateMetaInfo DelegateMetaInfo `json:"delegate_meta_info"`
+	InfraType        string           `json:"infra_type"`
+	api.VMTaskExecutionResponse
+}
+
 // exampleSetupRequest(id) creates a Request object with the given id.
 // It sets the network as the same ID (stage runtime ID which is unique)
 func exampleSetupRequest(id string) SetupRequest {
@@ -55,7 +66,9 @@ func sanitize(id string) string {
 	}, id)
 }
 
-func HandleSetup(ctx context.Context, s SetupRequest) error {
+// TODO: Need to cleanup delegateID from here. Today, it's being used to route
+// the subsequent tasks to the same delegate.
+func HandleSetup(ctx context.Context, s SetupRequest, delegateID string) (SetupResponse, error) {
 	fmt.Printf("setup request: %+v", s)
 	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 		s.Volumes = append(s.Volumes, getDockerSockVolume())
@@ -73,9 +86,19 @@ func HandleSetup(ctx context.Context, s SetupRequest) error {
 		TTY:               s.TTY,
 	}
 	if err := engine.SetupPipeline(ctx, engine.Opts{}, cfg); err != nil {
-		return err
+		return SetupResponse{
+			InfraType:        "DOCKER",
+			DelegateMetaInfo: DelegateMetaInfo{ID: delegateID},
+			VMTaskExecutionResponse: api.VMTaskExecutionResponse{
+				CommandExecutionStatus: api.Failure,
+				ErrorMessage:           err.Error()}}, nil
 	}
-	return nil
+	return SetupResponse{
+		IPAddress:        "127.0.0.1",
+		InfraType:        "DOCKER",
+		DelegateMetaInfo: DelegateMetaInfo{ID: delegateID},
+		VMTaskExecutionResponse: api.VMTaskExecutionResponse{
+			CommandExecutionStatus: api.Success}}, nil
 }
 
 func getDockerSockVolume() *spec.Volume {

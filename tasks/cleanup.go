@@ -29,6 +29,10 @@ func sampleDestroyRequest(stageID string) DestroyRequest {
 	}
 }
 
-func HandleDestroy(ctx context.Context, s DestroyRequest) error {
-	return engine.DestroyPipeline(ctx, engine.Opts{}, &s.PipelineConfig, internalStageLabel, s.StageRuntimeID)
+func HandleDestroy(ctx context.Context, s DestroyRequest) (api.VMTaskExecutionResponse, error) {
+	err := engine.DestroyPipeline(ctx, engine.Opts{}, &s.PipelineConfig, internalStageLabel, s.StageRuntimeID)
+	if err != nil {
+		return api.VMTaskExecutionResponse{CommandExecutionStatus: api.Failure, ErrorMessage: err.Error()}, nil
+	}
+	return api.VMTaskExecutionResponse{CommandExecutionStatus: api.Success}, nil
 }

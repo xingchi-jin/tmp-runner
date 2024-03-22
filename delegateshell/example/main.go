@@ -9,7 +9,6 @@ import (
 
 	"github.com/sirupsen/logrus"
 
-	"github.com/harness/lite-engine/api"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
@@ -34,7 +33,7 @@ func main() {
 	// Start polling for bijou events
 	eventsServer := poller.New(managerClient, requestsChan)
 	// TODO: we don't need hb if we poll for task. Isn't it ? : )
-	eventsServer.PollRunnerEvents(ctx, 3, info.ID, time.Second*10)
+	eventsServer.PollRunnerEvents(ctx, 3, info.ID, 2*time.Second)
 
 	// add a map which can store the taskID to prevent getting duplicates in the request channel
 	m := make(map[string]bool)
@@ -44,7 +43,6 @@ func main() {
 		for {
 			select {
 			case req := <-requestsChan:
-				fmt.Println("task id: ", req.TaskId)
 				if _, ok := m[req.TaskId]; ok {
 					logrus.Info("task already exists")
 					continue
@@ -61,16 +59,17 @@ func main() {
 					if err != nil {
 						logrus.Error("Error occurred during unmarshalling. %w", err)
 					}
-					err = tasks.HandleSetup(ctx, setupRequest)
+					// TODO: Remove info.ID - being used currently by the platform
+					resp, err := tasks.HandleSetup(ctx, setupRequest, info.ID)
 					if err != nil {
 						logrus.Error("could not handle setup request: %w", err)
 						panic(err)
 					}
-					respBytes, err := json.Marshal(api.VMTaskExecutionResponse{CommandExecutionStatus: api.Success})
+					respBytes, err := json.Marshal(resp)
 					if err != nil {
 						panic(err)
 					}
-					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{Type: "INITIALIZATION_PHASE", Code: "OK", Data: respBytes})
+					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{ID: req.TaskId, Type: "INITIALIZATION_PHASE", Code: "OK", Data: respBytes})
 					if err != nil {
 						logrus.Error("could not return back status: %w", err)
 						panic(err)
@@ -96,7 +95,7 @@ func main() {
 						panic(err)
 					}
 					fmt.Println("info.ID: ")
-					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{Type: "CI_EXECUTE_STEP", Code: "OK", Data: respBytes})
+					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{ID: req.TaskId, Type: "CI_EXECUTE_STEP", Code: "OK", Data: respBytes})
 					if err != nil {
 						logrus.Error("could not return back status: %w", err)
 						panic(err)
@@ -110,16 +109,16 @@ func main() {
 						logrus.Error("Error occurred during unmarshalling. %w", err)
 					}
 					fmt.Printf("destroy request: %+v", destroyRequest)
-					err = tasks.HandleDestroy(ctx, destroyRequest)
+					resp, err := tasks.HandleDestroy(ctx, destroyRequest)
 					if err != nil {
 						logrus.Error("could not handle destroy request: %w", err)
 						panic(err)
 					}
-					respBytes, err := json.Marshal(api.VMTaskExecutionResponse{CommandExecutionStatus: api.Success})
+					respBytes, err := json.Marshal(resp)
 					if err != nil {
 						panic(err)
 					}
-					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{Type: "CI_CLEANUP", Code: "OK", Data: respBytes})
+					err = managerClient.SendStatus(ctx, info.ID, req.TaskId, &client.TaskResponse{ID: req.TaskId, Type: "CI_CLEANUP", Code: "OK", Data: respBytes})
 					if err != nil {
 						logrus.Error("could not return back status: %w", err)
 						panic(err)

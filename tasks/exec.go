@@ -16,11 +16,16 @@ var (
 	internalStageLabel = "internal_stage_label"
 )
 
+type ExecStepRequest struct {
+	api.StartStepRequest `json:"start_step_request"`
+	StageRuntimeID       string `json:"stage_runtime_id"`
+}
+
 type ExecRequest struct {
 	// PipelineConfig is optional pipeline-level configuration which will be
 	// used for step execution if specified.
-	PipelineConfig       spec.PipelineConfig `json:"pipeline_config"`
-	api.StartStepRequest `json:"exec_request"`
+	PipelineConfig  spec.PipelineConfig `json:"pipeline_config"`
+	ExecStepRequest `json:"exec_request"`
 }
 
 // sampleExecRequest(id) creates a ExecRequest object with the given id.
@@ -38,26 +43,27 @@ func sampleExecRequest(stepID, stageID string, command []string) ExecRequest {
 				Arch: runtime.GOARCH,
 			},
 		},
-		StartStepRequest: api.StartStepRequest{
-			ID:             stepID,
-			StageRuntimeID: stageID,
-			LogConfig:      api.LogConfig{},
-			TIConfig:       api.TIConfig{}, // only needed for a RunTest step
-			Name:           "exec",
-			WorkingDir:     generatePath(stageID),
-			Kind:           api.Run,
-			Network:        sanitize(stageID),
-			Image:          "alpine",
-			Run: api.RunConfig{
-				Command: command,
-			},
-			Volumes: []*spec.VolumeMount{
-				{
-					Name: "harness",
-					Path: generatePath(stageID),
+		ExecStepRequest: ExecStepRequest{
+			StartStepRequest: api.StartStepRequest{
+				ID:             stepID,
+				StageRuntimeID: stageID,
+				LogConfig:      api.LogConfig{},
+				TIConfig:       api.TIConfig{}, // only needed for a RunTest step
+				Name:           "exec",
+				WorkingDir:     generatePath(stageID),
+				Kind:           api.Run,
+				Network:        sanitize(stageID),
+				Image:          "alpine",
+				Run: api.RunConfig{
+					Command: command,
 				},
-			},
-		},
+				Volumes: []*spec.VolumeMount{
+					{
+						Name: "harness",
+						Path: generatePath(stageID),
+					},
+				},
+			}},
 	}
 }
 

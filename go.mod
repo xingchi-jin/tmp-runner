@@ -9,7 +9,7 @@ require (
 	github.com/docker/go-connections v0.5.0
 	github.com/go-chi/chi v1.5.5
 	github.com/google/uuid v1.6.0
-	github.com/harness/lite-engine v0.5.63
+	github.com/harness/lite-engine v0.5.64-0.20240321142839-3cbff2dc176e
 	github.com/icrowley/fake v0.0.0-20221112152111-d7b7e2276db2
 	github.com/joho/godotenv v1.5.1
 	github.com/kelseyhightower/envconfig v1.4.0

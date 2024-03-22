@@ -16,7 +16,7 @@ func main() {
 	stageID := uuid.New().String()
 	// setup
 	req := exampleSetupRequest(stageID)
-	err := HandleSetup(ctxBg, req)
+	_, err := HandleSetup(ctxBg, req, "")
 	if err != nil {
 		panic(err)
 	}
@@ -40,7 +40,7 @@ func main() {
 
 	// cleanup
 	d := sampleDestroyRequest(stageID)
-	err = HandleDestroy(ctxBg, d)
+	_, err = HandleDestroy(ctxBg, d)
 	if err != nil {
 		panic(err)
 	}
