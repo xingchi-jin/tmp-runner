@@ -8,6 +8,7 @@ package client
 import (
 	"context"
 	"encoding/json"
+	runner_tasks "github.com/drone/go-task/task"
 )
 
 // TODO: Make the structs more generic and remove Harness specific stuff
@@ -97,21 +98,7 @@ type (
 	// TODO: use the definition in go-task repo
 
 	RunnerAcquiredTasks struct {
-		Requests []*RunnerRequest `json:"requests"`
-	}
-
-	RunnerRequest struct {
-		TaskId    string        `json:"id"`
-		AccountId string        `json:"account_id"`
-		Task      *RunnerTask   `json:"task"`
-		Secrets   []*RunnerTask `json:"secrets"`
-	}
-
-	RunnerTask struct {
-		Type   string `json:"type"`
-		Driver string `json:"driver"`
-		Data   []byte `json:"data"`
-		Config []byte `json:"config"`
+		Requests []*runner_tasks.Request `json:"requests"`
 	}
 )
 

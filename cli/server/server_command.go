@@ -12,7 +12,6 @@ import (
 
 	"github.com/harness/runner/cli/server/handlers"
 	"github.com/harness/runner/delegateshell"
-	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
@@ -69,7 +68,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	logrus.Info("registering")
 
-	err = processHarnessTasks(ctx, &loadedConfig)
+	err = startHarnessTasks(ctx, &loadedConfig)
 	if err != nil {
 		cancel()
 		logrus.Error("Error starting polling tasks from Harness")
@@ -107,9 +106,7 @@ func Register(app *kingpin.Application) {
 		StringVar(&c.envFile)
 }
 
-func processHarnessTasks(ctx context.Context, config *delegate.Config) error {
-	requestsChan := make(chan *client.RunnerRequest, 3)
-	_, err := delegateshell.Start(ctx, config, requestsChan)
-	// router.process(requestChan)
+func startHarnessTasks(ctx context.Context, config *delegate.Config) error {
+	_, err := delegateshell.Start(ctx, config, NewRouter())
 	return err
 }
