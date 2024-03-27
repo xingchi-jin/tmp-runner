@@ -39,8 +39,7 @@ type DestroyRequest struct {
 }
 
 // sampleDestroyRequest(id) creates a DestroyRequest object with the given id.
-func sampleDestroyRequest(stageID string) DestroyRequest {
-	fmt.Printf("in destroy request, id is: %s", stageID)
+func SampleDestroyRequest(stageID string) DestroyRequest {
 	return DestroyRequest{
 		DestroyRequest: api.DestroyRequest{
 			StageRuntimeID: stageID,

@@ -57,8 +57,8 @@ type ExecStepRequest struct {
 
 // sampleExecRequest(id) creates a ExecRequest object with the given id.
 // It sets the network as the same ID (stage runtime ID which is unique)
-func sampleExecRequest(stepID, stageID string, command []string) ExecRequest {
-	fmt.Printf("in exec request, id is: %s", stepID)
+// If image is empty, we use Host
+func SampleExecRequest(stepID, stageID string, command []string, image string, entrypoint []string) ExecRequest {
 	return ExecRequest{
 		PipelineConfig: spec.PipelineConfig{
 			// This can be used from the step directly as well.
@@ -80,9 +80,10 @@ func sampleExecRequest(stepID, stageID string, command []string) ExecRequest {
 				WorkingDir:     generatePath(stageID),
 				Kind:           api.Run,
 				Network:        sanitize(stageID),
-				Image:          "alpine",
+				Image:          image,
 				Run: api.RunConfig{
-					Command: command,
+					Command:    command,
+					Entrypoint: entrypoint,
 				},
 				Volumes: []*spec.VolumeMount{
 					{
@@ -95,9 +96,14 @@ func sampleExecRequest(stepID, stageID string, command []string) ExecRequest {
 }
 
 func HandleExec(ctx context.Context, s ExecRequest) (api.VMTaskExecutionResponse, error) {
+	fmt.Printf("in exec request, id is: %+v\n", s)
 	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 		s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 	}
+	// Temporary hack - need to move this to java
+	s.PipelineConfig.Volumes = append(
+		s.PipelineConfig.Volumes,
+		&spec.Volume{HostPath: &spec.VolumeHostPath{ID: "harness", Name: "harness", Path: s.WorkingDir, Create: true, Remove: true}})
 	stepExecutor := run.NewStepExecutorStateless()
 	// Internal label to keep track of containers started by a stage
 	if s.Labels == nil {

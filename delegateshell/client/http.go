@@ -191,7 +191,6 @@ func (p *HTTPClient) GetExecutionPayload(ctx context.Context, delegateID, taskID
 // SendStatus updates the status of a task
 func (p *HTTPClient) SendStatus(ctx context.Context, delegateID, taskID string, r *TaskResponse) error {
 	path := fmt.Sprintf(taskStatusEndpoint, taskID, delegateID, p.AccountID)
-	logrus.Info("response: ", path)
 	req := r
 	retryNumber := 0
 	var err error

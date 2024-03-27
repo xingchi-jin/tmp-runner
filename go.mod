@@ -3,7 +3,7 @@ module github.com/harness/runner
 go 1.22
 
 replace github.com/docker/docker => github.com/moby/moby v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible
-
+replace github.com/harness/lite-engine => /Users/vistaarjuneja/lite-engine
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/docker/go-connections v0.5.0

@@ -53,7 +53,7 @@ type SetupResponse struct {
 
 // exampleSetupRequest(id) creates a Request object with the given id.
 // It sets the network as the same ID (stage runtime ID which is unique)
-func exampleSetupRequest(id string) SetupRequest {
+func SampleSetupRequest(id string) SetupRequest {
 	fmt.Printf("in setup request, id is: %s", id)
 	return SetupRequest{
 		ID: id,
@@ -91,7 +91,7 @@ func sanitize(id string) string {
 // TODO: Need to cleanup delegateID from here. Today, it's being used to route
 // the subsequent tasks to the same delegate.
 func HandleSetup(ctx context.Context, s SetupRequest, delegateID string) (SetupResponse, error) {
-	fmt.Printf("setup request: %+v", s)
+	fmt.Printf("setup request: %+v\n", s)
 	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 		s.Volumes = append(s.Volumes, getDockerSockVolume())
 	}
