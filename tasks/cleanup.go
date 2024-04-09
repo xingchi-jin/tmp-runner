@@ -5,16 +5,14 @@ import (
 	"encoding/json"
 	"fmt"
 
-	runner_tasks "github.com/drone/go-task/task"
+	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
 	"github.com/sirupsen/logrus"
 )
 
-type DestroyHandler struct{}
-
-func (h *DestroyHandler) Handle(ctx context.Context, req *runner_tasks.Request) runner_tasks.Response {
+func DestroyHandler(ctx context.Context, req *task.Request) task.Response {
 	var destroyRequest DestroyRequest
 	err := json.Unmarshal(req.Task.Data, &destroyRequest)
 	if err != nil {
@@ -30,7 +28,7 @@ func (h *DestroyHandler) Handle(ctx context.Context, req *runner_tasks.Request) 
 	if err != nil {
 		panic(err)
 	}
-	return runner_tasks.Respond(respBytes)
+	return task.Respond(respBytes)
 }
 
 type DestroyRequest struct {

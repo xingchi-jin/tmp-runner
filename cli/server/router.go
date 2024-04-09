@@ -8,22 +8,24 @@ import (
 	"context"
 	"sync"
 
-	runner_tasks "github.com/drone/go-task/task"
+	"github.com/drone/go-task/task"
 	"github.com/harness/runner/tasks"
+	"github.com/harness/runner/tasks/secret/vault"
 )
 
 type Router struct {
-	router *runner_tasks.Router
+	router *task.Router
 	wg     sync.WaitGroup
 }
 
 func NewRouter() *Router {
-	r := runner_tasks.NewRouter()
+	r := task.NewRouter()
 
 	// TODO: handlers should be registered in the go-task lib
-	r.Register("local_init", new(tasks.SetupHandler))
-	r.Register("local_execute", new(tasks.ExecHandler))
-	r.Register("local_cleanup", new(tasks.DestroyHandler))
+	r.RegisterFunc("local_init", tasks.SetupHandler)
+	r.RegisterFunc("local_execute", tasks.ExecHandler)
+	r.RegisterFunc("local_cleanup", tasks.DestroyHandler)
+	r.RegisterFunc("secret/vault/fetch", vault.FetchHandler)
 	return &Router{
 		router: r,
 	}
@@ -33,7 +35,7 @@ func (r *Router) WaitForAll() {
 	r.wg.Wait()
 }
 
-func (r *Router) Handle(ctx context.Context, req *runner_tasks.Request) runner_tasks.Response {
+func (r *Router) Handle(ctx context.Context, req *task.Request) task.Response {
 	r.wg.Add(1)
 	defer func() {
 		r.wg.Done()

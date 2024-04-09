@@ -8,7 +8,8 @@ package client
 import (
 	"context"
 	"encoding/json"
-	runner_tasks "github.com/drone/go-task/task"
+
+	"github.com/drone/go-task/task"
 )
 
 // TODO: Make the structs more generic and remove Harness specific stuff
@@ -98,7 +99,7 @@ type (
 	// TODO: use the definition in go-task repo
 
 	RunnerAcquiredTasks struct {
-		Requests []*runner_tasks.Request `json:"requests"`
+		Requests []*task.Request `json:"requests"`
 	}
 )
 

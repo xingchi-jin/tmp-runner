@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"runtime"
 
-	runner_tasks "github.com/drone/go-task/task"
+	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine/spec"
 	run "github.com/harness/lite-engine/pipeline/runtime"
@@ -19,9 +19,7 @@ var (
 	internalStageLabel = "internal_stage_label"
 )
 
-type ExecHandler struct{}
-
-func (h *ExecHandler) Handle(ctx context.Context, req *runner_tasks.Request) runner_tasks.Response {
+func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	// unmarshal req.Task.Data into tasks.SetupRequest
 	var executeRequest ExecRequest
 	err := json.Unmarshal(req.Task.Data, &executeRequest)
@@ -40,7 +38,7 @@ func (h *ExecHandler) Handle(ctx context.Context, req *runner_tasks.Request) run
 		panic(err)
 	}
 	fmt.Println("info.ID: ")
-	return runner_tasks.Respond(respBytes)
+	return task.Respond(respBytes)
 }
 
 type ExecRequest struct {
