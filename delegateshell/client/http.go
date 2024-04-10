@@ -221,7 +221,7 @@ func (p *HTTPClient) retry(ctx context.Context, path, method string, in, out int
 			// 500's are typically not permanent errors and may
 			// relate to outages on the server side.
 			if (ignoreStatusCode && err != nil) || res.StatusCode > 501 {
-				p.logger().Errorf("http: server error: re-connect and re-try: %s", err)
+				p.logger().Errorf("url: %s server error: re-connect and re-try: %s", path, err)
 				if duration == backoff.Stop {
 					p.logger().Errorf("max retry limit reached, task status won't be updated")
 					return nil, err

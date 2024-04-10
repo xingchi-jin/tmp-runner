@@ -29,7 +29,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	fmt.Printf("execute request: %+v", executeRequest)
 	resp, err := HandleExec(ctx, executeRequest)
 	if err != nil {
-		logrus.Error("could not handle setup request: %w", err)
+		logrus.Error("could not handle exec request: %w", err)
 		panic(err)
 	}
 	// convert resp to bytes

@@ -11,6 +11,7 @@ import (
 	"github.com/drone/go-task/task"
 	"github.com/harness/runner/tasks"
 	"github.com/harness/runner/tasks/secret/vault"
+	"github.com/harness/runner/tasks/secrets"
 )
 
 type Router struct {
@@ -26,6 +27,7 @@ func NewRouter() *Router {
 	r.RegisterFunc("local_execute", tasks.ExecHandler)
 	r.RegisterFunc("local_cleanup", tasks.DestroyHandler)
 	r.RegisterFunc("secret/vault/fetch", vault.FetchHandler)
+	r.Register("secret/static", new(secrets.StaticSecretHandler))
 	return &Router{
 		router: r,
 	}
