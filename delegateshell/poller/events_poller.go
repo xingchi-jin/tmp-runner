@@ -7,9 +7,11 @@ package poller
 
 import (
 	"context"
+	"encoding/json"
 	"sync"
 	"time"
 
+	"github.com/harness/lite-engine/api"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/router"
 	"github.com/pkg/errors"
@@ -82,7 +84,7 @@ func (p *EventsServer) PollRunnerEvents(ctx context.Context, n int, id string, i
 				case task := <-events:
 					err := p.process(ctx, id, *task)
 					if err != nil {
-						logrus.WithError(err).WithField("task_id", task.TaskID).Errorf("[Thread %d]: delegate [%s] could not process runner request", i, id)
+						logrus.WithError(err).WithField("task_id", task.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
 					}
 				}
 			}
@@ -106,14 +108,22 @@ func (p *EventsServer) process(ctx context.Context, delegateID string, rv client
 	// Since task id is unique, it's just one request
 	for _, request := range payloads.Requests {
 		resp := p.router.Handle(ctx, request)
-		taskResponse := &client.TaskResponse{ID: request.ID, Type: "RUNNER_TASK"}
+		taskResponse := &client.TaskResponse{ID: rv.TaskID, Type: "RUNNER_TASK"}
 		if resp.Error() != nil {
 			taskResponse.Code = "FAILED"
+			logrus.WithError(resp.Error()).Error("Process task failed")
+			// TODO: a bug here. If the Data is nil, exception happen in cg manager.
+			// This will be taken care after integrating with new response workflow
+			if respBytes, err := json.Marshal(&api.VMTaskExecutionResponse{ErrorMessage: resp.Error().Error()}); err != nil {
+				taskResponse.Data = respBytes
+			} else {
+				return err
+			}
 		} else {
 			taskResponse.Code = "OK"
 			taskResponse.Data = resp.Body()
 		}
-		if err := p.Client.SendStatus(ctx, delegateID, request.ID, taskResponse); err != nil {
+		if err := p.Client.SendStatus(ctx, delegateID, rv.TaskID, taskResponse); err != nil {
 			return err
 		}
 	}
