@@ -10,7 +10,7 @@ import (
 
 	"github.com/drone/go-task/task"
 	"github.com/harness/runner/tasks"
-	"github.com/harness/runner/tasks/secret/vault"
+	"github.com/harness/runner/tasks/secrets/vault"
 	"github.com/harness/runner/tasks/secrets"
 )
 
