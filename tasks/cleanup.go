@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"runtime"
 
 	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
@@ -32,26 +33,47 @@ func DestroyHandler(ctx context.Context, req *task.Request) task.Response {
 }
 
 type DestroyRequest struct {
-	PipelineConfig     spec.PipelineConfig `json:"pipeline_config"`
-	api.DestroyRequest `json:"destroy_request"`
+	Network        string         `json:"network"`
+	Volumes        []*spec.Volume `json:"volumes"`
+	ContainerLabel string         `json:"container_label"`
+}
+
+func (d *DestroyRequest) Sanitize() {
+	d.Network = sanitize(d.Network)
+	d.ContainerLabel = sanitize(d.ContainerLabel)
 }
 
 // sampleDestroyRequest(id) creates a DestroyRequest object with the given id.
 func SampleDestroyRequest(stageID string) DestroyRequest {
 	return DestroyRequest{
-		DestroyRequest: api.DestroyRequest{
-			StageRuntimeID: stageID,
-		},
-		PipelineConfig: spec.PipelineConfig{
-			Network: spec.Network{
-				ID: sanitize(stageID),
+		Network:        stageID,
+		ContainerLabel: stageID,
+		Volumes: []*spec.Volume{
+			{
+				HostPath: &spec.VolumeHostPath{
+					Path:   generatePath(stageID),
+					ID:     sanitize(stageID),
+					Name:   sanitize(stageID),
+					Remove: true,
+				},
 			},
 		},
 	}
 }
 
 func HandleDestroy(ctx context.Context, s DestroyRequest) (api.VMTaskExecutionResponse, error) {
-	err := engine.DestroyPipeline(ctx, engine.Opts{}, &s.PipelineConfig, internalStageLabel, s.StageRuntimeID)
+	pipelineConfig := &spec.PipelineConfig{
+		Network: spec.Network{
+			ID: s.Network,
+		},
+		Volumes: s.Volumes,
+		Platform: spec.Platform{
+			OS:   runtime.GOOS,
+			Arch: runtime.GOARCH,
+		},
+	}
+	err := engine.DestroyPipeline(
+		ctx, engine.Opts{}, pipelineConfig, internalStageLabel, s.ContainerLabel)
 	if err != nil {
 		return api.VMTaskExecutionResponse{CommandExecutionStatus: api.Failure, ErrorMessage: err.Error()}, nil
 	}
