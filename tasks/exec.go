@@ -3,12 +3,12 @@ package tasks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"runtime"
 
 	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/lite-engine/logstream"
 	run "github.com/harness/lite-engine/pipeline/runtime"
 	"github.com/sirupsen/logrus"
 )
@@ -26,8 +26,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	if err != nil {
 		logrus.Error("Error occurred during unmarshalling. %w", err)
 	}
-	fmt.Printf("execute request: %+v", executeRequest)
-	resp, err := HandleExec(ctx, executeRequest)
+	resp, err := HandleExec(ctx, executeRequest, req.Logger)
 	if err != nil {
 		logrus.Error("could not handle exec request: %w", err)
 		panic(err)
@@ -37,20 +36,16 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("info.ID: ")
 	return task.Respond(respBytes)
 }
 
 type ExecRequest struct {
-	// PipelineConfig is optional pipeline-level configuration which will be
-	// used for step execution if specified.
-	PipelineConfig  spec.PipelineConfig `json:"pipeline_config"`
-	ExecStepRequest `json:"exec_request"`
-}
-
-type ExecStepRequest struct {
-	api.StartStepRequest `json:"start_step_request"`
-	StageRuntimeID       string `json:"stage_runtime_id"`
+	// The struct in the engine uses `volumes` for volume mounts, so this is a temporary
+	// workaround to be able to re-use the same structs.
+	VolumesActual []*spec.Volume `json:"volumes_actual"`
+	// (optional): used to label created containers as part of a group so they can be cleaned up easily.
+	GroupID string `json:"group_id"`
+	api.StartStepRequest
 }
 
 // sampleExecRequest(id) creates a ExecRequest object with the given id.
@@ -58,57 +53,61 @@ type ExecStepRequest struct {
 // If image is empty, we use Host
 func SampleExecRequest(stepID, stageID string, command []string, image string, entrypoint []string) ExecRequest {
 	return ExecRequest{
-		PipelineConfig: spec.PipelineConfig{
-			// This can be used from the step directly as well.
-			Network: spec.Network{
-				ID: sanitize(stageID),
-			},
-			Platform: spec.Platform{
-				OS:   runtime.GOOS,
-				Arch: runtime.GOARCH,
+		GroupID: stageID,
+		VolumesActual: []*spec.Volume{
+			{
+				HostPath: &spec.VolumeHostPath{
+					Name: sanitize(stageID),
+					Path: generatePath(stageID),
+					ID:   sanitize(stageID),
+				},
 			},
 		},
-		ExecStepRequest: ExecStepRequest{
-			StartStepRequest: api.StartStepRequest{
-				ID:             stepID,
-				StageRuntimeID: stageID,
-				LogConfig:      api.LogConfig{},
-				TIConfig:       api.TIConfig{}, // only needed for a RunTest step
-				Name:           "exec",
-				WorkingDir:     generatePath(stageID),
-				Kind:           api.Run,
-				Network:        sanitize(stageID),
-				Image:          image,
-				Run: api.RunConfig{
-					Command:    command,
-					Entrypoint: entrypoint,
+		StartStepRequest: api.StartStepRequest{
+			ID:         stepID,
+			Name:       "exec",
+			WorkingDir: generatePath(stageID),
+			Kind:       api.Run,
+			Network:    sanitize(stageID),
+			Image:      image,
+			Run: api.RunConfig{
+				Command:    command,
+				Entrypoint: entrypoint,
+			},
+			Volumes: []*spec.VolumeMount{
+				{
+					Name: sanitize(stageID),
+					Path: generatePath(stageID),
 				},
-				Volumes: []*spec.VolumeMount{
-					{
-						Name: "harness",
-						Path: generatePath(stageID),
-					},
-				},
-			}},
+			},
+		},
 	}
 }
 
-func HandleExec(ctx context.Context, s ExecRequest) (api.VMTaskExecutionResponse, error) {
-	fmt.Printf("in exec request, id is: %+v\n", s)
+func HandleExec(ctx context.Context, s ExecRequest, writer logstream.Writer) (api.VMTaskExecutionResponse, error) {
 	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 		s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 	}
-	// Temporary hack - need to move this to java
-	s.PipelineConfig.Volumes = append(
-		s.PipelineConfig.Volumes,
-		&spec.Volume{HostPath: &spec.VolumeHostPath{ID: "harness", Name: "harness", Path: s.WorkingDir, Create: true, Remove: true}})
+	// Create a new StepExecutor
 	stepExecutor := run.NewStepExecutorStateless()
 	// Internal label to keep track of containers started by a stage
 	if s.Labels == nil {
 		s.Labels = make(map[string]string)
 	}
-	s.Labels[internalStageLabel] = s.StageRuntimeID
-	resp, err := stepExecutor.Run(ctx, &s.StartStepRequest, &s.PipelineConfig)
+	s.Labels[internalStageLabel] = s.GroupID
+	// Map ExecRequest into what lite engine can understand
+	pipelineConfig := &spec.PipelineConfig{
+		Envs: s.Envs,
+		Network: spec.Network{
+			ID: s.Network,
+		},
+		Volumes: s.VolumesActual,
+		Platform: spec.Platform{
+			OS:   runtime.GOOS,
+			Arch: runtime.GOARCH,
+		},
+	}
+	resp, err := stepExecutor.Run(ctx, &s.StartStepRequest, pipelineConfig, writer)
 	if err != nil {
 		return api.VMTaskExecutionResponse{}, err
 	}

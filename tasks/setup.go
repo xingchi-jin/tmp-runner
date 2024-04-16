@@ -24,18 +24,24 @@ func SetupHandler(ctx context.Context, req *task.Request) task.Response {
 	}
 	// TODO: remove this after delegate id no longer needed from setup request
 	delegate_id := ctx.Value("delegate_id").(string)
-	resp, err := HandleSetup(ctx, setupRequest, delegate_id)
+	resp, err := HandleSetup(ctx, &setupRequest, delegate_id)
 	if err != nil {
 		logrus.Error("could not handle setup request: %w", err)
 		return task.Error(err)
 	}
+	fmt.Printf("setup response: %+v", resp)
 	return task.Respond(resp)
 }
 
 type SetupRequest struct {
-	ID               string `json:"id"` // stage runtime ID
-	LogKey           string `json:"log_key"`
-	api.SetupRequest `json:"setup_request"`
+	Network spec.Network      `json:"network"`
+	Volumes []*spec.Volume    `json:"volumes"`
+	Envs    map[string]string `json:"envs"`
+}
+
+func (s *SetupRequest) Sanitize() {
+	s.Network.ID = sanitize(s.Network.ID)
+	// TODO: Sanitize volumes and volume paths depending on the operating system.
 }
 
 type DelegateMetaInfo struct {
@@ -51,22 +57,19 @@ type SetupResponse struct {
 
 // exampleSetupRequest(id) creates a Request object with the given id.
 // It sets the network as the same ID (stage runtime ID which is unique)
-func SampleSetupRequest(id string) SetupRequest {
-	fmt.Printf("in setup request, id is: %s", id)
+func SampleSetupRequest(stageID string) SetupRequest {
+	fmt.Printf("in setup request, id is: %s", stageID)
 	return SetupRequest{
-		ID: id,
-		SetupRequest: api.SetupRequest{
-			Network: spec.Network{
-				ID: sanitize(id),
-			},
-			Volumes: []*spec.Volume{
-				{
-					HostPath: &spec.VolumeHostPath{
-						ID:     "harness",
-						Path:   generatePath(id),
-						Create: true,
-						Remove: true,
-					},
+		Network: spec.Network{
+			ID: sanitize(stageID),
+		},
+		Volumes: []*spec.Volume{
+			{
+				HostPath: &spec.VolumeHostPath{
+					Name:   sanitize(stageID),
+					Path:   generatePath(stageID),
+					ID:     sanitize(stageID),
+					Create: true,
 				},
 			},
 		},
@@ -77,6 +80,7 @@ func generatePath(id string) string {
 	return fmt.Sprintf("/tmp/harness/%s", sanitize(id))
 }
 
+// A function to sanitize any string and make it compatible with docker
 func sanitize(id string) string {
 	return strings.Map(func(r rune) rune {
 		if unicode.IsLetter(r) || unicode.IsNumber(r) {
@@ -88,11 +92,10 @@ func sanitize(id string) string {
 
 // TODO: Need to cleanup delegateID from here. Today, it's being used to route
 // the subsequent tasks to the same delegate.
-func HandleSetup(ctx context.Context, s SetupRequest, delegateID string) (SetupResponse, error) {
+func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string) (SetupResponse, error) {
 	fmt.Printf("setup request: %+v\n", s)
-	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
-		s.Volumes = append(s.Volumes, getDockerSockVolume())
-	}
+	s.Sanitize()
+	s.Volumes = append(s.Volumes, getDockerSockVolume())
 	cfg := &spec.PipelineConfig{
 		Envs:    s.Envs,
 		Network: s.Network,
@@ -100,10 +103,7 @@ func HandleSetup(ctx context.Context, s SetupRequest, delegateID string) (SetupR
 			OS:   runtime.GOOS,
 			Arch: runtime.GOARCH,
 		},
-		Volumes:           s.Volumes,
-		Files:             s.Files,
-		EnableDockerSetup: s.MountDockerSocket,
-		TTY:               s.TTY,
+		Volumes: s.Volumes,
 	}
 	if err := engine.SetupPipeline(ctx, engine.Opts{}, cfg); err != nil {
 		return SetupResponse{
@@ -115,7 +115,6 @@ func HandleSetup(ctx context.Context, s SetupRequest, delegateID string) (SetupR
 	}
 	return SetupResponse{
 		IPAddress: "127.0.0.1",
-		InfraType: "DOCKER",
 		// TODO: feature of "route back to the same delegate" should be handled at Runner framework level.
 		DelegateMetaInfo: DelegateMetaInfo{ID: delegateID},
 		VMTaskExecutionResponse: api.VMTaskExecutionResponse{

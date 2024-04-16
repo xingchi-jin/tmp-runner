@@ -10,8 +10,8 @@ import (
 
 	"github.com/drone/go-task/task"
 	"github.com/harness/runner/tasks"
-	"github.com/harness/runner/tasks/secrets/vault"
 	"github.com/harness/runner/tasks/secrets"
+	"github.com/harness/runner/tasks/secrets/vault"
 )
 
 type Router struct {
