@@ -115,7 +115,6 @@ func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string) (Setup
 	}
 	return SetupResponse{
 		IPAddress: "127.0.0.1",
-		InfraType: "DOCKER",
 		// TODO: feature of "route back to the same delegate" should be handled at Runner framework level.
 		DelegateMetaInfo: DelegateMetaInfo{ID: delegateID},
 		VMTaskExecutionResponse: api.VMTaskExecutionResponse{

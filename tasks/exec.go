@@ -3,7 +3,6 @@ package tasks
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"runtime"
 
 	"github.com/drone/go-task/task"
@@ -27,7 +26,6 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	if err != nil {
 		logrus.Error("Error occurred during unmarshalling. %w", err)
 	}
-	fmt.Printf("execute request: %+v", executeRequest)
 	resp, err := HandleExec(ctx, executeRequest, req.Logger)
 	if err != nil {
 		logrus.Error("could not handle exec request: %w", err)
@@ -38,7 +36,6 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("execute response: %+v", resp)
 	return task.Respond(respBytes)
 }
 
@@ -46,7 +43,8 @@ type ExecRequest struct {
 	// The struct in the engine uses `volumes` for volume mounts, so this is a temporary
 	// workaround to be able to re-use the same structs.
 	VolumesActual []*spec.Volume `json:"volumes_actual"`
-	GroupID       string         `json:"group_id"` // used to cleanup containers laters with a particular ID
+	// (optional): used to label created containers as part of a group so they can be cleaned up easily.
+	GroupID string `json:"group_id"`
 	api.StartStepRequest
 }
 
