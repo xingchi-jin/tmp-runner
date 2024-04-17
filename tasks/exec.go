@@ -3,6 +3,7 @@ package tasks
 import (
 	"context"
 	"encoding/json"
+	"fmt"
 	"runtime"
 
 	"github.com/drone/go-task/task"
@@ -36,6 +37,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	if err != nil {
 		panic(err)
 	}
+	fmt.Printf("exec response: %+v", resp)
 	return task.Respond(respBytes)
 }
 

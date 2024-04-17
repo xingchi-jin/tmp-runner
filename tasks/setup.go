@@ -107,7 +107,6 @@ func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string) (Setup
 	}
 	if err := engine.SetupPipeline(ctx, engine.Opts{}, cfg); err != nil {
 		return SetupResponse{
-			InfraType:        "DOCKER",
 			DelegateMetaInfo: DelegateMetaInfo{ID: delegateID},
 			VMTaskExecutionResponse: api.VMTaskExecutionResponse{
 				CommandExecutionStatus: api.Failure,
