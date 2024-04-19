@@ -7,7 +7,7 @@ replace github.com/docker/docker => github.com/moby/moby v17.12.0-ce-rc1.0.20200
 require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/docker/go-connections v0.5.0
-	github.com/drone/go-task v0.0.0-20240414192018-52bd9c148dec
+	github.com/drone/go-task v0.0.0-20240419131903-b8b9c04315e4
 	github.com/go-chi/chi v1.5.5
 	github.com/google/uuid v1.6.0
 	github.com/harness/lite-engine v1.0.0-rc.137.0.20240416162111-d73a09c7a3bf
