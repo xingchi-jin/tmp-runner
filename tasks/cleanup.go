@@ -62,6 +62,7 @@ func SampleDestroyRequest(stageID string) DestroyRequest {
 }
 
 func HandleDestroy(ctx context.Context, s DestroyRequest) (api.VMTaskExecutionResponse, error) {
+	s.Sanitize()
 	pipelineConfig := &spec.PipelineConfig{
 		Network: spec.Network{
 			ID: s.Network,
