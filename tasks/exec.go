@@ -41,6 +41,11 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	return task.Respond(respBytes)
 }
 
+func (s *ExecRequest) Sanitize() {
+	s.Network = sanitize(s.Network)
+	// TODO: Sanitize volumes and volume paths depending on the operating system.
+}
+
 type ExecRequest struct {
 	// The struct in the engine uses `volumes` for volume mounts, so this is a temporary
 	// workaround to be able to re-use the same structs.
@@ -87,6 +92,7 @@ func SampleExecRequest(stepID, stageID string, command []string, image string, e
 }
 
 func HandleExec(ctx context.Context, s ExecRequest, writer logstream.Writer) (api.VMTaskExecutionResponse, error) {
+	s.Sanitize()
 	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 		s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
 	}
