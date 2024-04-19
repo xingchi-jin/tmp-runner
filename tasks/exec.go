@@ -44,6 +44,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 func (s *ExecRequest) Sanitize() {
 	s.Network = sanitize(s.Network)
 	s.GroupID = sanitize(s.GroupID)
+	s.ID = sanitize(s.ID)
 	// TODO: Sanitize volumes and volume paths depending on the operating system.
 }
 
