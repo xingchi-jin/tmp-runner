@@ -31,7 +31,7 @@ const (
 	registerEndpoint         = "/api/agent/delegates/register?accountId=%s"
 	heartbeatEndpoint        = "/api/agent/delegates/heartbeat-with-polling?accountId=%s"
 	taskStatusEndpoint       = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
-	runnerEventsPollEndpoint = "/api/agent/delegates/%s/runner-events?accountId=%s"
+	runnerEventsPollEndpoint = "/api/executions/%s/runner-events?accountId=%s"
 	executionPayloadEndpoint = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s"
 )
 

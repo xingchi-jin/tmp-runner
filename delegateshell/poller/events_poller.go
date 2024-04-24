@@ -108,7 +108,7 @@ func (p *EventsServer) process(ctx context.Context, delegateID string, rv client
 	// Since task id is unique, it's just one request
 	for _, request := range payloads.Requests {
 		resp := p.router.Handle(ctx, request)
-		taskResponse := &client.TaskResponse{ID: rv.TaskID, Type: "RUNNER_TASK"}
+		taskResponse := &client.TaskResponse{ID: rv.TaskID, Type: "CI_EXECUTE_STEP"}
 		if resp.Error() != nil {
 			taskResponse.Code = "FAILED"
 			logrus.WithError(resp.Error()).Error("Process task failed")
