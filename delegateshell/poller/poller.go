@@ -24,10 +24,11 @@ var (
 
 type FilterFn func(*client.RunnerEvent) bool
 
-type EventsServer struct {
-	Client client.Client
-	router router.Router
-	Filter FilterFn
+type Poller struct {
+	UseV2Status bool
+	Client      client.Client
+	router      router.Router
+	Filter      FilterFn
 	// The Harness manager allows two task acquire calls with the same delegate ID to go through (by design).
 	// We need to make sure two different threads do not acquire the same task.
 	// This map makes sure Acquire() is called only once per task ID. The mapping is removed once the status
@@ -35,20 +36,21 @@ type EventsServer struct {
 	m sync.Map
 }
 
-func New(c client.Client, router router.Router) *EventsServer {
-	return &EventsServer{
-		Client: c,
-		router: router,
-		m:      sync.Map{},
+func New(c client.Client, router router.Router, useV2 bool) *Poller {
+	return &Poller{
+		Client:      c,
+		router:      router,
+		m:           sync.Map{},
+		UseV2Status: useV2,
 	}
 }
 
-func (p *EventsServer) SetFilter(filter FilterFn) {
+func (p *Poller) SetFilter(filter FilterFn) {
 	p.Filter = filter
 }
 
 // Poll continually asks the task server for tasks to execute.
-func (p *EventsServer) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
+func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
 	//	var wg sync.WaitGroup
 	events := make(chan *client.RunnerEvent, n)
 	// Task event poller
@@ -95,7 +97,7 @@ func (p *EventsServer) PollRunnerEvents(ctx context.Context, n int, id string, i
 }
 
 // execute tries to acquire the task and executes the handler for it
-func (p *EventsServer) process(ctx context.Context, delegateID string, rv client.RunnerEvent) error {
+func (p *Poller) process(ctx context.Context, delegateID string, rv client.RunnerEvent) error {
 	taskID := rv.TaskID
 	if _, loaded := p.m.LoadOrStore(taskID, true); loaded {
 		return nil
@@ -123,8 +125,20 @@ func (p *EventsServer) process(ctx context.Context, delegateID string, rv client
 			taskResponse.Code = "OK"
 			taskResponse.Data = resp.Body()
 		}
-		if err := p.Client.SendStatus(ctx, delegateID, rv.TaskID, taskResponse); err != nil {
-			return err
+		if p.UseV2Status {
+			taskResponseV2 := &client.TaskResponseV2{
+				ID:   taskResponse.ID,
+				Data: taskResponse.Data,
+				Type: rv.TaskType,
+				Code: client.StatusCode(taskResponse.Code),
+			}
+			if err := p.Client.SendStatusV2(ctx, delegateID, rv.TaskID, taskResponseV2); err != nil {
+				return err
+			}
+		} else {
+			if err := p.Client.SendStatus(ctx, delegateID, rv.TaskID, taskResponse); err != nil {
+				return err
+			}
 		}
 	}
 	return nil

@@ -36,7 +36,7 @@ func Start(ctx context.Context, config *delegate.Config, router router.Router) (
 
 	logrus.Info("Runner registered", info)
 	// Start polling for bijou events
-	eventsServer := poller.New(managerClient, router)
+	eventsServer := poller.New(managerClient, router, config.Delegate.TaskStatusV2)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
 	if err = eventsServer.PollRunnerEvents(ctx, 3, info.ID, time.Second*10); err != nil {
