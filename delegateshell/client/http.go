@@ -19,8 +19,6 @@ import (
 	"path/filepath"
 	"time"
 
-	pb "google.golang.org/protobuf/proto"
-
 	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/logger"
@@ -33,6 +31,7 @@ const (
 	taskStatusEndpoint       = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
 	runnerEventsPollEndpoint = "/api/executions/%s/runner-events?accountId=%s"
 	executionPayloadEndpoint = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s"
+	taskStatusEndpointV2     = "/api/executions/%s/response?delegateId=%s&accountId=%s"
 )
 
 var (
@@ -204,6 +203,15 @@ func (p *HTTPClient) SendStatus(ctx context.Context, delegateID, taskID string, 
 	return err
 }
 
+// SendStatusV2 updates the status of a task using the v2 endpoint which submits task
+// responses via events framework.
+func (p *HTTPClient) SendStatusV2(ctx context.Context, delegateID, taskID string, r *TaskResponseV2) error {
+	path := fmt.Sprintf(taskStatusEndpointV2, taskID, delegateID, p.AccountID)
+	req := r
+	_, err := p.doJson(ctx, path, "POST", req, nil)
+	return err
+}
+
 func (p *HTTPClient) retry(ctx context.Context, path, method string, in, out interface{}, b backoff.BackOffContext, ignoreStatusCode bool) (*http.Response, error) { //nolint: unparam
 	for {
 		res, err := p.doJson(ctx, path, method, in, out)
@@ -260,28 +268,6 @@ func (p *HTTPClient) doJson(ctx context.Context, path, method string, in, out in
 	}
 	if jsonErr := json.Unmarshal(body, out); jsonErr != nil {
 		return res, jsonErr
-	}
-
-	return res, nil
-}
-
-func (p *HTTPClient) doProto(ctx context.Context, path, method string, in pb.Message, out pb.Message) (*http.Response, error) {
-	// marshal the input payload into proto format and copy
-	// to an io.ReadCloser.
-	input, err := pb.Marshal(in)
-	if err != nil {
-		return nil, err
-	}
-	buf := bytes.NewBuffer(input)
-	res, body, err := p.do(ctx, path, method, buf)
-	if err != nil {
-		return res, err
-	}
-	if nil == out {
-		return res, nil
-	}
-	if protoErr := pb.Unmarshal(body, out); protoErr != nil {
-		return res, protoErr
 	}
 
 	return res, nil

@@ -117,6 +117,7 @@ func HandleExec(ctx context.Context, s ExecRequest, writer logstream.Writer) (ap
 			Arch: runtime.GOARCH,
 		},
 	}
+	fmt.Printf("exec request: %+v\n", s)
 	resp, err := stepExecutor.Run(ctx, &s.StartStepRequest, pipelineConfig, writer)
 	if err != nil {
 		return api.VMTaskExecutionResponse{}, err

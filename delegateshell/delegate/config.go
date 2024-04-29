@@ -22,6 +22,7 @@ type Config struct {
 		Tags            string `envconfig:"DELEGATE_TAGS"`
 		ManagerEndpoint string `envconfig:"MANAGER_HOST_AND_PORT"`
 		Name            string `envconfig:"DELEGATE_NAME"`
+		TaskStatusV2    bool   `envconfig:"DELEGATE_TASK_STATUS_V2"`
 	}
 
 	Server struct {
