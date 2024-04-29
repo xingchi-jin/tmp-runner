@@ -10,7 +10,7 @@ require (
 	github.com/drone/go-task v0.0.0-20240419131903-b8b9c04315e4
 	github.com/go-chi/chi v1.5.5
 	github.com/google/uuid v1.6.0
-	github.com/harness/lite-engine v1.0.0-rc.137.0.20240416162111-d73a09c7a3bf
+	github.com/harness/lite-engine v1.0.0-rc.137.0.20240429154243-ca535efeeb31
 	github.com/hashicorp/vault/api v1.12.2
 	github.com/icrowley/fake v0.0.0-20221112152111-d7b7e2276db2
 	github.com/joho/godotenv v1.5.1
@@ -45,6 +45,7 @@ require (
 	github.com/drone/envsubst v1.0.3 // indirect
 	github.com/drone/runner-go v1.12.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
+	github.com/go-chi/chi/v5 v5.0.8 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect

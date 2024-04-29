@@ -63,6 +63,8 @@ github.com/fatih/color v1.16.0 h1:zmkK9Ngbjj+K0yRhTVONQh1p/HknKYSlNT+vZCzyokM=
 github.com/fatih/color v1.16.0/go.mod h1:fL2Sau1YI5c0pdGEVCbKQbLXB6edEj1ZgiY4NijnWvE=
 github.com/go-chi/chi v1.5.5 h1:vOB/HbEMt9QqBqErz07QehcOKHaWFtuj87tTDVz2qXE=
 github.com/go-chi/chi v1.5.5/go.mod h1:C9JqLr3tIYjDOZpzn+BCuxY8z8vmca43EeMgyZt7irw=
+github.com/go-chi/chi/v5 v5.0.8 h1:lD+NLqFcAi1ovnVZpsnObHGW4xb4J8lNmoYVfECH1Y0=
+github.com/go-chi/chi/v5 v5.0.8/go.mod h1:DslCQbL2OYiznFReuXYUmQ2hGd1aDpCnlMNITLSKoi8=
 github.com/go-jose/go-jose/v3 v3.0.3 h1:fFKWeig/irsp7XD2zBxvnmA/XaRWp5V3CBsZXJF7G7k=
 github.com/go-jose/go-jose/v3 v3.0.3/go.mod h1:5b+7YgP7ZICgJDBdfjZaIt+H/9L9T/YQrVfLAMboGkQ=
 github.com/go-ole/go-ole v1.2.6 h1:/Fpf6oFPoeFik9ty7siob0G6Ke8QvQEuVcuChpwXzpY=
@@ -99,6 +101,8 @@ github.com/harness/godotenv/v3 v3.0.0 h1:1YJU9nUk4tQygHOYkm+NZ5jL9IZQ3UqyBspCqL3
 github.com/harness/godotenv/v3 v3.0.0/go.mod h1:UIXXJtTM7NkSYMYknHYOO2d8BfDlAWMYZRuRsXcDDR0=
 github.com/harness/lite-engine v1.0.0-rc.137.0.20240416162111-d73a09c7a3bf h1:bzzHAPgzp7czZyhSm+eA+D99uYrZfLGySW16mM2X3y0=
 github.com/harness/lite-engine v1.0.0-rc.137.0.20240416162111-d73a09c7a3bf/go.mod h1:r9Hbz0rdJ3STJvrekSnOTxp11Ab4eaP5ZMruUq+giRc=
+github.com/harness/lite-engine v1.0.0-rc.137.0.20240429154243-ca535efeeb31 h1:GFXynBQQVFMU/y/EeMK2XC8/hlkcWqiypUgdsFxc094=
+github.com/harness/lite-engine v1.0.0-rc.137.0.20240429154243-ca535efeeb31/go.mod h1:r9Hbz0rdJ3STJvrekSnOTxp11Ab4eaP5ZMruUq+giRc=
 github.com/harness/ti-client v0.0.0-20240412182020-48619e4621e9 h1:WUXfdwuOPywDh2+YjepfMtgKXCo48PWXrO3bqAZ4Lhw=
 github.com/harness/ti-client v0.0.0-20240412182020-48619e4621e9/go.mod h1:/ow4f34mPgr5KPkzKxmBUB4cC09OjzStcLX6R8+43TI=
 github.com/hashicorp/errwrap v1.0.0/go.mod h1:YH+1FKiLXxHSkmPseP+kNlulaMuP3n2brvKWEqk/Jc4=
