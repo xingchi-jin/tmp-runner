@@ -12,13 +12,8 @@ import (
 	logger "github.com/harness/lite-engine/logstream"
 	run "github.com/harness/lite-engine/pipeline/runtime"
 	"github.com/harness/runner/logger/logstream"
+	"github.com/harness/runner/tasks/local/utils"
 	"github.com/sirupsen/logrus"
-)
-
-var (
-	// this label is used to identify steps associated with a pipeline
-	// It's used only internally to successfully destroy containers.
-	internalStageLabel = "internal_stage_label"
 )
 
 func ExecHandler(ctx context.Context, req *task.Request) task.Response {
@@ -45,9 +40,9 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 }
 
 func (s *ExecRequest) Sanitize() {
-	s.Network = sanitize(s.Network)
-	s.GroupID = sanitize(s.GroupID)
-	s.ID = sanitize(s.ID)
+	s.Network = utils.Sanitize(s.Network)
+	s.GroupID = utils.Sanitize(s.GroupID)
+	s.ID = utils.Sanitize(s.ID)
 	// TODO: Sanitize volumes and volume paths depending on the operating system.
 }
 
@@ -56,6 +51,8 @@ type ExecRequest struct {
 	// workaround to be able to re-use the same structs.
 	VolumesActual []*spec.Volume `json:"volumes_actual"`
 	// (optional): used to label created containers as part of a group so they can be cleaned up easily.
+	//
+	// Deprecated: It's not being used. Labels are being used to identify containers for clean up.
 	GroupID string `json:"group_id"`
 	api.StartStepRequest
 }
@@ -69,27 +66,28 @@ func SampleExecRequest(stepID, stageID string, command []string, image string, e
 		VolumesActual: []*spec.Volume{
 			{
 				HostPath: &spec.VolumeHostPath{
-					Name: sanitize(stageID),
-					Path: generatePath(stageID),
-					ID:   sanitize(stageID),
+					Name: utils.Sanitize(stageID),
+					Path: utils.GeneratePath(stageID),
+					ID:   utils.Sanitize(stageID),
 				},
 			},
 		},
 		StartStepRequest: api.StartStepRequest{
 			ID:         stepID,
 			Name:       "exec",
-			WorkingDir: generatePath(stageID),
+			WorkingDir: utils.GeneratePath(stageID),
 			Kind:       api.Run,
-			Network:    sanitize(stageID),
+			Network:    utils.Sanitize(stageID),
 			Image:      image,
+			Labels:     map[string]string{"harness": stageID},
 			Run: api.RunConfig{
 				Command:    command,
 				Entrypoint: entrypoint,
 			},
 			Volumes: []*spec.VolumeMount{
 				{
-					Name: sanitize(stageID),
-					Path: generatePath(stageID),
+					Name: utils.Sanitize(stageID),
+					Path: utils.GeneratePath(stageID),
 				},
 			},
 		},
@@ -107,7 +105,7 @@ func HandleExec(ctx context.Context, s *ExecRequest, writer logger.Writer) (api.
 	if s.Labels == nil {
 		s.Labels = make(map[string]string)
 	}
-	s.Labels[internalStageLabel] = s.GroupID
+	//s.Labels["internal_stage_label"] = s.GroupID
 	// Map ExecRequest into what lite engine can understand
 	pipelineConfig := &spec.PipelineConfig{
 		Envs: s.Envs,

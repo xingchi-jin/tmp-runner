@@ -8,6 +8,7 @@ import (
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine/spec"
 	"github.com/harness/runner/tasks/local"
+	runnerspec "github.com/harness/runner/tasks/local/spec"
 )
 
 func generatePath(id string) string {
@@ -85,13 +86,12 @@ func SampleDestroyRequest(stageID string) local.DestroyRequest {
 	return local.DestroyRequest{
 		Network: stageID,
 		GroupID: stageID,
-		Volumes: []*spec.Volume{
+		Volumes: []*runnerspec.Volume{
 			{
-				HostPath: &spec.VolumeHostPath{
+				HostPath: &runnerspec.VolumeHostPath{
 					Path:   generatePath(stageID),
 					ID:     sanitize(stageID),
 					Name:   sanitize(stageID),
-					Remove: true,
 				},
 			},
 		},
