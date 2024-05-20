@@ -110,6 +110,9 @@ func (p *Poller) process(ctx context.Context, delegateID string, rv client.Runne
 	// Since task id is unique, it's just one request
 	for _, request := range payloads.Requests {
 		resp := p.router.Handle(ctx, request)
+		if resp == nil {
+			continue
+		}
 		taskResponse := &client.TaskResponse{ID: rv.TaskID, Type: "CI_EXECUTE_STEP"}
 		if resp.Error() != nil {
 			taskResponse.Code = "FAILED"

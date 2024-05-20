@@ -23,6 +23,7 @@ type Config struct {
 		ManagerEndpoint string `envconfig:"MANAGER_HOST_AND_PORT"`
 		Name            string `envconfig:"DELEGATE_NAME"`
 		TaskStatusV2    bool   `envconfig:"DELEGATE_TASK_STATUS_V2"`
+		TaskServiceURL  string `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
 	}
 
 	Server struct {

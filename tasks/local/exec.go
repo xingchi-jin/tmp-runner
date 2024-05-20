@@ -27,6 +27,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	err := json.Unmarshal(req.Task.Data, executeRequest)
 	if err != nil {
 		logrus.Error("Error occurred during unmarshalling. %w", err)
+		return task.Error(err)
 	}
 	// Wrap the io.Writer to convert it into a logstream.Writer which is used by the lite-engine.
 	resp, err := HandleExec(ctx, executeRequest, logger.NewWriterWrapper(req.Logger))
