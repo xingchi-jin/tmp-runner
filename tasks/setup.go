@@ -106,16 +106,16 @@ func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string, logger
 		},
 		Volumes: s.Volumes,
 	}
-	logger.Write([]byte("setting up pipeline"))
+	logger.Write([]byte("setting up pipeline\n"))
 	if err := engine.SetupPipeline(ctx, engine.Opts{}, cfg); err != nil {
-		logger.Write([]byte(fmt.Sprintf("failed to set up pipeline: %s", err)))
+		logger.Write([]byte(fmt.Sprintf("failed to set up pipeline: %s\n", err)))
 		return SetupResponse{
 			DelegateMetaInfo: DelegateMetaInfo{ID: delegateID},
 			VMTaskExecutionResponse: api.VMTaskExecutionResponse{
 				CommandExecutionStatus: api.Failure,
 				ErrorMessage:           err.Error()}}, nil
 	}
-	logger.Write([]byte("pipeline set up successfully"))
+	logger.Write([]byte("pipeline set up successfully\n"))
 	return SetupResponse{
 		IPAddress: "127.0.0.1",
 		// TODO: feature of "route back to the same delegate" should be handled at Runner framework level.
