@@ -12,19 +12,20 @@ import (
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/lite-engine/logstream"
 	"github.com/sirupsen/logrus"
 )
 
 func SetupHandler(ctx context.Context, req *task.Request) task.Response {
-	var setupRequest SetupRequest
-	err := json.Unmarshal(req.Task.Data, &setupRequest)
+	setupRequest := new(SetupRequest)
+	err := json.Unmarshal(req.Task.Data, setupRequest)
 	if err != nil {
 		logrus.Error("Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	// TODO: remove this after delegate id no longer needed from setup request
 	delegate_id := ctx.Value("delegate_id").(string)
-	resp, err := HandleSetup(ctx, &setupRequest, delegate_id)
+	resp, err := HandleSetup(ctx, setupRequest, delegate_id, req.Logger)
 	if err != nil {
 		logrus.Error("could not handle setup request: %w", err)
 		return task.Error(err)
@@ -92,7 +93,7 @@ func sanitize(id string) string {
 
 // TODO: Need to cleanup delegateID from here. Today, it's being used to route
 // the subsequent tasks to the same delegate.
-func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string) (SetupResponse, error) {
+func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string, logger logstream.Writer) (SetupResponse, error) {
 	fmt.Printf("setup request: %+v\n", s)
 	s.Sanitize()
 	s.Volumes = append(s.Volumes, getDockerSockVolume())
@@ -105,13 +106,16 @@ func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string) (Setup
 		},
 		Volumes: s.Volumes,
 	}
+	logger.Write([]byte("setting up pipeline"))
 	if err := engine.SetupPipeline(ctx, engine.Opts{}, cfg); err != nil {
+		logger.Write([]byte(fmt.Sprintf("failed to set up pipeline: %s", err)))
 		return SetupResponse{
 			DelegateMetaInfo: DelegateMetaInfo{ID: delegateID},
 			VMTaskExecutionResponse: api.VMTaskExecutionResponse{
 				CommandExecutionStatus: api.Failure,
 				ErrorMessage:           err.Error()}}, nil
 	}
+	logger.Write([]byte("pipeline set up successfully"))
 	return SetupResponse{
 		IPAddress: "127.0.0.1",
 		// TODO: feature of "route back to the same delegate" should be handled at Runner framework level.
