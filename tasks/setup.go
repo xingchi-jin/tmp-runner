@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"runtime"
 	"strings"
 	"unicode"
@@ -12,7 +13,6 @@ import (
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/lite-engine/logstream"
 	"github.com/sirupsen/logrus"
 )
 
@@ -93,7 +93,7 @@ func sanitize(id string) string {
 
 // TODO: Need to cleanup delegateID from here. Today, it's being used to route
 // the subsequent tasks to the same delegate.
-func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string, logger logstream.Writer) (SetupResponse, error) {
+func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string, logger io.Writer) (SetupResponse, error) {
 	fmt.Printf("setup request: %+v\n", s)
 	s.Sanitize()
 	s.Volumes = append(s.Volumes, getDockerSockVolume())
