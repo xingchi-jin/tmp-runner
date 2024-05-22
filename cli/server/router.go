@@ -9,6 +9,9 @@ import (
 	"sync"
 
 	"github.com/drone/go-task/task"
+	"github.com/drone/go-task/task/cloner"
+	"github.com/drone/go-task/task/download"
+	"github.com/drone/go-task/task/drivers/cgi"
 	"github.com/harness/runner/tasks"
 	"github.com/harness/runner/tasks/secrets"
 	"github.com/harness/runner/tasks/secrets/vault"
@@ -28,6 +31,8 @@ func NewRouter() *Router {
 	r.RegisterFunc("local_cleanup", tasks.DestroyHandler)
 	r.RegisterFunc("secret/vault/fetch", vault.FetchHandler)
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
+	downloader := download.New(cloner.Default())
+	r.NotFound(cgi.New(downloader))
 	return &Router{
 		router: r,
 	}

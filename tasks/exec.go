@@ -22,8 +22,8 @@ var (
 
 func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	// unmarshal req.Task.Data into tasks.SetupRequest
-	var executeRequest ExecRequest
-	err := json.Unmarshal(req.Task.Data, &executeRequest)
+	executeRequest := new(ExecRequest)
+	err := json.Unmarshal(req.Task.Data, executeRequest)
 	if err != nil {
 		logrus.Error("Error occurred during unmarshalling. %w", err)
 	}
@@ -93,7 +93,7 @@ func SampleExecRequest(stepID, stageID string, command []string, image string, e
 	}
 }
 
-func HandleExec(ctx context.Context, s ExecRequest, writer logstream.Writer) (api.VMTaskExecutionResponse, error) {
+func HandleExec(ctx context.Context, s *ExecRequest, writer logstream.Writer) (api.VMTaskExecutionResponse, error) {
 	s.Sanitize()
 	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 		s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
