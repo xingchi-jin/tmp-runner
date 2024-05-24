@@ -25,7 +25,7 @@ func main() {
 
 	// execute two steps
 	step1ID := uuid.New().String()
-	q := tasks.SampleExecRequest(step1ID, stageID, []string{"touc a.tx"}, "", []string{"sh", "-c"})
+	q := tasks.SampleExecRequest(step1ID, stageID, []string{"touch a.tx"}, "", []string{"sh", "-c"})
 	resp, err := tasks.HandleExec(ctxBg, q, logstream.NopWriter())
 	if err != nil {
 		panic(err)

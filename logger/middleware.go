@@ -2,6 +2,7 @@ package logger
 
 import (
 	"context"
+	"os"
 
 	"github.com/drone/go-task/task"
 )
@@ -18,6 +19,8 @@ func Middleware() func(next task.Handler) task.Handler {
 				writer.Open()
 				defer writer.Close()
 				req.Logger = writer
+			} else {
+				req.Logger = os.Stdout // write logs to stdout if custom logger is not provided.
 			}
 			return next.Handle(ctx, req)
 		}
