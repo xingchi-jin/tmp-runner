@@ -11,6 +11,7 @@ import (
 	"github.com/harness/lite-engine/engine/spec"
 	"github.com/harness/lite-engine/logstream"
 	run "github.com/harness/lite-engine/pipeline/runtime"
+	"github.com/harness/runner/logger"
 	"github.com/sirupsen/logrus"
 )
 
@@ -27,7 +28,8 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	if err != nil {
 		logrus.Error("Error occurred during unmarshalling. %w", err)
 	}
-	resp, err := HandleExec(ctx, executeRequest, req.Logger)
+	// Wrap the io.Writer to convert it into a logstream.Writer which is used by the lite-engine.
+	resp, err := HandleExec(ctx, executeRequest, logger.NewWriterWrapper(req.Logger))
 	if err != nil {
 		logrus.Error("could not handle exec request: %w", err)
 		panic(err)

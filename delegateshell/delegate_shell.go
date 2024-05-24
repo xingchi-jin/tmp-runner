@@ -9,15 +9,15 @@ import (
 	"context"
 	"time"
 
+	"github.com/drone/go-task/task"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
-	"github.com/harness/runner/delegateshell/router"
 	"github.com/sirupsen/logrus"
 )
 
-func Start(ctx context.Context, config *delegate.Config, router router.Router) (*heartbeat.DelegateInfo, error) {
+func Start(ctx context.Context, config *delegate.Config, router *task.Router) (*heartbeat.DelegateInfo, error) {
 	// Create a delegate client
 	managerClient := client.New(config.Delegate.ManagerEndpoint, config.Delegate.AccountID, config.Delegate.DelegateToken, true, "")
 

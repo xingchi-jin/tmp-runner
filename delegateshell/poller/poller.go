@@ -11,9 +11,9 @@ import (
 	"sync"
 	"time"
 
+	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/runner/delegateshell/client"
-	"github.com/harness/runner/delegateshell/router"
 	"github.com/pkg/errors"
 	"github.com/sirupsen/logrus"
 )
@@ -27,7 +27,7 @@ type FilterFn func(*client.RunnerEvent) bool
 type Poller struct {
 	UseV2Status bool
 	Client      client.Client
-	router      router.Router
+	router      *task.Router
 	Filter      FilterFn
 	// The Harness manager allows two task acquire calls with the same delegate ID to go through (by design).
 	// We need to make sure two different threads do not acquire the same task.
@@ -36,7 +36,7 @@ type Poller struct {
 	m sync.Map
 }
 
-func New(c client.Client, router router.Router, useV2 bool) *Poller {
+func New(c client.Client, router *task.Router, useV2 bool) *Poller {
 	return &Poller{
 		Client:      c,
 		router:      router,
