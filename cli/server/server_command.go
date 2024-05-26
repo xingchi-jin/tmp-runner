@@ -10,7 +10,6 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/harness/runner/cli/server/handlers"
 	"github.com/harness/runner/delegateshell"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/router"
@@ -41,7 +40,6 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	// create the http serverInstance.
 	serverInstance := Server{
 		Addr:     loadedConfig.Server.Bind,
-		Handler:  handlers.Handler(),
 		CAFile:   loadedConfig.Server.CACertFile, // CA certificate file
 		CertFile: loadedConfig.Server.CertFile,   // Server certificate PEM file
 		KeyFile:  loadedConfig.Server.KeyFile,    // Server key file
