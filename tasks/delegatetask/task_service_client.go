@@ -5,15 +5,15 @@ import (
 	"context"
 
 	"github.com/harness/runner/utils"
+	"github.com/harness/runner/delegateshell/delegate"
 )
 
 var client Client
 
 func SendTask(ctx context.Context, data []byte) error {
 	if client == nil {
-		endpoint := ctx.Value("task_service_url").(string)
-		skipVerify := ctx.Value("skip_verify").(bool)
-		client = NewTaskServiceClient(endpoint, skipVerify, "")
+		taskContext := ctx.Value("task_service_url").(delegate.TaskContext)
+		client = NewTaskServiceClient(taskContext.DelegateTaskServiceURL, taskContext.SkipVerify, "")
 	}
 	return client.SendTask(ctx, data)
 }

@@ -31,11 +31,12 @@ func Start(ctx context.Context, config *delegate.Config, router *task.Router) (*
 		return info, err
 	}
 
-	// TODO: remove this after delegate id no longer needed from setup request
-	ctx = context.WithValue(ctx, "delegate_id", info.ID)
-	// Used by delegateTask
-	ctx = context.WithValue(ctx, "task_service_url", config.Delegate.TaskServiceURL)
-	ctx = context.WithValue(ctx, "skip_verify", config.Server.Insecure)
+	taskContext := delegate.TaskContext{
+		DelegateId: info.ID,
+		DelegateTaskServiceURL: config.Delegate.DelegateTaskServiceURL,
+		SkipVerify: config.Server.Insecure,
+	}
+	ctx = context.WithValue(ctx, "task_context", taskContext)
 
 	logrus.Info("Runner registered", info)
 	// Start polling for bijou events

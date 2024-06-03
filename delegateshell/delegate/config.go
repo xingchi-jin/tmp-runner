@@ -23,7 +23,7 @@ type Config struct {
 		ManagerEndpoint string `envconfig:"MANAGER_HOST_AND_PORT"`
 		Name            string `envconfig:"DELEGATE_NAME"`
 		TaskStatusV2    bool   `envconfig:"DELEGATE_TASK_STATUS_V2"`
-		TaskServiceURL  string `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
+		DelegateTaskServiceURL string `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
 	}
 
 	Server struct {
@@ -34,6 +34,13 @@ type Config struct {
 		SkipPrepareServer bool   `envconfig:"SKIP_PREPARE_SERVER" default:"false"`                   // skip prepare server, install docker / git
 		Insecure          bool   `envconfig:"SERVER_INSECURE" default:"true"`                        // run in insecure mode
 	}
+}
+
+// Configurations that will pass to task handlers at runtime
+type TaskContext struct {
+	DelegateTaskServiceURL string // URL of Delegate Task Service
+	DelegateId             string // Delegate id abtained after a successful runner registration call.
+	SkipVerify             bool   // Skip SSL verification if the task is conducting https connection.
 }
 
 func FromEnviron() (Config, error) {
