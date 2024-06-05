@@ -6,10 +6,21 @@ import (
 	"encoding/json"
 
 	"github.com/drone/go-task/task"
+	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/sirupsen/logrus"
 )
 
-func DelegateTaskHandler(ctx context.Context, req *task.Request) task.Response {
+type DelegateTaskHandler struct {
+	taskContext *delegate.TaskContext
+}
+
+func NewDelegateTaskHandler(taskContext *delegate.TaskContext) *DelegateTaskHandler {
+	return &DelegateTaskHandler{
+		taskContext: taskContext,
+	}
+}
+
+func (h *DelegateTaskHandler) Handle(ctx context.Context, req *task.Request) task.Response {
 	var delegateTask DelegateTaskRequest
 	err := json.Unmarshal(req.Task.Data, &delegateTask)
 	if err != nil {
@@ -25,7 +36,7 @@ func DelegateTaskHandler(ctx context.Context, req *task.Request) task.Response {
 	}
 	dst = dst[:n]
 
-	if err = SendTask(ctx, dst); err != nil {
+	if err = SendTask(ctx, dst, h.taskContext.DelegateTaskServiceURL, h.taskContext.SkipVerify); err != nil {
 		logrus.WithError(err).Error("Send request to delegate task service failed")
 		return task.Error(err)
 	}
@@ -36,4 +47,3 @@ func DelegateTaskHandler(ctx context.Context, req *task.Request) task.Response {
 type DelegateTaskRequest struct {
 	Base64Data []byte `json:"taskPackage"`
 }
-

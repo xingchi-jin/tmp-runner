@@ -3,18 +3,18 @@ package delegatetask
 import (
 	"bytes"
 	"context"
+	"sync"
 
 	"github.com/harness/runner/utils"
-	"github.com/harness/runner/delegateshell/delegate"
 )
 
+var once sync.Once
 var client Client
 
-func SendTask(ctx context.Context, data []byte) error {
-	if client == nil {
-		taskContext := ctx.Value("task_service_url").(delegate.TaskContext)
-		client = NewTaskServiceClient(taskContext.DelegateTaskServiceURL, taskContext.SkipVerify, "")
-	}
+func SendTask(ctx context.Context, data []byte, url string, skipVerify bool) error {
+	once.Do(func() {
+		client = NewTaskServiceClient(url, skipVerify, "")
+	})
 	return client.SendTask(ctx, data)
 }
 

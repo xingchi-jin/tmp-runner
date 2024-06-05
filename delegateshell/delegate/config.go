@@ -7,6 +7,7 @@ package delegate
 
 import (
 	"strings"
+	"sync"
 
 	"github.com/kelseyhightower/envconfig"
 )
@@ -36,13 +37,6 @@ type Config struct {
 	}
 }
 
-// Configurations that will pass to task handlers at runtime
-type TaskContext struct {
-	DelegateTaskServiceURL string // URL of Delegate Task Service
-	DelegateId             string // Delegate id abtained after a successful runner registration call.
-	SkipVerify             bool   // Skip SSL verification if the task is conducting https connection.
-}
-
 func FromEnviron() (Config, error) {
 	var config Config
 	err := envconfig.Process("", &config)
@@ -59,4 +53,25 @@ func (c *Config) GetTags() []string {
 		tags = append(tags, strings.TrimSpace(s))
 	}
 	return tags
+}
+
+// Configurations that will pass to task handlers at runtime
+type TaskContext struct {
+	DelegateTaskServiceURL string // URL of Delegate Task Service
+	DelegateId             string // Delegate id abtained after a successful runner registration call.
+	SkipVerify             bool   // Skip SSL verification if the task is conducting https connection.
+}
+
+var once sync.Once
+var taskContext *TaskContext
+
+func GetTaskContext(config *Config, delegateId string) *TaskContext {
+	once.Do(func() {
+		taskContext = &TaskContext{
+			DelegateId: delegateId,
+			DelegateTaskServiceURL: config.Delegate.DelegateTaskServiceURL,
+			SkipVerify: config.Server.Insecure,
+		}
+	})
+	return taskContext
 }
