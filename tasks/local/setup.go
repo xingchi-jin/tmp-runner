@@ -13,10 +13,21 @@ import (
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/sirupsen/logrus"
 )
 
-func SetupHandler(ctx context.Context, req *task.Request) task.Response {
+type SetupHandler struct {
+	taskContext *delegate.TaskContext
+}
+
+func NewSetupHandler(taskContext *delegate.TaskContext) *SetupHandler {
+	return &SetupHandler{
+		taskContext: taskContext,
+	}
+}
+
+func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Response {
 	setupRequest := new(SetupRequest)
 	err := json.Unmarshal(req.Task.Data, setupRequest)
 	if err != nil {
@@ -24,8 +35,7 @@ func SetupHandler(ctx context.Context, req *task.Request) task.Response {
 		return task.Error(err)
 	}
 	// TODO: remove this after delegate id no longer needed from setup request
-	delegate_id := ctx.Value("delegate_id").(string)
-	resp, err := HandleSetup(ctx, setupRequest, delegate_id, req.Logger)
+	resp, err := HandleSetup(ctx, setupRequest, h.taskContext.DelegateId, req.Logger)
 	if err != nil {
 		logrus.Error("could not handle setup request: %w", err)
 		return task.Error(err)

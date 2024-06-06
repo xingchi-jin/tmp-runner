@@ -21,7 +21,7 @@ func NewRouter(taskContext *delegate.TaskContext) *task.Router {
 	r := task.NewRouter()
 	r.Use(logger.Middleware())
 
-	r.RegisterFunc("local_init", local.SetupHandler)
+	r.Register("local_init", local.NewSetupHandler(taskContext))
 	r.RegisterFunc("local_execute", local.ExecHandler)
 	r.RegisterFunc("local_cleanup", local.DestroyHandler)
 	r.RegisterFunc("secret/vault/fetch", vault.FetchHandler)
