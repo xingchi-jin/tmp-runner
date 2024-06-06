@@ -12,7 +12,6 @@ import (
 
 	"github.com/harness/runner/delegateshell"
 	"github.com/harness/runner/delegateshell/delegate"
-	"github.com/harness/runner/router"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -106,6 +105,6 @@ func Register(app *kingpin.Application) {
 }
 
 func startHarnessTasks(ctx context.Context, config *delegate.Config) error {
-	_, err := delegateshell.Start(ctx, config, router.NewRouter())
+	_, err := delegateshell.Start(ctx, config)
 	return err
 }

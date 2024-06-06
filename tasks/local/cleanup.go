@@ -17,6 +17,7 @@ func DestroyHandler(ctx context.Context, req *task.Request) task.Response {
 	err := json.Unmarshal(req.Task.Data, &destroyRequest)
 	if err != nil {
 		logrus.Error("Error occurred during unmarshalling. %w", err)
+		return task.Error(err)
 	}
 	resp, err := HandleDestroy(ctx, destroyRequest)
 	if err != nil {

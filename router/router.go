@@ -9,20 +9,23 @@ import (
 	"github.com/drone/go-task/task/cloner"
 	"github.com/drone/go-task/task/download"
 	"github.com/drone/go-task/task/drivers/cgi"
+	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger"
+	"github.com/harness/runner/tasks/delegatetask"
 	"github.com/harness/runner/tasks/local"
 	"github.com/harness/runner/tasks/secrets"
 	"github.com/harness/runner/tasks/secrets/vault"
 )
 
-func NewRouter() *task.Router {
+func NewRouter(taskContext *delegate.TaskContext) *task.Router {
 	r := task.NewRouter()
 	r.Use(logger.Middleware())
 
-	r.RegisterFunc("local_init", local.SetupHandler)
+	r.Register("local_init", local.NewSetupHandler(taskContext))
 	r.RegisterFunc("local_execute", local.ExecHandler)
 	r.RegisterFunc("local_cleanup", local.DestroyHandler)
 	r.RegisterFunc("secret/vault/fetch", vault.FetchHandler)
+	r.Register("delegate_task", delegatetask.NewDelegateTaskHandler(taskContext))
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
 	downloader := download.New(cloner.Default())
 	r.NotFound(cgi.New(downloader))

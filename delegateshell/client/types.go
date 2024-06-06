@@ -92,7 +92,7 @@ type (
 		ID   string          `json:"id"`
 		Data json.RawMessage `json:"data"`
 		Type string          `json:"type"`
-		Code string          `json:"code"` // OK, FAILED, RETRY_ON_OTHER_DELEGATE
+		Code string          `json:"code"` // OK, FAILED
 	}
 
 	TaskResponseV2 struct {

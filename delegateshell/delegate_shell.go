@@ -9,17 +9,17 @@ import (
 	"context"
 	"time"
 
-	"github.com/drone/go-task/task"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
+	"github.com/harness/runner/router"
 	"github.com/sirupsen/logrus"
 )
 
-func Start(ctx context.Context, config *delegate.Config, router *task.Router) (*heartbeat.DelegateInfo, error) {
+func Start(ctx context.Context, config *delegate.Config) (*heartbeat.DelegateInfo, error) {
 	// Create a delegate client
-	managerClient := client.New(config.Delegate.ManagerEndpoint, config.Delegate.AccountID, config.Delegate.DelegateToken, true, "")
+	managerClient := client.NewManagerClient(config.Delegate.ManagerEndpoint, config.Delegate.AccountID, config.Delegate.DelegateToken, config.Server.Insecure, "")
 
 	// The poller needs a client that interacts with the task management system and a router to route the tasks
 	keepAlive := heartbeat.New(config.Delegate.AccountID, config.Delegate.Name, config.GetTags(), managerClient)
@@ -31,12 +31,9 @@ func Start(ctx context.Context, config *delegate.Config, router *task.Router) (*
 		return info, err
 	}
 
-	// TODO: remove this after delegate id no longer needed from setup request
-	ctx = context.WithValue(ctx, "delegate_id", info.ID)
-
 	logrus.Info("Runner registered", info)
 	// Start polling for bijou events
-	eventsServer := poller.New(managerClient, router, config.Delegate.TaskStatusV2)
+	eventsServer := poller.New(managerClient, router.NewRouter(delegate.GetTaskContext(config, info.ID)), config.Delegate.TaskStatusV2)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
 	if err = eventsServer.PollRunnerEvents(ctx, 3, info.ID, time.Second*10); err != nil {
