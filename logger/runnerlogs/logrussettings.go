@@ -15,7 +15,6 @@ func SetLogrus() {
 		TimestampFormat: time.RFC3339,
 		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
 			fileName := path.Base(frame.File) + ":" + strconv.Itoa(frame.Line)
-			//return frame.Function, fileName
 			return "", fileName
 		},
 	})
