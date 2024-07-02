@@ -12,6 +12,7 @@ import (
 
 	"github.com/harness/runner/delegateshell"
 	"github.com/harness/runner/delegateshell/delegate"
+	"github.com/harness/runner/logger/runnerlogs"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -35,6 +36,8 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	if err != nil {
 		logrus.WithError(err).Errorln("Load Runner config failed")
 	}
+
+	runnerlogs.SetLogrus()
 
 	// create the http serverInstance.
 	serverInstance := Server{

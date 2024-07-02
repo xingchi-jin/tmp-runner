@@ -7,7 +7,7 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/harness/lite-engine/logstream"
-	"github.com/harness/runner/logger"
+	logger "github.com/harness/runner/logger/logstream"
 	"github.com/harness/runner/tasks/local"
 )
 
