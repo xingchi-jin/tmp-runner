@@ -32,7 +32,6 @@ type Server struct {
 func (s *Server) Start(ctx context.Context) error {
 	// The default run mode is insecure, as most clients will run the delegate and
 	// the docker runner on a same host.
-
 	logrus.Infof("Runner version: %s", version.Version)
 
 	var tlsConfig *tls.Config

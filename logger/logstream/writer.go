@@ -1,4 +1,4 @@
-package logger
+package logstream
 
 import (
 	"github.com/drone/go-task/task"

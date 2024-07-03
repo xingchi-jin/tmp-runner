@@ -9,9 +9,9 @@ import (
 	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/lite-engine/logstream"
+	logger "github.com/harness/lite-engine/logstream"
 	run "github.com/harness/lite-engine/pipeline/runtime"
-	"github.com/harness/runner/logger"
+	"github.com/harness/runner/logger/logstream"
 	"github.com/sirupsen/logrus"
 )
 
@@ -30,7 +30,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 		return task.Error(err)
 	}
 	// Wrap the io.Writer to convert it into a logstream.Writer which is used by the lite-engine.
-	resp, err := HandleExec(ctx, executeRequest, logger.NewWriterWrapper(req.Logger))
+	resp, err := HandleExec(ctx, executeRequest, logstream.NewWriterWrapper(req.Logger))
 	if err != nil {
 		logrus.Error("could not handle exec request: %w", err)
 		panic(err)
@@ -96,7 +96,7 @@ func SampleExecRequest(stepID, stageID string, command []string, image string, e
 	}
 }
 
-func HandleExec(ctx context.Context, s *ExecRequest, writer logstream.Writer) (api.VMTaskExecutionResponse, error) {
+func HandleExec(ctx context.Context, s *ExecRequest, writer logger.Writer) (api.VMTaskExecutionResponse, error) {
 	s.Sanitize()
 	if s.MountDockerSocket == nil || *s.MountDockerSocket { // required to support m1 where docker isn't installed.
 		s.Volumes = append(s.Volumes, getDockerSockVolumeMount())
