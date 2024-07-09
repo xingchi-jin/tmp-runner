@@ -6,14 +6,13 @@ import (
 	"fmt"
 	"io"
 	"runtime"
-	"strings"
-	"unicode"
 
 	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
 	"github.com/harness/runner/delegateshell/delegate"
+	"github.com/harness/runner/tasks/local/utils"
 	"github.com/sirupsen/logrus"
 )
 
@@ -51,7 +50,7 @@ type SetupRequest struct {
 }
 
 func (s *SetupRequest) Sanitize() {
-	s.Network.ID = sanitize(s.Network.ID)
+	s.Network.ID = utils.Sanitize(s.Network.ID)
 	// TODO: Sanitize volumes and volume paths depending on the operating system.
 }
 
@@ -72,33 +71,19 @@ func SampleSetupRequest(stageID string) SetupRequest {
 	fmt.Printf("in setup request, id is: %s", stageID)
 	return SetupRequest{
 		Network: spec.Network{
-			ID: sanitize(stageID),
+			ID: utils.Sanitize(stageID),
 		},
 		Volumes: []*spec.Volume{
 			{
 				HostPath: &spec.VolumeHostPath{
-					Name:   sanitize(stageID),
-					Path:   generatePath(stageID),
-					ID:     sanitize(stageID),
+					Name:   utils.Sanitize(stageID),
+					Path:   utils.GeneratePath(stageID),
+					ID:     utils.Sanitize(stageID),
 					Create: true,
 				},
 			},
 		},
 	}
-}
-
-func generatePath(id string) string {
-	return fmt.Sprintf("/tmp/harness/%s", sanitize(id))
-}
-
-// A function to sanitize any string and make it compatible with docker
-func sanitize(id string) string {
-	return strings.Map(func(r rune) rune {
-		if unicode.IsLetter(r) || unicode.IsNumber(r) {
-			return r
-		}
-		return '_'
-	}, id)
 }
 
 // TODO: Need to cleanup delegateID from here. Today, it's being used to route
