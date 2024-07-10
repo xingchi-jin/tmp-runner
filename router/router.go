@@ -24,6 +24,7 @@ func NewRouter(taskContext *delegate.TaskContext) *task.Router {
 	r.Register("local_init", local.NewSetupHandler(taskContext))
 	r.RegisterFunc("local_execute", local.ExecHandler)
 	r.RegisterFunc("local_cleanup", local.DestroyHandler)
+	r.RegisterFunc("secret", vault.Handler)
 	r.RegisterFunc("secret/vault/fetch", vault.FetchHandler)
 	r.Register("delegate_task", delegatetask.NewDelegateTaskHandler(taskContext))
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
