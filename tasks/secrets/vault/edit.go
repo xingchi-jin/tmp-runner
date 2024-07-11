@@ -28,7 +28,6 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 
 	// decode the task input.
 	err := json.Unmarshal(req.Task.Data, in)
-	logrus.Info(fmt.Sprintf("Here is the input: %+v", in))
 	if err != nil {
 		return task.Error(err)
 	}
@@ -59,11 +58,12 @@ func HandleCreate(in *EditVaultSecretSpec, client *vault.Client) (api.VMTaskExec
 			in.Key: in.Value,
 		},
 	}
-	logrus.Info(fmt.Sprintf("Writing secret value to path %s, data: %+v", in.Path, data))
-	secret, err := client.Logical().Write(in.Path, data)
+	logrus.Infof("Writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
+	_, err := client.Logical().Write(in.Path, data)
 	if err != nil {
+		logrus.WithError(err).Errorf("Failed writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 		return api.VMTaskExecutionResponse{CommandExecutionStatus: api.Failure, ErrorMessage: err.Error()}, nil
 	}
-	logrus.Info(fmt.Sprintf("Written the secret! secret: %+v", secret))
+	logrus.Infof("Done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 	return api.VMTaskExecutionResponse{CommandExecutionStatus: api.Success}, nil
 }
