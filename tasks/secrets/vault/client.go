@@ -6,9 +6,10 @@ import (
 
 // Config provides the vault configuration.
 type Config struct {
-	Address   string  `json:"address"`
-	Token     *string `json:"token"`
-	Namespace *string `json:"namespace"`
+	Address          string  `json:"address"`
+	Token            *string `json:"token"`
+	Namespace        *string `json:"namespace"`
+	SecretEngineName *string `json:"secretEngineName"`
 }
 
 // New returns a new vault client.
