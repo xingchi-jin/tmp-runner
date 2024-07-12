@@ -45,6 +45,12 @@ func SampleExecRequest(stepID, stageID string, command []string, image string, e
 			Name:       "exec",
 			WorkingDir: generatePath(stageID),
 			Kind:       api.Run,
+			Files: []*spec.File{&spec.File{
+				Path: "/tmp/abcd",
+				Data: "helloworld",
+				Mode: 0400,
+				IsDir: false,
+			}},
 			Network:    sanitize(stageID),
 			Image:      image,
 			Run: api.RunConfig{
