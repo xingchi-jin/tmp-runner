@@ -132,7 +132,7 @@ func (p *Poller) process(ctx context.Context, delegateID string, rv client.Runne
 			taskResponseV2 := &client.TaskResponseV2{
 				ID:   taskResponse.ID,
 				Data: taskResponse.Data,
-				Type: rv.TaskType,
+				Type: request.Task.Type,
 				Code: client.StatusCode(taskResponse.Code),
 			}
 			if err := p.Client.SendStatusV2(ctx, delegateID, rv.TaskID, taskResponseV2); err != nil {
