@@ -43,6 +43,9 @@ func (d *Docker) KillContainersByLabel(
 		for labelKey, labelValue := range labels {
 			args.Add("label", fmt.Sprintf("%s=%s", labelKey, labelValue))
 		}
+	} else {
+		// If no labels provided, don't kill anything
+		return nil
 	}
 	ctrs, err := d.client.ContainerList(ctx, types.ContainerListOptions{
 		Filters: args,
