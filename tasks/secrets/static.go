@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	"github.com/drone/go-task/task"
 	"github.com/sirupsen/logrus"
@@ -23,11 +24,10 @@ func (h *StaticSecretHandler) Handle(ctx context.Context, req *task.Request) tas
 	if len(staticSecretSpec.Secrets) > 0 {
 		secret := staticSecretSpec.Secrets[0]
 		secretValue := secret.Value
-		if secret.Base64 == true {
+		if secret.Base64 {
 			decodedValue, err := base64.StdEncoding.DecodeString(secretValue)
 			if err != nil {
-				logrus.Error("Error occurred when decoding base64 secret. %w", err)
-				return task.Respond(secretResponse)
+				return task.Error(fmt.Errorf("Error occurred when decoding base64 secret. %w", err))
 			}
 			secretValue = string(decodedValue)
 		}
