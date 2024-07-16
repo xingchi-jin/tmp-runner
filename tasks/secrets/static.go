@@ -2,7 +2,9 @@ package secrets
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
+	"fmt"
 
 	"github.com/drone/go-task/task"
 	"github.com/sirupsen/logrus"
@@ -20,14 +22,24 @@ func (h *StaticSecretHandler) Handle(ctx context.Context, req *task.Request) tas
 	// TODO: support batch secrets
 	secretResponse := &task.Secret{}
 	if len(staticSecretSpec.Secrets) > 0 {
-		secretResponse.Value = staticSecretSpec.Secrets[0].Value
+		secret := staticSecretSpec.Secrets[0]
+		secretValue := secret.Value
+		if secret.Base64 {
+			decodedValue, err := base64.StdEncoding.DecodeString(secretValue)
+			if err != nil {
+				return task.Error(fmt.Errorf("Error occurred when decoding base64 secret. %w", err))
+			}
+			secretValue = string(decodedValue)
+		}
+		secretResponse.Value = secretValue
 	}
 	return task.Respond(secretResponse)
 }
 
 type StaticSecret struct {
-	Id    string `json:"id"`
-	Value string `json:"value"`
+	Id     string `json:"id"`
+	Value  string `json:"value"`
+	Base64 bool   `json:"base64"`
 }
 
 type StaticSecretSpec struct {
