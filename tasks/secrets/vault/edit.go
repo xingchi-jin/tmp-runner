@@ -38,10 +38,8 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 	}
 
 	switch action := in.Action; action {
-	case "CREATE":
-		return handleCreate(in, client)
-	case "UPDATE":
-		return handleUpdate(in, client)
+	case "UPSERT":
+		return handleUpsert(in, client)
 	case "RENAME":
 		return handleRename(in, client)
 	case "DELETE":
@@ -55,20 +53,11 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 	}
 }
 
-func handleCreate(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
+func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
 	err := upsert(in.EngineName, in.Path, in.Key, in.Value, "", false, client)
 	if err != nil {
 		return task.Error(err)
 	}
-	return task.Respond(VaultSecretTaskResponse{})
-}
-
-func handleUpdate(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	err := upsert(in.EngineName, in.Path, in.Key, in.Value, "", false, client)
-	if err != nil {
-		return task.Error(err)
-	}
-
 	return task.Respond(VaultSecretTaskResponse{})
 }
 
