@@ -1,0 +1,97 @@
+openapi: 3.0.0
+info:
+  title: Daemon Set APIs
+  description: APIs for Daemon Set plugin integration with Harness Runner
+  version: 0.1.0
+paths:
+  /tasks:
+    post:
+      summary: Assign tasks
+      operationId: postTasks
+      requestBody:
+        description: Request body for assigning a list of daemon tasks
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Tasks'
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid request data"
+    delete:
+      summary: Delete tasks
+      operationId: deleteTasks
+      parameters:
+        - in: query
+          name: taskIds
+          description: IDs of tasks to be deleted
+          required: true
+          schema:
+            type: array
+            items:
+              type: string
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  status:
+                    type: string
+                    example: "OK"
+        '400':
+          description: Invalid request
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+                    example: "Invalid task IDs"
+    get:
+      summary: Get all tasks
+      operationId: getTasks
+      responses:
+        '200':
+          description: Successful operation
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Tasks'
+components:
+  schemas:
+    Task:
+      type: object
+      properties:
+        id:
+          type: string
+        params:
+          type: object
+    Tasks:
+      type: object
+      properties:
+        tasks:
+          type: array
+          items:
+            $ref: '#/components/schemas/Task'

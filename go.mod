@@ -4,12 +4,14 @@ go 1.22.0
 
 replace github.com/docker/docker => github.com/moby/moby v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible
 
+replace github.com/drone/go-task => /Users/vcalasans/projects/go-task
+
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/drone/go-task v0.0.0-20240523164958-666e94a56881
+	github.com/drone/go-task v0.0.0-20240815160432-32375929f390
 	github.com/google/uuid v1.6.0
 	github.com/harness/godotenv/v3 v3.0.0
 	github.com/harness/lite-engine v1.0.0-rc.137.0.20240823100307-59d20158489b
@@ -43,6 +45,8 @@ require (
 	github.com/drone/envsubst v1.0.3 // indirect
 	github.com/drone/runner-go v1.12.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
+	github.com/frankban/quicktest v1.14.6 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-chi/chi/v5 v5.0.8 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
@@ -64,10 +68,10 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/linkedin/goavro/v2 v2.12.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-zglob v0.0.4 // indirect
+	github.com/mholt/archiver v3.1.1+incompatible // indirect
 	github.com/mholt/archiver/v3 v3.5.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -75,6 +79,7 @@ require (
 	github.com/nwaples/rardecode v1.1.3 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
+	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect

@@ -9,6 +9,7 @@ import (
 	"github.com/drone/go-task/task/cloner"
 	"github.com/drone/go-task/task/download"
 	"github.com/drone/go-task/task/drivers/cgi"
+	"github.com/harness/runner/daemonset"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger/logstream"
 	"github.com/harness/runner/tasks/delegatetask"
@@ -28,8 +29,12 @@ func NewRouter(taskContext *delegate.TaskContext) *task.Router {
 	r.RegisterFunc("secret/vault/edit", vault.Handler)
 	r.Register("delegate_task", delegatetask.NewDelegateTaskHandler(taskContext))
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
-	downloader := download.New(cloner.Default())
-	r.NotFound(cgi.New(downloader))
 
+	downloader := download.New(cloner.Default(), "pkgs")
+	daemonSetDriver := daemonset.New(downloader, delegate.IsK8sRunner(taskContext.RunnerType))
+	r.RegisterFunc("daemonset/upsert", daemonSetDriver.HandleUpsert)
+	r.RegisterFunc("daemonset/tasks/assign", daemonSetDriver.HandleTaskAssign)
+	r.RegisterFunc("daemonset/tasks/remove", daemonSetDriver.HandleTaskRemove)
+	r.NotFound(cgi.New(downloader))
 	return r
 }
