@@ -21,9 +21,7 @@ type VaultSecretTaskRequest struct {
 	Value      string  `json:"value"`
 }
 
-type SecretTaskResponse struct {
-	Status string `json:"status"`
-}
+type VaultSecretTaskResponse struct{}
 
 func Handler(ctx context.Context, req *task.Request) task.Response {
 	in := new(VaultSecretTaskRequest)
@@ -62,7 +60,7 @@ func handleCreate(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 	if err != nil {
 		return task.Error(err)
 	}
-	return task.Respond(SecretTaskResponse{})
+	return task.Respond(VaultSecretTaskResponse{})
 }
 
 func handleUpdate(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
@@ -71,7 +69,7 @@ func handleUpdate(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 		return task.Error(err)
 	}
 
-	return task.Respond(SecretTaskResponse{})
+	return task.Respond(VaultSecretTaskResponse{})
 }
 
 func handleRename(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
@@ -87,7 +85,7 @@ func handleRename(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 		return task.Error(err)
 	}
 
-	return task.Respond(SecretTaskResponse{})
+	return task.Respond(VaultSecretTaskResponse{})
 }
 
 func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
@@ -99,7 +97,7 @@ func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 		return task.Error(err)
 	}
 	logrus.Infof("Done deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
-	return task.Respond(SecretTaskResponse{})
+	return task.Respond(VaultSecretTaskResponse{})
 }
 
 func handleValidate(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
@@ -109,7 +107,7 @@ func handleValidate(in *VaultSecretTaskRequest, client *vault.Client) task.Respo
 		logrus.WithError(err).Errorf("Failed validating secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 		return task.Error(err)
 	}
-	return task.Respond(SecretTaskResponse{})
+	return task.Respond(VaultSecretTaskResponse{})
 }
 
 func upsert(engineName string, path string, key string, value string, oldPath string, deleteOldPath bool, client *vault.Client) error {
