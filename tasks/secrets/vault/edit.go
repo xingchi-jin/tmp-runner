@@ -15,7 +15,6 @@ type VaultSecretTaskRequest struct {
 	Config     *Config `json:"config"`
 	EngineName string  `json:"engine_name"`
 	Key        string  `json:"key"`
-	OldPath    string  `json:"old_path"`
 	Path       string  `json:"path"`
 	Value      string  `json:"value"`
 }
@@ -39,12 +38,8 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 	switch action := in.Action; action {
 	case "UPSERT":
 		return handleUpsert(in, client)
-	case "RENAME":
-		return handleRename(in, client)
 	case "DELETE":
 		return handleDelete(in, client)
-	case "VALIDATE":
-		return handleValidate(in, client)
 	default:
 		err = fmt.Errorf("unsupported secret task action: %s", action)
 		logrus.Error(err)
@@ -53,27 +48,11 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 }
 
 func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	err := upsert(in.EngineName, in.Path, in.Key, in.Value, "", false, client)
+	err := upsert(in.EngineName, in.Path, in.Key, in.Value, client)
 	if err != nil {
 		logrus.WithError(err).Errorf("failed upserting secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 		return task.Error(err)
 	}
-	return task.Respond(VaultSecretTaskResponse{})
-}
-
-func handleRename(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	logrus.Infof("renaming secret value in Vault. Url: [%s]; Path: [%s]; OldPath: [%s]", client.Address(), in.Path, in.OldPath)
-	secret, err := fetch(in.EngineName, in.OldPath, in.Key, client)
-	if err != nil {
-		logrus.WithError(err).Errorf("failed renaming secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.OldPath)
-		return task.Error(err)
-	}
-	err = upsert(in.EngineName, in.Path, in.Key, secret, in.OldPath, true, client)
-	if err != nil {
-		logrus.WithError(err).Errorf("failed renaming secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.OldPath)
-		return task.Error(err)
-	}
-
 	return task.Respond(VaultSecretTaskResponse{})
 }
 
@@ -89,17 +68,7 @@ func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 	return task.Respond(VaultSecretTaskResponse{})
 }
 
-func handleValidate(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	logrus.Infof("validating secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
-	_, err := fetch(in.EngineName, in.Path, in.Key, client)
-	if err != nil {
-		logrus.WithError(err).Errorf("failed validating secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
-		return task.Error(err)
-	}
-	return task.Respond(VaultSecretTaskResponse{})
-}
-
-func upsert(engineName string, path string, key string, value string, oldPath string, deleteOldPath bool, client *vault.Client) error {
+func upsert(engineName string, path string, key string, value string, client *vault.Client) error {
 	data := map[string]any{
 		"data": map[string]string{
 			key: value,
@@ -112,16 +81,6 @@ func upsert(engineName string, path string, key string, value string, oldPath st
 		return err
 	}
 	logrus.Infof("done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
-	if deleteOldPath {
-		fullOldPath := getFullPathForDelete(engineName, oldPath)
-		logrus.Infof("deleting previous secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullOldPath)
-		_, err = client.Logical().Delete(fullOldPath)
-		if err != nil {
-			logrus.WithError(err).Errorf("failed deleting previous secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullOldPath)
-		}
-		logrus.Infof("done deleting previous secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullOldPath)
-
-	}
 	return nil
 }
 
