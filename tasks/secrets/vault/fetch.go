@@ -2,6 +2,7 @@ package vault
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
 
@@ -33,6 +34,7 @@ import (
 
 type vaultSecret struct {
 	Config *Config `json:"config"`
+	Base64 bool    `json:"base64"`
 	Path   string  `json:"path"`
 	Key    string  `json:"key"`
 }
@@ -75,13 +77,24 @@ func FetchHandler(ctx context.Context, req *task.Request) task.Response {
 			continue
 		}
 		if k == in.Secrets[0].Key {
-			return task.Respond(
-				&task.Secret{
-					Value: s,
-				},
-			)
+			return parse(s, in.Secrets[0].Base64)
 		}
 	}
 
 	return task.Error(fmt.Errorf("could not find secret key: %s", in.Secrets[0].Key))
+}
+
+func parse(s string, decode bool) task.Response {
+	if decode {
+		decoded, err := base64.StdEncoding.DecodeString(s)
+		if err != nil {
+			return task.Error(fmt.Errorf("Error occurred when decoding base64 secret. %w", err))
+		}
+		s = string(decoded)
+	}
+	return task.Respond(
+		&task.Secret{
+			Value: s,
+		},
+	)
 }
