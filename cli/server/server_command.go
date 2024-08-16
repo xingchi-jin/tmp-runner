@@ -13,7 +13,7 @@ import (
 	"github.com/harness/runner/delegateshell"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger/runnerlogs"
-	"github.com/joho/godotenv"
+	"github.com/harness/godotenv/v3"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
 )
