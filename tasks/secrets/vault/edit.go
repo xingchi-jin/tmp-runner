@@ -14,7 +14,7 @@ type VaultSecretTaskRequest struct {
 	Action        string  `json:"action"`
 	Config        *Config `json:"config"`
 	EngineName    string  `json:"engine_name"`
-	EngineVersion int64   `json:"engine_version"`
+	EngineVersion uint8   `json:"engine_version"`
 	Key           string  `json:"key"`
 	Path          string  `json:"path"`
 	Value         string  `json:"value"`
@@ -73,7 +73,7 @@ func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 	return task.Respond(VaultSecretTaskResponse{})
 }
 
-func upsert(engineVersion int64, engineName string, path string, key string, value string, client *vault.Client) error {
+func upsert(engineVersion uint8, engineName string, path string, key string, value string, client *vault.Client) error {
 	data := map[string]any{
 		"data": map[string]string{
 			key: value,
@@ -92,7 +92,7 @@ func upsert(engineVersion int64, engineName string, path string, key string, val
 	return nil
 }
 
-func fetch(engineVersion int64, engineName string, path string, key string, client *vault.Client) (string, error) {
+func fetch(engineVersion uint8, engineName string, path string, key string, client *vault.Client) (string, error) {
 	logrus.Infof("fetching secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 	fullPath, err := getFullPath(engineVersion, engineName, path)
 	if err != nil {
@@ -126,7 +126,7 @@ func fetch(engineVersion int64, engineName string, path string, key string, clie
 	return "", err
 }
 
-func getFullPath(engineVersion int64, engineName string, path string) (string, error) {
+func getFullPath(engineVersion uint8, engineName string, path string) (string, error) {
 	switch engineVersion {
 	case 1:
 		return fmt.Sprintf("%s/%s", engineName, path), nil
@@ -137,7 +137,7 @@ func getFullPath(engineVersion int64, engineName string, path string) (string, e
 	}
 }
 
-func getFullPathForDelete(engineVersion int64, secretEngineName string, path string) (string, error) {
+func getFullPathForDelete(engineVersion uint8, secretEngineName string, path string) (string, error) {
 	switch engineVersion {
 	case 1:
 		return fmt.Sprintf("%s/%s", secretEngineName, path), nil
