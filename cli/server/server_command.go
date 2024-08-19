@@ -46,7 +46,13 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	ctx, cancel := context.WithCancel(ctx)
 
 	// trap the os signal to gracefully shutdown the http server.
-	handleOSSignals(ctx, cancel)
+	s := make(chan os.Signal, 1)
+	signal.Notify(s, os.Interrupt)
+	handleOSSignals(ctx, s, cancel)
+	defer func() {
+		signal.Stop(s)
+		cancel()
+	}()
 
 	// Create a manager client
 	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
@@ -82,13 +88,7 @@ func startHarnessTasks(ctx context.Context, config *delegate.Config, managerClie
 	return runnerInfo, err
 }
 
-func handleOSSignals(ctx context.Context, cancel context.CancelFunc) {
-	s := make(chan os.Signal, 1)
-	signal.Notify(s, os.Interrupt)
-	defer func() {
-		signal.Stop(s)
-		cancel()
-	}()
+func handleOSSignals(ctx context.Context, s chan os.Signal, cancel context.CancelFunc) {
 	go func() {
 		select {
 		case val := <-s:
