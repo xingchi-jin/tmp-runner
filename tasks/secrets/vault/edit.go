@@ -11,12 +11,13 @@ import (
 )
 
 type VaultSecretTaskRequest struct {
-	Action     string  `json:"action"`
-	Config     *Config `json:"config"`
-	EngineName string  `json:"engine_name"`
-	Key        string  `json:"key"`
-	Path       string  `json:"path"`
-	Value      string  `json:"value"`
+	Action        string  `json:"action"`
+	Config        *Config `json:"config"`
+	EngineName    string  `json:"engine_name"`
+	EngineVersion int64   `json:"engine_version"`
+	Key           string  `json:"key"`
+	Path          string  `json:"path"`
+	Value         string  `json:"value"`
 }
 
 type VaultSecretTaskResponse struct{}
@@ -48,7 +49,7 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 }
 
 func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	err := upsert(in.EngineName, in.Path, in.Key, in.Value, client)
+	err := upsert(in.EngineVersion, in.EngineName, in.Path, in.Key, in.Value, client)
 	if err != nil {
 		logrus.WithError(err).Errorf("failed upserting secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 		return task.Error(err)
@@ -57,9 +58,13 @@ func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 }
 
 func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	path := getFullPathForDelete(in.EngineName, in.Path)
+	path, err := getFullPathForDelete(in.EngineVersion, in.EngineName, in.Path)
+	if err != nil {
+		logrus.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]; EngineName: [%s]; EngineVersion: [%d]", client.Address(), in.Path, in.EngineName, in.EngineVersion)
+		return task.Error(err)
+	}
 	logrus.Infof("deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
-	_, err := client.Logical().Delete(path)
+	_, err = client.Logical().Delete(path)
 	if err != nil {
 		logrus.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 		return task.Error(err)
@@ -68,15 +73,18 @@ func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 	return task.Respond(VaultSecretTaskResponse{})
 }
 
-func upsert(engineName string, path string, key string, value string, client *vault.Client) error {
+func upsert(engineVersion int64, engineName string, path string, key string, value string, client *vault.Client) error {
 	data := map[string]any{
 		"data": map[string]string{
 			key: value,
 		},
 	}
-	fullPath := getFullPath(engineName, path)
+	fullPath, err := getFullPath(engineVersion, engineName, path)
+	if err != nil {
+		return err
+	}
 	logrus.Infof("writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
-	_, err := client.Logical().Write(fullPath, data)
+	_, err = client.Logical().Write(fullPath, data)
 	if err != nil {
 		return err
 	}
@@ -84,9 +92,12 @@ func upsert(engineName string, path string, key string, value string, client *va
 	return nil
 }
 
-func fetch(engineName string, path string, key string, client *vault.Client) (string, error) {
+func fetch(engineVersion int64, engineName string, path string, key string, client *vault.Client) (string, error) {
 	logrus.Infof("fetching secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
-	fullPath := getFullPath(engineName, path)
+	fullPath, err := getFullPath(engineVersion, engineName, path)
+	if err != nil {
+		return "", err
+	}
 	secret, err := client.Logical().Read(fullPath)
 	if err != nil {
 		return "", err
@@ -111,14 +122,28 @@ func fetch(engineName string, path string, key string, client *vault.Client) (st
 			return s, nil
 		}
 	}
-	err = fmt.Errorf("could not find key [%s] in secret data.", key)
+	err = fmt.Errorf("could not find key [%s] in secret data", key)
 	return "", err
 }
 
-func getFullPath(engineName string, path string) string {
-	return fmt.Sprintf("%s/data/%s", engineName, path)
+func getFullPath(engineVersion int64, engineName string, path string) (string, error) {
+	switch engineVersion {
+	case 1:
+		return fmt.Sprintf("%s/%s", engineName, path), nil
+	case 2:
+		return fmt.Sprintf("%s/data/%s", engineName, path), nil
+	default:
+		return "", fmt.Errorf("unsupported secret engine version [%d]", engineVersion)
+	}
 }
 
-func getFullPathForDelete(secretEngineName string, path string) string {
-	return fmt.Sprintf("%s/metadata/%s", secretEngineName, path)
+func getFullPathForDelete(engineVersion int64, secretEngineName string, path string) (string, error) {
+	switch engineVersion {
+	case 1:
+		return fmt.Sprintf("%s/%s", secretEngineName, path), nil
+	case 2:
+		return fmt.Sprintf("%s/metadata/%s", secretEngineName, path), nil
+	default:
+		return "", fmt.Errorf("unsupported secret engine version [%d]", engineVersion)
+	}
 }
