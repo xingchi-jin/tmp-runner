@@ -62,12 +62,13 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		logrus.Error("Error starting polling tasks from Harness")
 		cancel()
 	}
+	// TODO create cleanup context
 	defer func(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) {
 		err := stopHarnessTasks(ctx, runnerInfo, managerClient)
 		if err != nil {
-			logrus.Error("Error stopping polling tasks from Harness")
+			logrus.Errorf("Error stopping polling tasks from Harness:  %s", err)
 		}
-	}(ctx, runnerInfo, managerClient)
+	}(context.Background(), runnerInfo, managerClient)
 
 	// starts the http server.
 	if err := startHTTPServer(ctx, &loadedConfig); err != nil {
