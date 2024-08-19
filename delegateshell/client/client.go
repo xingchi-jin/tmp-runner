@@ -28,4 +28,7 @@ type Client interface {
 
 	// SendStatusV2 sends a response to the task server (updated workflow which uses message queues on the server side).
 	SendStatusV2(ctx context.Context, delegateID, taskID string, req *TaskResponseV2) error
+
+	// Unregister registers the runner with the task server
+	Unregister(ctx context.Context, r *UnregisterRequest) error
 }

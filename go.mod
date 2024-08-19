@@ -1,14 +1,15 @@
 module github.com/harness/runner
 
-go 1.22
+go 1.22.0
 
 replace github.com/docker/docker => github.com/moby/moby v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible
 
 require (
+	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cenkalti/backoff/v4 v4.2.1
+	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/drone/go-task v0.0.0-20240523164958-666e94a56881
-	github.com/go-chi/chi v1.5.5
 	github.com/google/uuid v1.6.0
 	github.com/harness/lite-engine v1.0.0-rc.137.0.20240429154243-ca535efeeb31
 	github.com/hashicorp/vault/api v1.12.2
@@ -31,14 +32,12 @@ require (
 	github.com/andybalholm/brotli v1.0.5 // indirect
 	github.com/bmatcuk/doublestar v1.3.4 // indirect
 	github.com/buildkite/yaml v2.1.0+incompatible // indirect
-	github.com/cenkalti/backoff v2.2.1+incompatible // indirect
 	github.com/cenkalti/backoff/v3 v3.0.0 // indirect
 	github.com/containerd/containerd v1.7.0 // indirect
 	github.com/coreos/go-semver v0.3.1 // indirect
 	github.com/corpix/uarand v0.0.0-20170723150923-031be390f409 // indirect
 	github.com/dgryski/go-lttb v0.0.0-20230207170358-f8fc36cdbff1 // indirect
 	github.com/docker/distribution v2.8.1+incompatible // indirect
-	github.com/docker/docker v23.0.1+incompatible // indirect
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/drone/drone-go v1.7.1 // indirect
 	github.com/drone/envsubst v1.0.3 // indirect
@@ -80,6 +79,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/shirou/gopsutil/v3 v3.23.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816 // indirect

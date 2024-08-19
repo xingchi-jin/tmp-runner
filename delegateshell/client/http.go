@@ -21,6 +21,7 @@ import (
 
 const (
 	registerEndpoint         = "/api/agent/delegates/register?accountId=%s"
+	unregisterEndpoint       = "/api/agent/delegates/unregister?accountId=%s"
 	heartbeatEndpoint        = "/api/agent/delegates/heartbeat-with-polling?accountId=%s"
 	taskStatusEndpoint       = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
 	runnerEventsPollEndpoint = "/api/executions/%s/runner-events?accountId=%s"
@@ -56,6 +57,14 @@ func (p *ManagerClient) Register(ctx context.Context, r *RegisterRequest) (*Regi
 	path := fmt.Sprintf(registerEndpoint, p.AccountID)
 	_, err := p.retry(ctx, path, "POST", req, resp, createBackoff(ctx, registerTimeout), true) //nolint: bodyclose
 	return resp, err
+}
+
+// Unregister unregisters the runner with the manager
+func (p *ManagerClient) Unregister(ctx context.Context, r *UnregisterRequest) error {
+	req := r
+	path := fmt.Sprintf(unregisterEndpoint, p.AccountID)
+	_, err := p.retry(ctx, path, "POST", req, nil, createBackoff(ctx, registerTimeout), true)
+	return err
 }
 
 // Heartbeat sends a periodic heartbeat to the server

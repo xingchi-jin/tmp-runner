@@ -51,16 +51,21 @@ func (p *Poller) SetFilter(filter FilterFn) {
 
 // Poll continually asks the task server for tasks to execute.
 func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
-	//	var wg sync.WaitGroup
+
 	events := make(chan *client.RunnerEvent, n)
+	var wg sync.WaitGroup
+
 	// Task event poller
 	go func() {
+		defer close(events) // Ensure the events channel is closed when polling stops
 		pollTimer := time.NewTimer(interval)
+		defer pollTimer.Stop()
+
 		for {
 			pollTimer.Reset(interval)
 			select {
 			case <-ctx.Done():
-				logrus.Error("context canceled")
+				logrus.Error("context canceled, stopping task polling")
 				return
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
@@ -71,28 +76,33 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 				cancelFn()
 
 				for _, e := range tasks.RunnerEvents {
-					events <- e
+					select {
+					case events <- e:
+						// Event successfully sent to the channel
+					case <-ctx.Done():
+						logrus.Info("context canceled during event processing")
+						// Context canceled, but let the loop exit naturally so that all acquired events are processed
+						return
+					}
 				}
 			}
 		}
 	}()
 	// Task event processor. Start n threads to process events from the channel
 	for i := 0; i < n; i++ {
+		wg.Add(1)
 		go func(i int) {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case task := <-events:
-					err := p.process(ctx, id, *task)
-					if err != nil {
-						logrus.WithError(err).WithField("task_id", task.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
-					}
+			defer wg.Done()
+			for acquiredTask := range events { // Read from events channel until it's closed
+				err := p.process(ctx, id, *acquiredTask)
+				if err != nil {
+					logrus.WithError(err).WithField("task_id", acquiredTask.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
 				}
 			}
 		}(i)
 	}
 	logrus.Infof("initialized %d threads successfully and starting polling for tasks", n)
+	wg.Wait()
 	return nil
 }
 

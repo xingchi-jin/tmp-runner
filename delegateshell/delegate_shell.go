@@ -7,9 +7,9 @@ package delegateshell
 
 import (
 	"context"
+	"github.com/harness/runner/delegateshell/client"
 	"time"
 
-	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
@@ -17,14 +17,12 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func Start(ctx context.Context, config *delegate.Config) (*heartbeat.DelegateInfo, error) {
-	// Create a delegate client
-	managerClient := client.NewManagerClient(config.Delegate.ManagerEndpoint, config.Delegate.AccountID, config.Delegate.DelegateToken, config.Server.Insecure, "")
+func Start(ctx context.Context, config *delegate.Config, managerClient *client.ManagerClient) (*heartbeat.DelegateInfo, error) {
 
 	// The poller needs a client that interacts with the task management system and a router to route the tasks
 	keepAlive := heartbeat.New(config.Delegate.AccountID, config.Delegate.Name, config.GetTags(), managerClient)
 
-	// Register the poller
+	// Register the poller with manager
 	info, err := keepAlive.Register(ctx)
 	if err != nil {
 		logrus.WithError(err).Errorln("Register Runner with Harness manager failed.")
@@ -41,4 +39,16 @@ func Start(ctx context.Context, config *delegate.Config) (*heartbeat.DelegateInf
 		return info, err
 	}
 	return info, nil
+}
+
+func Shutdown(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) error {
+
+	req := &client.UnregisterRequest{
+		ID:       runnerInfo.ID,
+		NG:       true,
+		Type:     "DOCKER",
+		HostName: runnerInfo.Host,
+		IP:       runnerInfo.IP,
+	}
+	return managerClient.Unregister(ctx, req)
 }
