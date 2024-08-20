@@ -25,7 +25,8 @@ import (
 )
 
 type serverCommand struct {
-	envFile string
+	envFile       string
+	delegateshell *delegateshell.DelegateShell
 }
 
 func (c *serverCommand) run(*kingpin.ParseContext) error {
@@ -57,11 +58,19 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
 
-	runnerInfo, err := registerRunner(ctx, &loadedConfig, managerClient)
-	if err != nil || runnerInfo == nil {
-		logrus.Errorf("Register Runner with Harness manager failed. Error: %v, RunnerInfo: %v", err, runnerInfo)
+	delegateShell, err := register(ctx, &loadedConfig, managerClient)
+	if err != nil {
+		logrus.Errorf("Register Runner with Harness manager failed. Error: %v", err)
 		return err
 	}
+	if delegateShell == nil || delegateShell.DelegateInfo == nil {
+		logrus.Error("Register Runner with Harness manager failed. RunnerInfo is nil")
+		return err
+	}
+
+	c.delegateshell = delegateShell
+	runnerInfo := delegateShell.DelegateInfo
+
 	logrus.Info("Runner registered", runnerInfo)
 
 	var wg sync.WaitGroup
@@ -70,6 +79,12 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	go func() {
 		defer wg.Done()
 		pollForEvents(ctx, &loadedConfig, runnerInfo, managerClient)
+	}()
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		c.sendHeartbeat(ctx)
 	}()
 
 	// starts the http server.
@@ -87,8 +102,8 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	wg.Wait()
 
-	// TODO create cleanup context
-	err = unregisterRunner(context.Background(), runnerInfo, managerClient)
+	// TODO cleanup
+	err = c.unregisterRunner(ctx, runnerInfo, managerClient)
 	if err != nil {
 		logrus.Errorf("Error stopping polling tasks from Harness:  %s", err)
 	}
@@ -106,10 +121,9 @@ func pollForEvents(ctx context.Context, c *delegate.Config, runnerInfo *heartbea
 	}
 }
 
-func registerRunner(ctx context.Context, config *delegate.Config, managerClient *client.ManagerClient) (*heartbeat.DelegateInfo, error) {
+func register(ctx context.Context, config *delegate.Config, managerClient *client.ManagerClient) (*delegateshell.DelegateShell, error) {
 	logrus.Info("Registering")
-	runnerInfo, err := delegateshell.Start(ctx, config, managerClient)
-	return runnerInfo, err
+	return delegateshell.Start(ctx, config, managerClient)
 }
 
 func handleOSSignals(ctx context.Context, s chan os.Signal, cancel context.CancelFunc) {
@@ -153,9 +167,9 @@ func startHTTPServer(ctx context.Context, config *delegate.Config) error {
 	return err
 }
 
-func unregisterRunner(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) error {
+func (c *serverCommand) unregisterRunner(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) error {
 	logrus.Info("Unregistering")
-	return delegateshell.Shutdown(ctx, runnerInfo, managerClient)
+	return c.delegateshell.Unregister(ctx, runnerInfo, managerClient)
 }
 
 func Register(app *kingpin.Application) {
@@ -167,4 +181,9 @@ func Register(app *kingpin.Application) {
 	cmd.Flag("env-file", "environment file").
 		Default(".env").
 		StringVar(&c.envFile)
+}
+
+func (c *serverCommand) sendHeartbeat(ctx context.Context) {
+	logrus.Info("Started sending heartbeat to manager")
+	c.delegateshell.SendHeartbeat(ctx)
 }

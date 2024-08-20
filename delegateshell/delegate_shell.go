@@ -12,17 +12,29 @@ import (
 	"github.com/harness/runner/delegateshell/heartbeat"
 )
 
-func Start(ctx context.Context, config *delegate.Config, managerClient *client.ManagerClient) (*heartbeat.DelegateInfo, error) {
+type DelegateShell struct {
+	KeepAlive    *heartbeat.KeepAlive
+	DelegateInfo *heartbeat.DelegateInfo
+}
+
+func Start(ctx context.Context, config *delegate.Config, managerClient *client.ManagerClient) (*DelegateShell, error) {
 
 	// The poller needs a client that interacts with the task management system and a router to route the tasks
 	keepAlive := heartbeat.New(config.Delegate.AccountID, config.Delegate.Name, config.GetTags(), managerClient)
 
 	// Register the poller with manager
-	return keepAlive.Register(ctx)
+	runnerInfo, err := keepAlive.Register(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &DelegateShell{KeepAlive: keepAlive, DelegateInfo: runnerInfo}, nil
 }
 
-func Shutdown(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) error {
+func (d *DelegateShell) SendHeartbeat(ctx context.Context) {
+	d.KeepAlive.Heartbeat(ctx, d.DelegateInfo.ID, d.DelegateInfo.IP, d.DelegateInfo.Host)
+}
 
+func (d *DelegateShell) Unregister(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) error {
 	req := &client.UnregisterRequest{
 		ID:       runnerInfo.ID,
 		NG:       true,

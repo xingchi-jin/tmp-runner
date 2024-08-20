@@ -72,7 +72,7 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 	}
 	host = "runner-" + strings.ReplaceAll(host, " ", "-")
 	ip := getOutboundIP()
-	id, err := p.register(ctx, hearbeatInterval, ip, host)
+	id, err := p.register(ctx, ip, host)
 	if err != nil {
 		logrus.WithField("ip", ip).WithField("host", host).WithError(err).Error("could not register runner")
 		return nil, err
@@ -87,22 +87,8 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 
 // Register registers the runner and runs a background thread which keeps pinging the server
 // at a period of interval. It returns the delegate ID.
-func (p *KeepAlive) register(ctx context.Context, interval time.Duration, ip, host string) (string, error) {
-	req := &client.RegisterRequest{
-		AccountID:     p.AccountID,
-		RunnerName:    p.Name,
-		LastHeartbeat: time.Now().UnixMilli(),
-		//Token:              p.AccountSecret,
-		NG:       true,
-		Type:     "DOCKER",
-		Polling:  true,
-		HostName: host,
-		IP:       ip,
-		// SupportedTaskTypes: p.Router.Routes(),  // Ignore this because for new Runner tasks, this SupportedTaskTypes feature doesn't apply
-		Tags:              p.Tags,
-		Version:           "v0.1",
-		HeartbeatAsObject: true,
-	}
+func (p *KeepAlive) register(ctx context.Context, ip, host string) (string, error) {
+	req := p.getRegisterRequest("", ip, host)
 	resp, err := p.Client.Register(ctx, req)
 	if err != nil {
 		return "", errors.Wrap(err, "could not register the runner")
@@ -110,17 +96,17 @@ func (p *KeepAlive) register(ctx context.Context, interval time.Duration, ip, ho
 	req.ID = resp.Resource.DelegateID
 	logrus.WithField("id", req.ID).WithField("host", req.HostName).
 		WithField("ip", req.IP).Info("registered delegate successfully")
-	p.heartbeat(ctx, req, interval)
 	return resp.Resource.DelegateID, nil
 }
 
-// heartbeat starts a periodic thread in the background which continually pings the server
-func (p *KeepAlive) heartbeat(ctx context.Context, req *client.RegisterRequest, interval time.Duration) {
+// Heartbeat starts a periodic thread in the background which continually pings the server
+func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
+	req := p.getRegisterRequest(id, ip, host)
 	go func() {
-		msgDelayTimer := time.NewTimer(interval)
+		msgDelayTimer := time.NewTimer(hearbeatInterval)
 		defer msgDelayTimer.Stop()
 		for {
-			msgDelayTimer.Reset(interval)
+			msgDelayTimer.Reset(hearbeatInterval)
 			select {
 			case <-ctx.Done():
 				logrus.Error("context canceled")
@@ -136,6 +122,29 @@ func (p *KeepAlive) heartbeat(ctx context.Context, req *client.RegisterRequest, 
 			}
 		}
 	}()
+}
+
+func (p *KeepAlive) getRegisterRequest(id, ip, host string) *client.RegisterRequest {
+	req := &client.RegisterRequest{
+		AccountID:     p.AccountID,
+		RunnerName:    p.Name,
+		LastHeartbeat: time.Now().UnixMilli(),
+		//Token:              p.AccountSecret,
+		NG:       true,
+		Type:     "DOCKER",
+		Polling:  true,
+		HostName: host,
+		IP:       ip,
+		// SupportedTaskTypes: p.Router.Routes(),  // Ignore this because for new Runner tasks, this SupportedTaskTypes feature doesn't apply
+		Tags:              p.Tags,
+		Version:           "v0.1",
+		HeartbeatAsObject: true,
+	}
+
+	if id != "" {
+		req.ID = id
+	}
+	return req
 }
 
 // Get preferred outbound ip of this machine. It returns a fake IP in case of errors.
