@@ -10,7 +10,7 @@ import (
 
 func logRunnerResourceStats() {
 	processId := os.Getpid()
-	logrus.Info("Logging resource stats")
+	logrus.Infoln("Logging resource stats")
 	logrus.Infof("Runner process ID: %d", processId)
 
 	currentProcess, err := process.NewProcess(int32(processId))
@@ -30,9 +30,9 @@ func logRunnerResourceStats() {
 	// CPU usage of the current process
 	cpuPercent, err := currentProcess.CPUPercent()
 	if err != nil {
-		logrus.WithError(err).Errorln("Error getting runner CPU usage")
+		logrus.WithError(err).Errorln("Error getting CPU usage")
 	} else {
-		logrus.Infof("Runner CPU usage: %f%%", cpuPercent)
+		logrus.Infof("CPU usage: %f%%", cpuPercent)
 	}
 
 	// total memory
@@ -46,8 +46,8 @@ func logRunnerResourceStats() {
 	// memory usage of the current process
 	memPercent, err := currentProcess.MemoryPercent()
 	if err != nil {
-		logrus.WithError(err).Errorln("Error getting runner memory usage")
+		logrus.WithError(err).Errorln("Error getting memory usage")
 	} else {
-		logrus.Infof("Runner memory usage: %f%%", memPercent)
+		logrus.Infof("Memory usage: %f%%", memPercent)
 	}
 }

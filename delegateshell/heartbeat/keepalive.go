@@ -109,7 +109,7 @@ func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
 			msgDelayTimer.Reset(hearbeatInterval)
 			select {
 			case <-ctx.Done():
-				logrus.Error("context canceled, stopping heartbeat")
+				logrus.Infoln("context canceled, stopping heartbeat")
 				return
 			case <-msgDelayTimer.C:
 				req.LastHeartbeat = time.Now().UnixMilli()
@@ -117,9 +117,6 @@ func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
 				err := p.Client.Heartbeat(heartbeatCtx, req)
 				if err != nil && !errors.Is(err, context.Canceled) {
 					logrus.WithError(err).Errorf("could not send heartbeat")
-				} else {
-					// TODO rm after debug else block
-					logrus.Info("heartbeat sent")
 				}
 				cancelFn()
 			}

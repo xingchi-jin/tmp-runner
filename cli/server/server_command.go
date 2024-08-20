@@ -8,11 +8,11 @@ package server
 import (
 	"context"
 	"errors"
+	"github.com/harness/godotenv/v3"
 	"github.com/harness/runner/delegateshell"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger/runnerlogs"
-	"github.com/harness/godotenv/v3"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -62,7 +62,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		logrus.Errorf("Registering Runner with Harness manager failed. Error: %v", err)
 		return err
 	}
-	logrus.Info("Runner registered", runnerInfo)
+	logrus.Infoln("Runner registered", runnerInfo)
 
 	var g errgroup.Group
 
@@ -74,22 +74,22 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		if err := startHTTPServer(ctx, &loadedConfig); err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
 				logrus.Infoln("Program gracefully terminated")
-			} else {
-				logrus.Errorf("Program terminated with error: %s", err)
+				return nil
 			}
+			logrus.Errorf("Program terminated with error: %s", err)
 			return err
 		}
 		return nil
 	})
 
 	if err := g.Wait(); err != nil {
-		logrus.WithError(err).Errorln("One or more processes failed")
+		logrus.WithError(err).Errorln("One or more runner processes failed")
 		return err
 	}
-	logrus.Info("All runner processes terminated, unregistering runner...")
+	logrus.Infoln("All runner processes terminated, unregistering runner...")
 
-	// TODO create cleanup context
-	err = delegateShell.Unregister(context.Background(), runnerInfo)
+	// TODO create cleanup context and unregister irrespective of processes failing
+	err = delegateShell.Unregister(context.Background())
 	if err != nil {
 		logrus.Errorf("Error while unregistering runner:  %v", err)
 	}
@@ -103,20 +103,20 @@ func handleOSSignals(ctx context.Context, s chan os.Signal, cancel context.Cance
 		case val := <-s:
 			logrus.Infof("Received OS Signal to exit server: %s", val)
 			logRunnerResourceStats()
-			close(stopChannel) // Notify poller to stop acquiring new events
-			logrus.Info("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
+			close(stopChannel) // Notify poller to stop acquiring new tasks
+			logrus.Infoln("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
 			<-doneChannel // Wait for all tasks to be processed
-			logrus.Info("All tasks are completed, stopping task processor...")
+			logrus.Infoln("All tasks are completed, stopping task processor...")
 			cancel()
 		case <-ctx.Done():
-			logrus.Infoln("Received a done signal to exit server")
+			logrus.Errorln("Received a done signal to exit server, this should not happen")
 			logRunnerResourceStats()
 		}
 	}()
 }
 
 func startHTTPServer(ctx context.Context, config *delegate.Config) error {
-	logrus.Info("Starting HTTP server")
+	logrus.Infoln("Starting HTTP server")
 
 	serverInstance := Server{
 		Addr:     config.Server.Bind,
@@ -134,9 +134,7 @@ func startHTTPServer(ctx context.Context, config *delegate.Config) error {
 	// 	setup.PrepareSystem()
 	// }
 	// Start the HTTP server
-	err := serverInstance.Start(ctx)
-
-	return err
+	return serverInstance.Start(ctx)
 }
 
 func Register(app *kingpin.Application) {

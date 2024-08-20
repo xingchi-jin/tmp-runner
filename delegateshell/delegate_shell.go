@@ -36,7 +36,7 @@ func NewDelegateShell(config *delegate.Config, managerClient *client.ManagerClie
 }
 
 func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, error) {
-	logrus.Info("Registering runner")
+	logrus.Infoln("Registering runner")
 	// Register the poller with manager
 	runnerInfo, err := d.KeepAlive.Register(ctx)
 	if err != nil {
@@ -46,13 +46,13 @@ func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, 
 	return runnerInfo, nil
 }
 
-func (d *DelegateShell) Unregister(ctx context.Context, runnerInfo *heartbeat.DelegateInfo) error {
+func (d *DelegateShell) Unregister(ctx context.Context) error {
 	req := &client.UnregisterRequest{
-		ID:       runnerInfo.ID,
+		ID:       d.Info.ID,
 		NG:       true,
 		Type:     "DOCKER",
-		HostName: runnerInfo.Host,
-		IP:       runnerInfo.IP,
+		HostName: d.Info.Host,
+		IP:       d.Info.IP,
 	}
 	return d.ManagerClient.Unregister(ctx, req)
 }
@@ -72,7 +72,7 @@ func (d *DelegateShell) StartRunnerProcesses(ctx context.Context, stopChannel ch
 
 func (d *DelegateShell) sendHeartbeat(ctx context.Context) error {
 
-	logrus.Info("Starting sending heartbeat to manager...")
+	logrus.Infoln("Started sending heartbeat to manager...")
 	d.KeepAlive.Heartbeat(ctx, d.Info.ID, d.Info.IP, d.Info.Host)
 	return nil
 }

@@ -49,7 +49,7 @@ func (p *Poller) SetFilter(filter FilterFn) {
 	p.Filter = filter
 }
 
-// PollRunnerEvents Poll continually asks the task server for tasks to execute.
+// PollRunnerEvents continually asks the task server for tasks to execute.
 func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration, stopChannel chan struct{}, doneChannel chan struct{}) error {
 
 	events := make(chan *client.RunnerEvent, n)
@@ -57,7 +57,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 
 	// Task event poller
 	go func() {
-		defer close(events) // Ensure the events channel is closed when polling stops
+		defer close(events)
 		pollTimer := time.NewTimer(interval)
 		defer pollTimer.Stop()
 
@@ -65,24 +65,20 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 			pollTimer.Reset(interval)
 			select {
 			case <-ctx.Done():
-				logrus.Error("context canceled during task polling, this should not happen")
+				logrus.Errorln("context canceled during task polling, this should not happen")
 				return
 			case <-stopChannel:
-				logrus.Info("stop channel received in poller")
+				logrus.Infoln("Requesting to stop poller")
 				if !pollTimer.Stop() {
 					// If the timer was already firing, i.e. some events are already in progress, wait for it to finish
-					logrus.Info("waiting for events in progress to finish")
+					logrus.Infoln("Waiting for events in progress to finish")
 					<-pollTimer.C
 				}
-				logrus.Info("stopped task polling")
+				logrus.Infoln("Stopped task polling")
 				return
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
 				tasks, err := p.Client.GetRunnerEvents(taskEventsCtx, id)
-				// TODO rm after debug if block
-				if len(tasks.RunnerEvents) > 0 {
-					logrus.Infof("rrrrrreceived %d tasks", len(tasks.RunnerEvents))
-				}
 
 				if err != nil {
 					logrus.WithError(err).Errorf("could not query for task events")
@@ -94,7 +90,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 					case events <- e:
 						// Event successfully sent to the channel
 					case <-ctx.Done():
-						logrus.Info("context canceled during event processing, this should not happen")
+						logrus.Errorln("context canceled during event processing, this should not happen")
 						return
 					}
 				}
