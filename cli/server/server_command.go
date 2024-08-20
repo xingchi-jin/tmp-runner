@@ -12,7 +12,7 @@ import (
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger/runnerlogs"
-	"github.com/joho/godotenv"
+	"github.com/harness/godotenv/v3"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
