@@ -17,10 +17,10 @@ import (
 	"github.com/harness/runner/router"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
 	"os"
 	"os/signal"
-	"sync"
 	"time"
 )
 
@@ -73,34 +73,34 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	logrus.Info("Runner registered", runnerInfo)
 
-	var wg sync.WaitGroup
+	var g errgroup.Group
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	g.Go(func() error {
 		pollForEvents(ctx, &loadedConfig, runnerInfo, managerClient)
-	}()
+		return nil
+	})
 
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	g.Go(func() error {
 		c.sendHeartbeat(ctx)
-	}()
+		return nil
+	})
 
-	// starts the http server.
-	wg.Add(1)
-	go func() {
-		defer wg.Done()
+	g.Go(func() error {
 		if err := startHTTPServer(ctx, &loadedConfig); err != nil {
 			if errors.Is(err, context.Canceled) {
 				logrus.Infoln("Program gracefully terminated")
 			} else {
 				logrus.Errorf("Program terminated with error: %s", err)
 			}
+			return err
 		}
-	}()
+		return nil
+	})
 
-	wg.Wait()
+	if err := g.Wait(); err != nil {
+		logrus.WithError(err).Errorln("One or more processes failed")
+		return err
+	}
 
 	// TODO cleanup
 	err = c.unregisterRunner(ctx, runnerInfo, managerClient)
