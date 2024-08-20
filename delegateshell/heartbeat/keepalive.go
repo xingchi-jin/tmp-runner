@@ -115,8 +115,11 @@ func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
 				req.LastHeartbeat = time.Now().UnixMilli()
 				heartbeatCtx, cancelFn := context.WithTimeout(ctx, heartbeatTimeout)
 				err := p.Client.Heartbeat(heartbeatCtx, req)
-				if err != nil {
+				if err != nil && !errors.Is(err, context.Canceled) {
 					logrus.WithError(err).Errorf("could not send heartbeat")
+				} else {
+					// TODO rm after debug else block
+					logrus.Info("heartbeat sent")
 				}
 				cancelFn()
 			}

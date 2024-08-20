@@ -19,6 +19,7 @@ import (
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"net/http"
 	"os"
 	"os/signal"
 	"time"
@@ -103,6 +104,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		logrus.WithError(err).Errorln("One or more processes failed")
 		return err
 	}
+	logrus.Info("All runner processes terminated")
 
 	// TODO create cleanup context
 	err = c.unregisterRunner(context.Background(), runnerInfo, managerClient)
@@ -166,7 +168,7 @@ func startHTTPServer(ctx context.Context, config *delegate.Config) error {
 	// }
 	// Start the HTTP server
 	err := serverInstance.Start(ctx)
-	if errors.Is(err, context.Canceled) {
+	if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
 		return nil
 	}
 

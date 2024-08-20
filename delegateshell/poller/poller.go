@@ -74,11 +74,16 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 					logrus.Info("waiting for events in progress to finish")
 					<-pollTimer.C
 				}
-				logrus.Info("stopping task polling")
+				logrus.Info("stopped task polling")
 				return
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
 				tasks, err := p.Client.GetRunnerEvents(taskEventsCtx, id)
+				// TODO rm after debug if block
+				if len(tasks.RunnerEvents) > 0 {
+					logrus.Infof("rrrrrreceived %d tasks", len(tasks.RunnerEvents))
+				}
+
 				if err != nil {
 					logrus.WithError(err).Errorf("could not query for task events")
 				}
