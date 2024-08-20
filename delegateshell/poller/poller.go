@@ -50,7 +50,7 @@ func (p *Poller) SetFilter(filter FilterFn) {
 }
 
 // PollRunnerEvents Poll continually asks the task server for tasks to execute.
-func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
+func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration, stopChannel chan struct{}, doneChannel chan struct{}) error {
 
 	events := make(chan *client.RunnerEvent, n)
 	var wg sync.WaitGroup
@@ -65,7 +65,16 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 			pollTimer.Reset(interval)
 			select {
 			case <-ctx.Done():
-				logrus.Error("context canceled, stopping task polling")
+				logrus.Error("context canceled during task polling, this should not happen")
+				return
+			case <-stopChannel:
+				logrus.Info("stop channel received in poller")
+				if !pollTimer.Stop() {
+					// If the timer was already firing, i.e. some events are already in progress, wait for it to finish
+					logrus.Info("waiting for events in progress to finish")
+					<-pollTimer.C
+				}
+				logrus.Info("stopping task polling")
 				return
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
@@ -80,10 +89,8 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 					case events <- e:
 						// Event successfully sent to the channel
 					case <-ctx.Done():
-						logrus.Info("context canceled during event processing")
-						// Context canceled, but let the loop exit naturally so that all acquired events are processed
+						logrus.Info("context canceled during event processing, this should not happen")
 						return
-						// TODO check if this causes premature return without processing all the events
 					}
 				}
 			}
@@ -104,6 +111,9 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 	}
 	logrus.Infof("initialized %d threads successfully and starting polling for tasks", n)
 	wg.Wait()
+
+	// After all tasks are processed, notify completion
+	close(doneChannel)
 	return nil
 }
 

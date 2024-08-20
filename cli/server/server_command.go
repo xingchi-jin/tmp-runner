@@ -52,8 +52,10 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	// trap the os signal to gracefully shutdown the http server.
 	s := make(chan os.Signal, 1)
+	stopChannel := make(chan struct{})
+	doneChannel := make(chan struct{})
 	signal.Notify(s, os.Interrupt)
-	handleOSSignals(ctx, s, cancel)
+	handleOSSignals(ctx, s, cancel, stopChannel, doneChannel)
 	defer signal.Stop(s)
 
 	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
@@ -76,7 +78,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	var g errgroup.Group
 
 	g.Go(func() error {
-		pollForEvents(ctx, &loadedConfig, runnerInfo, managerClient)
+		pollForEvents(ctx, &loadedConfig, runnerInfo, managerClient, stopChannel, doneChannel)
 		return nil
 	})
 
@@ -102,8 +104,8 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		return err
 	}
 
-	// TODO cleanup
-	err = c.unregisterRunner(ctx, runnerInfo, managerClient)
+	// TODO create cleanup context
+	err = c.unregisterRunner(context.Background(), runnerInfo, managerClient)
 	if err != nil {
 		logrus.Errorf("Error stopping polling tasks from Harness:  %s", err)
 	}
@@ -111,12 +113,12 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	return err
 }
 
-func pollForEvents(ctx context.Context, c *delegate.Config, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) {
+func pollForEvents(ctx context.Context, c *delegate.Config, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient, stopChannel chan struct{}, doneChannel chan struct{}) {
 	// Start polling for bijou events
 	eventsServer := poller.New(managerClient, router.NewRouter(delegate.GetTaskContext(c, runnerInfo.ID)), c.Delegate.TaskStatusV2)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
-	if err := eventsServer.PollRunnerEvents(ctx, 3, runnerInfo.ID, time.Second*10); err != nil {
+	if err := eventsServer.PollRunnerEvents(ctx, 3, runnerInfo.ID, time.Second*10, stopChannel, doneChannel); err != nil {
 		logrus.WithError(err).Errorln("Error when polling task events")
 	}
 }
@@ -126,12 +128,16 @@ func register(ctx context.Context, config *delegate.Config, managerClient *clien
 	return delegateshell.Start(ctx, config, managerClient)
 }
 
-func handleOSSignals(ctx context.Context, s chan os.Signal, cancel context.CancelFunc) {
+func handleOSSignals(ctx context.Context, s chan os.Signal, cancel context.CancelFunc, stopChannel chan struct{}, doneChannel chan struct{}) {
 	go func() {
 		select {
 		case val := <-s:
 			logrus.Infof("received OS Signal to exit server: %s", val)
 			logRunnerResourceStats()
+			close(stopChannel) // Notify poller to stop acquiring new events
+			logrus.Info("Notified poller to stop acquiring new tasks")
+			<-doneChannel // Wait for all tasks to be processed
+			logrus.Info("All tasks are completed, stopping task processor...")
 			cancel()
 		case <-ctx.Done():
 			logrus.Infoln("received a done signal to exit server")
