@@ -49,11 +49,11 @@ func (p *Poller) SetFilter(filter FilterFn) {
 	p.Filter = filter
 }
 
-// Poll continually asks the task server for tasks to execute.
+// PollRunnerEvents Poll continually asks the task server for tasks to execute.
 func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
 
 	events := make(chan *client.RunnerEvent, n)
-	//var wg sync.WaitGroup
+	var wg sync.WaitGroup
 
 	// Task event poller
 	go func() {
@@ -83,6 +83,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 						logrus.Info("context canceled during event processing")
 						// Context canceled, but let the loop exit naturally so that all acquired events are processed
 						return
+						// TODO check if this causes premature return without processing all the events
 					}
 				}
 			}
@@ -90,9 +91,9 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 	}()
 	// Task event processor. Start n threads to process events from the channel
 	for i := 0; i < n; i++ {
-		//wg.Add(1)
+		wg.Add(1)
 		go func(i int) {
-			//defer wg.Done()
+			defer wg.Done()
 			for acquiredTask := range events { // Read from events channel until it's closed
 				err := p.process(ctx, id, *acquiredTask)
 				if err != nil {
@@ -102,7 +103,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 		}(i)
 	}
 	logrus.Infof("initialized %d threads successfully and starting polling for tasks", n)
-	//wg.Wait()
+	wg.Wait()
 	return nil
 }
 

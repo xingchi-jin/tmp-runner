@@ -17,7 +17,7 @@ type Client interface {
 	// Heartbeat pings the task server to let it know that the runner is still alive
 	Heartbeat(ctx context.Context, r *RegisterRequest) error
 
-	// GetTaskEvents gets a list of pending tasks that need to be executed for this runner
+	// GetRunnerEvents gets a list of pending tasks that need to be executed for this runner
 	GetRunnerEvents(ctx context.Context, delegateID string) (*RunnerEventsResponse, error)
 
 	// Acquire tells the task server that the runner is ready to execute a task ID

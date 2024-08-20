@@ -8,17 +8,20 @@ package server
 import (
 	"context"
 	"errors"
-	"github.com/harness/runner/delegateshell/client"
-	"github.com/harness/runner/delegateshell/heartbeat"
-	"os"
-	"os/signal"
-
 	"github.com/harness/runner/delegateshell"
+	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
+	"github.com/harness/runner/delegateshell/heartbeat"
+	"github.com/harness/runner/delegateshell/poller"
 	"github.com/harness/runner/logger/runnerlogs"
+	"github.com/harness/runner/router"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"os"
+	"os/signal"
+	"sync"
+	"time"
 )
 
 type serverCommand struct {
@@ -44,46 +47,66 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
 
 	// trap the os signal to gracefully shutdown the http server.
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt)
 	handleOSSignals(ctx, s, cancel)
-	defer func() {
-		signal.Stop(s)
-		cancel()
-	}()
+	defer signal.Stop(s)
 
-	// Create a manager client
 	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
 
-	runnerInfo, err := startHarnessTasks(ctx, &loadedConfig, managerClient)
-	if err != nil {
-		logrus.Error("Error starting polling tasks from Harness")
-		cancel()
+	runnerInfo, err := registerRunner(ctx, &loadedConfig, managerClient)
+	if err != nil || runnerInfo == nil {
+		logrus.Errorf("Register Runner with Harness manager failed. Error: %v, RunnerInfo: %v", err, runnerInfo)
+		return err
 	}
-	// TODO create cleanup context
-	defer func(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) {
-		err := stopHarnessTasks(ctx, runnerInfo, managerClient)
-		if err != nil {
-			logrus.Errorf("Error stopping polling tasks from Harness:  %s", err)
-		}
-	}(context.Background(), runnerInfo, managerClient)
+	logrus.Info("Runner registered", runnerInfo)
+
+	var wg sync.WaitGroup
+
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		pollForEvents(ctx, &loadedConfig, runnerInfo, managerClient)
+	}()
 
 	// starts the http server.
-	if err := startHTTPServer(ctx, &loadedConfig); err != nil {
-		if errors.Is(err, context.Canceled) {
-			logrus.Infoln("Program gracefully terminated")
-			return nil
+	wg.Add(1)
+	go func() {
+		defer wg.Done()
+		if err := startHTTPServer(ctx, &loadedConfig); err != nil {
+			if errors.Is(err, context.Canceled) {
+				logrus.Infoln("Program gracefully terminated")
+			} else {
+				logrus.Errorf("Program terminated with error: %s", err)
+			}
 		}
-		logrus.Errorf("Program terminated with error: %s", err)
-		return err
+	}()
+
+	wg.Wait()
+
+	// TODO create cleanup context
+	err = unregisterRunner(context.Background(), runnerInfo, managerClient)
+	if err != nil {
+		logrus.Errorf("Error stopping polling tasks from Harness:  %s", err)
 	}
 
 	return err
 }
 
-func startHarnessTasks(ctx context.Context, config *delegate.Config, managerClient *client.ManagerClient) (*heartbeat.DelegateInfo, error) {
+func pollForEvents(ctx context.Context, c *delegate.Config, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) {
+	// Start polling for bijou events
+	eventsServer := poller.New(managerClient, router.NewRouter(delegate.GetTaskContext(c, runnerInfo.ID)), c.Delegate.TaskStatusV2)
+	// TODO: we don't need hb if we poll for task.
+	// TODO: instead of hardcode 3, figure out better thread management
+	if err := eventsServer.PollRunnerEvents(ctx, 3, runnerInfo.ID, time.Second*10); err != nil {
+		logrus.WithError(err).Errorln("Error when polling task events")
+	}
+}
+
+func registerRunner(ctx context.Context, config *delegate.Config, managerClient *client.ManagerClient) (*heartbeat.DelegateInfo, error) {
 	logrus.Info("Registering")
 	runnerInfo, err := delegateshell.Start(ctx, config, managerClient)
 	return runnerInfo, err
@@ -130,7 +153,7 @@ func startHTTPServer(ctx context.Context, config *delegate.Config) error {
 	return err
 }
 
-func stopHarnessTasks(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) error {
+func unregisterRunner(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) error {
 	logrus.Info("Unregistering")
 	return delegateshell.Shutdown(ctx, runnerInfo, managerClient)
 }
