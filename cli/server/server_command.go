@@ -11,10 +11,7 @@ import (
 	"github.com/harness/runner/delegateshell"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
-	"github.com/harness/runner/delegateshell/heartbeat"
-	"github.com/harness/runner/delegateshell/poller"
 	"github.com/harness/runner/logger/runnerlogs"
-	"github.com/harness/runner/router"
 	"github.com/joho/godotenv"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
@@ -22,12 +19,10 @@ import (
 	"net/http"
 	"os"
 	"os/signal"
-	"time"
 )
 
 type serverCommand struct {
-	envFile       string
-	delegateshell *delegateshell.DelegateShell
+	envFile string
 }
 
 func (c *serverCommand) run(*kingpin.ParseContext) error {
@@ -51,7 +46,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// trap the os signal to gracefully shutdown the http server.
+	// trap the os signal to gracefully shut down the http server.
 	s := make(chan os.Signal, 1)
 	stopChannel := make(chan struct{})
 	doneChannel := make(chan struct{})
@@ -60,37 +55,24 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	defer signal.Stop(s)
 
 	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
+	delegateShell := delegateshell.NewDelegateShell(&loadedConfig, managerClient)
 
-	delegateShell, err := register(ctx, &loadedConfig, managerClient)
+	runnerInfo, err := delegateShell.Register(ctx)
 	if err != nil {
-		logrus.Errorf("Register Runner with Harness manager failed. Error: %v", err)
+		logrus.Errorf("Registering Runner with Harness manager failed. Error: %v", err)
 		return err
 	}
-	if delegateShell == nil || delegateShell.DelegateInfo == nil {
-		logrus.Error("Register Runner with Harness manager failed. RunnerInfo is nil")
-		return err
-	}
-
-	c.delegateshell = delegateShell
-	runnerInfo := delegateShell.DelegateInfo
-
 	logrus.Info("Runner registered", runnerInfo)
 
 	var g errgroup.Group
 
 	g.Go(func() error {
-		pollForEvents(ctx, &loadedConfig, runnerInfo, managerClient, stopChannel, doneChannel)
-		return nil
-	})
-
-	g.Go(func() error {
-		c.sendHeartbeat(ctx)
-		return nil
+		return delegateShell.StartRunnerProcesses(ctx, stopChannel, doneChannel)
 	})
 
 	g.Go(func() error {
 		if err := startHTTPServer(ctx, &loadedConfig); err != nil {
-			if errors.Is(err, context.Canceled) {
+			if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
 				logrus.Infoln("Program gracefully terminated")
 			} else {
 				logrus.Errorf("Program terminated with error: %s", err)
@@ -104,45 +86,30 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		logrus.WithError(err).Errorln("One or more processes failed")
 		return err
 	}
-	logrus.Info("All runner processes terminated")
+	logrus.Info("All runner processes terminated, unregistering runner...")
 
 	// TODO create cleanup context
-	err = c.unregisterRunner(context.Background(), runnerInfo, managerClient)
+	err = delegateShell.Unregister(context.Background(), runnerInfo)
 	if err != nil {
-		logrus.Errorf("Error stopping polling tasks from Harness:  %s", err)
+		logrus.Errorf("Error while unregistering runner:  %v", err)
 	}
 
 	return err
-}
-
-func pollForEvents(ctx context.Context, c *delegate.Config, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient, stopChannel chan struct{}, doneChannel chan struct{}) {
-	// Start polling for bijou events
-	eventsServer := poller.New(managerClient, router.NewRouter(delegate.GetTaskContext(c, runnerInfo.ID)), c.Delegate.TaskStatusV2)
-	// TODO: we don't need hb if we poll for task.
-	// TODO: instead of hardcode 3, figure out better thread management
-	if err := eventsServer.PollRunnerEvents(ctx, 3, runnerInfo.ID, time.Second*10, stopChannel, doneChannel); err != nil {
-		logrus.WithError(err).Errorln("Error when polling task events")
-	}
-}
-
-func register(ctx context.Context, config *delegate.Config, managerClient *client.ManagerClient) (*delegateshell.DelegateShell, error) {
-	logrus.Info("Registering")
-	return delegateshell.Start(ctx, config, managerClient)
 }
 
 func handleOSSignals(ctx context.Context, s chan os.Signal, cancel context.CancelFunc, stopChannel chan struct{}, doneChannel chan struct{}) {
 	go func() {
 		select {
 		case val := <-s:
-			logrus.Infof("received OS Signal to exit server: %s", val)
+			logrus.Infof("Received OS Signal to exit server: %s", val)
 			logRunnerResourceStats()
 			close(stopChannel) // Notify poller to stop acquiring new events
-			logrus.Info("Notified poller to stop acquiring new tasks")
+			logrus.Info("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
 			<-doneChannel // Wait for all tasks to be processed
 			logrus.Info("All tasks are completed, stopping task processor...")
 			cancel()
 		case <-ctx.Done():
-			logrus.Infoln("received a done signal to exit server")
+			logrus.Infoln("Received a done signal to exit server")
 			logRunnerResourceStats()
 		}
 	}()
@@ -168,16 +135,8 @@ func startHTTPServer(ctx context.Context, config *delegate.Config) error {
 	// }
 	// Start the HTTP server
 	err := serverInstance.Start(ctx)
-	if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
-		return nil
-	}
 
 	return err
-}
-
-func (c *serverCommand) unregisterRunner(ctx context.Context, runnerInfo *heartbeat.DelegateInfo, managerClient *client.ManagerClient) error {
-	logrus.Info("Unregistering")
-	return c.delegateshell.Unregister(ctx, runnerInfo, managerClient)
 }
 
 func Register(app *kingpin.Application) {
@@ -189,9 +148,4 @@ func Register(app *kingpin.Application) {
 	cmd.Flag("env-file", "environment file").
 		Default(".env").
 		StringVar(&c.envFile)
-}
-
-func (c *serverCommand) sendHeartbeat(ctx context.Context) {
-	logrus.Info("Started sending heartbeat to manager")
-	c.delegateshell.SendHeartbeat(ctx)
 }

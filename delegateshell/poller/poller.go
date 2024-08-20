@@ -114,7 +114,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 			}
 		}(i)
 	}
-	logrus.Infof("initialized %d threads successfully and starting polling for tasks", n)
+	logrus.Infof("Initialized %d threads successfully and starting polling for tasks", n)
 	wg.Wait()
 
 	// After all tasks are processed, notify completion
