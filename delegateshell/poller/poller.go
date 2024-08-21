@@ -68,13 +68,20 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 				logrus.Errorln("context canceled during task polling, this should not happen")
 				return
 			case <-stopChannel:
-				logrus.Infoln("Requesting to stop poller")
+				logrus.Infoln("Request received to stop the poller")
+				// Note: The goal here is to stop the poller from acquiring new tasks,
+				// but we want to allow any ongoing tasks that were already in progress to complete.
 				if !pollTimer.Stop() {
-					// If the timer was already firing, i.e. some events are already in progress, wait for it to finish
-					logrus.Infoln("Waiting for events in progress to finish")
+					// We attempt to stop the timer. If `pollTimer.Stop()` returns `false`,
+					// it means the timer was either already triggered or is currently firing.
+					// In this case, there might be an event pending on the channel `pollTimer.C`.
+					// To ensure that no timer events are left unprocessed before stopping the poller,
+					// we need to drain the channel by waiting to receive the event from `pollTimer.C`
+
+					logrus.Infoln("Waiting for any ongoing events to complete")
 					<-pollTimer.C
 				}
-				logrus.Infoln("Stopped task polling")
+				logrus.Infoln("Task polling has been stopped")
 				return
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
