@@ -64,6 +64,14 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	}
 	logrus.Infoln("Runner registered", runnerInfo)
 
+	defer func() {
+		logrus.Infoln("Unregistering runner...")
+		err = delegateShell.Unregister(context.Background())
+		if err != nil {
+			logrus.Errorf("Error while unregistering runner: %v", err)
+		}
+	}()
+
 	var g errgroup.Group
 
 	g.Go(func() error {
@@ -86,14 +94,8 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		logrus.WithError(err).Errorln("One or more runner processes failed")
 		return err
 	}
-	logrus.Infoln("All runner processes terminated, unregistering runner...")
 
-	// TODO create cleanup context and unregister irrespective of processes failing
-	err = delegateShell.Unregister(context.Background())
-	if err != nil {
-		logrus.Errorf("Error while unregistering runner:  %v", err)
-	}
-
+	logrus.Infoln("All runner processes terminated")
 	return err
 }
 
