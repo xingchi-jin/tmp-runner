@@ -88,6 +88,11 @@ components:
           type: string
         params:
           type: object
+          properties:
+            binary_data:
+              type: string
+              format: byte
+              description: Base64-encoded binary data
     Tasks:
       type: object
       properties:
