@@ -25,6 +25,7 @@ type (
 	// represents a daemon set for the in-memory map of daemon sets
 	DaemonSet struct {
 		DaemonSetId string
+		Type        string
 		Config      DaemonSetOperationalConfig
 		Execution   *exec.Cmd
 		Port        int
@@ -51,8 +52,8 @@ type (
 
 	DaemonSetUpsertResponse struct {
 		DaemonSetId string `json:"daemon_set_id"`
-		Error       string `json:"error_message,omitempty"`
 		State       State  `json:"state,omitempty"`
+		Error       string `json:"error_message,omitempty"`
 	}
 
 	// request for runner to assign a new daemon task to a daemon set
@@ -64,8 +65,8 @@ type (
 
 	DaemonTaskAssignResponse struct {
 		DaemonTaskId string `json:"daemon_task_id"`
-		Error        string `json:"error_message,omitempty"`
 		State        State  `json:"state,omitempty"`
+		Error        string `json:"error_message,omitempty"`
 	}
 
 	// request for runner to remove a daemon task from a daemon set
@@ -74,7 +75,11 @@ type (
 		Type         string `json:"type"`
 	}
 
-	DaemonTaskRemoveResponse struct{}
+	DaemonTaskRemoveResponse struct {
+		DaemonTaskId string `json:"daemon_task_id"`
+		State        State  `json:"state,omitempty"`
+		Error        string `json:"error_message,omitempty"`
+	}
 
 	DaemonTaskParams struct {
 		Base64Data []byte `json:"binary_data"`
