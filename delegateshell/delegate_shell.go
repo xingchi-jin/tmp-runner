@@ -22,6 +22,7 @@ type DelegateShell struct {
 	Config        *delegate.Config
 	ManagerClient *client.ManagerClient
 	KeepAlive     *heartbeat.KeepAlive
+	Poller        *poller.Poller
 }
 
 func NewDelegateShell(config *delegate.Config, managerClient *client.ManagerClient) *DelegateShell {
@@ -57,11 +58,11 @@ func (d *DelegateShell) Unregister(ctx context.Context) error {
 	return d.ManagerClient.Unregister(ctx, req)
 }
 
-func (d *DelegateShell) StartRunnerProcesses(ctx context.Context, stopChannel chan struct{}, doneChannel chan struct{}) error {
+func (d *DelegateShell) StartRunnerProcesses(ctx context.Context) error {
 	var rg errgroup.Group
 
 	rg.Go(func() error {
-		return d.startPoller(ctx, stopChannel, doneChannel)
+		return d.startPoller(ctx)
 	})
 
 	rg.Go(func() error {
@@ -71,20 +72,23 @@ func (d *DelegateShell) StartRunnerProcesses(ctx context.Context, stopChannel ch
 }
 
 func (d *DelegateShell) sendHeartbeat(ctx context.Context) error {
-
 	logrus.Infoln("Started sending heartbeat to manager...")
 	d.KeepAlive.Heartbeat(ctx, d.Info.ID, d.Info.IP, d.Info.Host)
 	return nil
 }
 
-func (d *DelegateShell) startPoller(ctx context.Context, stopChannel chan struct{}, doneChannel chan struct{}) error {
+func (d *DelegateShell) startPoller(ctx context.Context) error {
 	// Start polling for bijou events
-	eventsServer := poller.New(d.ManagerClient, router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID)), d.Config.Delegate.TaskStatusV2)
+	d.Poller = poller.New(d.ManagerClient, router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID)), d.Config.Delegate.TaskStatusV2)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
-	if err := eventsServer.PollRunnerEvents(ctx, 3, d.Info.ID, time.Second*10, stopChannel, doneChannel); err != nil {
+	if err := d.Poller.PollRunnerEvents(ctx, 3, d.Info.ID, time.Second*10); err != nil {
 		logrus.WithError(err).Errorln("Error when polling task events")
 		return err
 	}
 	return nil
+}
+
+func (d *DelegateShell) Shutdown() {
+	d.Poller.Shutdown()
 }

@@ -46,16 +46,25 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	// trap the os signal to gracefully shut down the http server.
-	s := make(chan os.Signal, 1)
-	stopChannel := make(chan struct{})
-	doneChannel := make(chan struct{})
-	signal.Notify(s, os.Interrupt)
-	handleOSSignals(ctx, s, cancel, stopChannel, doneChannel)
-	defer signal.Stop(s)
-
 	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
 	delegateShell := delegateshell.NewDelegateShell(&loadedConfig, managerClient)
+
+	// trap the os signal to gracefully shut down the http server.
+	s := make(chan os.Signal, 1)
+	signal.Notify(s, os.Interrupt)
+	go func() {
+		select {
+		case val := <-s:
+			logrus.Infof("Received OS Signal to exit server: %s", val)
+			logRunnerResourceStats()
+			delegateShell.Shutdown()
+			cancel()
+		case <-ctx.Done():
+			logrus.Errorln("Received a done signal to exit server, this should not happen")
+			logRunnerResourceStats()
+		}
+	}()
+	defer signal.Stop(s)
 
 	runnerInfo, err := delegateShell.Register(ctx)
 	if err != nil {
@@ -75,7 +84,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	var g errgroup.Group
 
 	g.Go(func() error {
-		return delegateShell.StartRunnerProcesses(ctx, stopChannel, doneChannel)
+		return delegateShell.StartRunnerProcesses(ctx)
 	})
 
 	g.Go(func() error {
@@ -97,24 +106,6 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	logrus.Infoln("All runner processes terminated")
 	return err
-}
-
-func handleOSSignals(ctx context.Context, s chan os.Signal, cancel context.CancelFunc, stopChannel chan struct{}, doneChannel chan struct{}) {
-	go func() {
-		select {
-		case val := <-s:
-			logrus.Infof("Received OS Signal to exit server: %s", val)
-			logRunnerResourceStats()
-			close(stopChannel) // Notify poller to stop acquiring new tasks
-			logrus.Infoln("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
-			<-doneChannel // Wait for all tasks to be processed
-			logrus.Infoln("All tasks are completed, stopping task processor...")
-			cancel()
-		case <-ctx.Done():
-			logrus.Errorln("Received a done signal to exit server, this should not happen")
-			logRunnerResourceStats()
-		}
-	}()
 }
 
 func startHTTPServer(ctx context.Context, config *delegate.Config) error {

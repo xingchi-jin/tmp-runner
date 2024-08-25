@@ -29,6 +29,8 @@ type Poller struct {
 	Client      client.Client
 	router      *task.Router
 	Filter      FilterFn
+	stopChannel chan struct{}
+	doneChannel chan struct{}
 	// The Harness manager allows two task acquire calls with the same delegate ID to go through (by design).
 	// We need to make sure two different threads do not acquire the same task.
 	// This map makes sure Acquire() is called only once per task ID. The mapping is removed once the status
@@ -37,12 +39,15 @@ type Poller struct {
 }
 
 func New(c client.Client, router *task.Router, useV2 bool) *Poller {
-	return &Poller{
+	p := &Poller{
 		Client:      c,
 		router:      router,
 		m:           sync.Map{},
 		UseV2Status: useV2,
 	}
+	p.stopChannel = make(chan struct{})
+	p.doneChannel = make(chan struct{})
+	return p
 }
 
 func (p *Poller) SetFilter(filter FilterFn) {
@@ -50,7 +55,7 @@ func (p *Poller) SetFilter(filter FilterFn) {
 }
 
 // PollRunnerEvents continually asks the task server for tasks to execute.
-func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration, stopChannel chan struct{}, doneChannel chan struct{}) error {
+func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
 
 	events := make(chan *client.RunnerEvent, n)
 	var wg sync.WaitGroup
@@ -67,7 +72,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 			case <-ctx.Done():
 				logrus.Errorln("context canceled during task polling, this should not happen")
 				return
-			case <-stopChannel:
+			case <-p.stopChannel:
 				logrus.Infoln("Request received to stop the poller")
 				// Note: The goal here is to stop the poller from acquiring new tasks,
 				// but we want to allow any ongoing tasks that were already in progress to complete.
@@ -86,7 +91,6 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
 				tasks, err := p.Client.GetRunnerEvents(taskEventsCtx, id)
-
 				if err != nil {
 					logrus.WithError(err).Errorf("could not query for task events")
 				}
@@ -119,9 +123,8 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 	}
 	logrus.Infof("Initialized %d threads successfully and starting polling for tasks", n)
 	wg.Wait()
-
 	// After all tasks are processed, notify completion
-	close(doneChannel)
+	close(p.doneChannel)
 	return nil
 }
 
@@ -174,4 +177,19 @@ func (p *Poller) process(ctx context.Context, delegateID string, rv client.Runne
 		}
 	}
 	return nil
+}
+
+func (p *Poller) Shutdown() {
+	p.stopPollingForTasks()
+	logrus.Infoln("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
+	p.waitForTasks()
+	logrus.Infoln("All tasks are completed, stopping task processor...")
+}
+
+func (p *Poller) stopPollingForTasks() {
+	close(p.stopChannel) // Notify poller to stop acquiring new tasks
+}
+
+func (p *Poller) waitForTasks() {
+	<-p.doneChannel // Wait for all tasks to be processed
 }
