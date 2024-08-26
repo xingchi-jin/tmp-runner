@@ -12,7 +12,7 @@ require (
 	github.com/drone/go-task v0.0.0-20240523164958-666e94a56881
 	github.com/google/uuid v1.6.0
 	github.com/harness/godotenv/v3 v3.0.0
-	github.com/harness/lite-engine v1.0.0-rc.137.0.20240429154243-ca535efeeb31
+	github.com/harness/lite-engine v1.0.0-rc.137.0.20240823100307-59d20158489b
 	github.com/hashicorp/vault/api v1.12.2
 	github.com/icrowley/fake v0.0.0-20221112152111-d7b7e2276db2
 	github.com/kelseyhightower/envconfig v1.4.0
@@ -43,6 +43,7 @@ require (
 	github.com/drone/envsubst v1.0.3 // indirect
 	github.com/drone/runner-go v1.12.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
+	github.com/go-chi/chi/v5 v5.0.8 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
@@ -51,7 +52,7 @@ require (
 	github.com/golang/protobuf v1.5.3 // indirect
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/harness/godotenv/v2 v2.0.0 // indirect
-	github.com/harness/ti-client v0.0.0-20240412182020-48619e4621e9 // indirect
+	github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
@@ -84,7 +85,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/ulikunitz/xz v0.5.11 // indirect
-	github.com/wings-software/dlite v1.0.0-rc.9 // indirect
+	github.com/wings-software/dlite v1.0.0-rc.11 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	golang.org/x/crypto v0.19.0 // indirect
