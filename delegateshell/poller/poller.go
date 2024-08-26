@@ -29,6 +29,8 @@ type Poller struct {
 	Client      client.Client
 	router      *task.Router
 	Filter      FilterFn
+	stopChannel chan struct{}
+	doneChannel chan struct{}
 	// The Harness manager allows two task acquire calls with the same delegate ID to go through (by design).
 	// We need to make sure two different threads do not acquire the same task.
 	// This map makes sure Acquire() is called only once per task ID. The mapping is removed once the status
@@ -37,30 +39,54 @@ type Poller struct {
 }
 
 func New(c client.Client, router *task.Router, useV2 bool) *Poller {
-	return &Poller{
+	p := &Poller{
 		Client:      c,
 		router:      router,
 		m:           sync.Map{},
 		UseV2Status: useV2,
 	}
+	p.stopChannel = make(chan struct{})
+	p.doneChannel = make(chan struct{})
+	return p
 }
 
 func (p *Poller) SetFilter(filter FilterFn) {
 	p.Filter = filter
 }
 
-// Poll continually asks the task server for tasks to execute.
+// PollRunnerEvents continually asks the task server for tasks to execute.
 func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
-	//	var wg sync.WaitGroup
+
 	events := make(chan *client.RunnerEvent, n)
+	var wg sync.WaitGroup
+
 	// Task event poller
 	go func() {
+		defer close(events)
 		pollTimer := time.NewTimer(interval)
+		defer pollTimer.Stop()
+
 		for {
 			pollTimer.Reset(interval)
 			select {
 			case <-ctx.Done():
-				logrus.Error("context canceled")
+				logrus.Errorln("context canceled during task polling, this should not happen")
+				return
+			case <-p.stopChannel:
+				logrus.Infoln("Request received to stop the poller")
+				// Note: The goal here is to stop the poller from acquiring new tasks,
+				// but we want to allow any ongoing tasks that were already in progress to complete.
+				if !pollTimer.Stop() {
+					// We attempt to stop the timer. If `pollTimer.Stop()` returns `false`,
+					// it means the timer was either already triggered or is currently firing.
+					// In this case, there might be an event pending on the channel `pollTimer.C`.
+					// To ensure that no timer events are left unprocessed before stopping the poller,
+					// we need to drain the channel by waiting to receive the event from `pollTimer.C`
+
+					logrus.Infoln("Waiting for any ongoing events to complete")
+					<-pollTimer.C
+				}
+				logrus.Infoln("Task polling has been stopped")
 				return
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
@@ -71,28 +97,34 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 				cancelFn()
 
 				for _, e := range tasks.RunnerEvents {
-					events <- e
+					select {
+					case events <- e:
+						// Event successfully sent to the channel
+					case <-ctx.Done():
+						logrus.Errorln("context canceled during event processing, this should not happen")
+						return
+					}
 				}
 			}
 		}
 	}()
 	// Task event processor. Start n threads to process events from the channel
 	for i := 0; i < n; i++ {
+		wg.Add(1)
 		go func(i int) {
-			for {
-				select {
-				case <-ctx.Done():
-					return
-				case task := <-events:
-					err := p.process(ctx, id, *task)
-					if err != nil {
-						logrus.WithError(err).WithField("task_id", task.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
-					}
+			defer wg.Done()
+			for acquiredTask := range events { // Read from events channel until it's closed
+				err := p.process(ctx, id, *acquiredTask)
+				if err != nil {
+					logrus.WithError(err).WithField("task_id", acquiredTask.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
 				}
 			}
 		}(i)
 	}
-	logrus.Infof("initialized %d threads successfully and starting polling for tasks", n)
+	logrus.Infof("Initialized %d threads successfully and starting polling for tasks", n)
+	wg.Wait()
+	// After all tasks are processed, notify completion
+	close(p.doneChannel)
 	return nil
 }
 
@@ -145,4 +177,19 @@ func (p *Poller) process(ctx context.Context, delegateID string, rv client.Runne
 		}
 	}
 	return nil
+}
+
+func (p *Poller) Shutdown() {
+	p.stopPollingForTasks()
+	logrus.Infoln("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
+	p.waitForTasks()
+	logrus.Infoln("All tasks are completed, stopping task processor...")
+}
+
+func (p *Poller) stopPollingForTasks() {
+	close(p.stopChannel) // Notify poller to stop acquiring new tasks
+}
+
+func (p *Poller) waitForTasks() {
+	<-p.doneChannel // Wait for all tasks to be processed
 }

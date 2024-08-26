@@ -18,12 +18,12 @@ type Config struct {
 	Trace bool `envconfig:"TRACE"`
 
 	Delegate struct {
-		AccountID       string `envconfig:"ACCOUNT_ID"`
-		DelegateToken   string `envconfig:"DELEGATE_TOKEN"`
-		Tags            string `envconfig:"DELEGATE_TAGS"`
-		ManagerEndpoint string `envconfig:"MANAGER_HOST_AND_PORT"`
-		Name            string `envconfig:"DELEGATE_NAME"`
-		TaskStatusV2    bool   `envconfig:"DELEGATE_TASK_STATUS_V2"`
+		AccountID              string `envconfig:"ACCOUNT_ID"`
+		DelegateToken          string `envconfig:"DELEGATE_TOKEN"`
+		Tags                   string `envconfig:"DELEGATE_TAGS"`
+		ManagerEndpoint        string `envconfig:"MANAGER_HOST_AND_PORT"`
+		Name                   string `envconfig:"DELEGATE_NAME"`
+		TaskStatusV2           bool   `envconfig:"DELEGATE_TASK_STATUS_V2"`
 		DelegateTaskServiceURL string `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
 	}
 
@@ -68,9 +68,9 @@ var taskContext *TaskContext
 func GetTaskContext(config *Config, delegateId string) *TaskContext {
 	once.Do(func() {
 		taskContext = &TaskContext{
-			DelegateId: delegateId,
+			DelegateId:             delegateId,
 			DelegateTaskServiceURL: config.Delegate.DelegateTaskServiceURL,
-			SkipVerify: config.Server.Insecure,
+			SkipVerify:             config.Server.Insecure,
 		}
 	})
 	return taskContext

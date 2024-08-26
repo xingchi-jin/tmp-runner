@@ -72,7 +72,7 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 	}
 	host = "runner-" + strings.ReplaceAll(host, " ", "-")
 	ip := getOutboundIP()
-	id, err := p.register(ctx, hearbeatInterval, ip, host)
+	id, err := p.register(ctx, ip, host)
 	if err != nil {
 		logrus.WithField("ip", ip).WithField("host", host).WithError(err).Error("could not register runner")
 		return nil, err
@@ -87,7 +87,44 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 
 // Register registers the runner and runs a background thread which keeps pinging the server
 // at a period of interval. It returns the delegate ID.
-func (p *KeepAlive) register(ctx context.Context, interval time.Duration, ip, host string) (string, error) {
+func (p *KeepAlive) register(ctx context.Context, ip, host string) (string, error) {
+	req := p.getRegisterRequest("", ip, host)
+	resp, err := p.Client.Register(ctx, req)
+	if err != nil {
+		return "", errors.Wrap(err, "could not register the runner")
+	}
+	req.ID = resp.Resource.DelegateID
+	logrus.WithField("id", req.ID).WithField("host", req.HostName).
+		WithField("ip", req.IP).Info("registered delegate successfully")
+	return resp.Resource.DelegateID, nil
+}
+
+// Heartbeat starts a periodic thread in the background which continually pings the server
+func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
+	req := p.getRegisterRequest(id, ip, host)
+	go func() {
+		msgDelayTimer := time.NewTimer(hearbeatInterval)
+		defer msgDelayTimer.Stop()
+		for {
+			msgDelayTimer.Reset(hearbeatInterval)
+			select {
+			case <-ctx.Done():
+				logrus.Infoln("context canceled, stopping heartbeat")
+				return
+			case <-msgDelayTimer.C:
+				req.LastHeartbeat = time.Now().UnixMilli()
+				heartbeatCtx, cancelFn := context.WithTimeout(ctx, heartbeatTimeout)
+				err := p.Client.Heartbeat(heartbeatCtx, req)
+				if err != nil && !errors.Is(err, context.Canceled) {
+					logrus.WithError(err).Errorf("could not send heartbeat")
+				}
+				cancelFn()
+			}
+		}
+	}()
+}
+
+func (p *KeepAlive) getRegisterRequest(id, ip, host string) *client.RegisterRequest {
 	req := &client.RegisterRequest{
 		AccountID:     p.AccountID,
 		RunnerName:    p.Name,
@@ -103,39 +140,11 @@ func (p *KeepAlive) register(ctx context.Context, interval time.Duration, ip, ho
 		Version:           "v0.1",
 		HeartbeatAsObject: true,
 	}
-	resp, err := p.Client.Register(ctx, req)
-	if err != nil {
-		return "", errors.Wrap(err, "could not register the runner")
-	}
-	req.ID = resp.Resource.DelegateID
-	logrus.WithField("id", req.ID).WithField("host", req.HostName).
-		WithField("ip", req.IP).Info("registered delegate successfully")
-	p.heartbeat(ctx, req, interval)
-	return resp.Resource.DelegateID, nil
-}
 
-// heartbeat starts a periodic thread in the background which continually pings the server
-func (p *KeepAlive) heartbeat(ctx context.Context, req *client.RegisterRequest, interval time.Duration) {
-	go func() {
-		msgDelayTimer := time.NewTimer(interval)
-		defer msgDelayTimer.Stop()
-		for {
-			msgDelayTimer.Reset(interval)
-			select {
-			case <-ctx.Done():
-				logrus.Error("context canceled")
-				return
-			case <-msgDelayTimer.C:
-				req.LastHeartbeat = time.Now().UnixMilli()
-				heartbeatCtx, cancelFn := context.WithTimeout(ctx, heartbeatTimeout)
-				err := p.Client.Heartbeat(heartbeatCtx, req)
-				if err != nil {
-					logrus.WithError(err).Errorf("could not send heartbeat")
-				}
-				cancelFn()
-			}
-		}
-	}()
+	if id != "" {
+		req.ID = id
+	}
+	return req
 }
 
 // Get preferred outbound ip of this machine. It returns a fake IP in case of errors.

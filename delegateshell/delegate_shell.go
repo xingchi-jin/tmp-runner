@@ -7,38 +7,88 @@ package delegateshell
 
 import (
 	"context"
-	"time"
-
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
 	"github.com/harness/runner/router"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
+	"time"
 )
 
-func Start(ctx context.Context, config *delegate.Config) (*heartbeat.DelegateInfo, error) {
-	// Create a delegate client
-	managerClient := client.NewManagerClient(config.Delegate.ManagerEndpoint, config.Delegate.AccountID, config.Delegate.DelegateToken, config.Server.Insecure, "")
+type DelegateShell struct {
+	Info          *heartbeat.DelegateInfo
+	Config        *delegate.Config
+	ManagerClient *client.ManagerClient
+	KeepAlive     *heartbeat.KeepAlive
+	Poller        *poller.Poller
+}
+
+func NewDelegateShell(config *delegate.Config, managerClient *client.ManagerClient) *DelegateShell {
 
 	// The poller needs a client that interacts with the task management system and a router to route the tasks
 	keepAlive := heartbeat.New(config.Delegate.AccountID, config.Delegate.Name, config.GetTags(), managerClient)
-
-	// Register the poller
-	info, err := keepAlive.Register(ctx)
-	if err != nil {
-		logrus.WithError(err).Errorln("Register Runner with Harness manager failed.")
-		return info, err
+	return &DelegateShell{
+		Config:        config,
+		KeepAlive:     keepAlive,
+		ManagerClient: managerClient,
 	}
+}
 
-	logrus.Info("Runner registered", info)
+func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, error) {
+	logrus.Infoln("Registering runner")
+	// Register the poller with manager
+	runnerInfo, err := d.KeepAlive.Register(ctx)
+	if err != nil {
+		return nil, err
+	}
+	d.Info = runnerInfo
+	return runnerInfo, nil
+}
+
+func (d *DelegateShell) Unregister(ctx context.Context) error {
+	req := &client.UnregisterRequest{
+		ID:       d.Info.ID,
+		NG:       true,
+		Type:     "DOCKER",
+		HostName: d.Info.Host,
+		IP:       d.Info.IP,
+	}
+	return d.ManagerClient.Unregister(ctx, req)
+}
+
+func (d *DelegateShell) StartRunnerProcesses(ctx context.Context) error {
+	var rg errgroup.Group
+
+	rg.Go(func() error {
+		return d.startPoller(ctx)
+	})
+
+	rg.Go(func() error {
+		return d.sendHeartbeat(ctx)
+	})
+	return rg.Wait()
+}
+
+func (d *DelegateShell) sendHeartbeat(ctx context.Context) error {
+	logrus.Infoln("Started sending heartbeat to manager...")
+	d.KeepAlive.Heartbeat(ctx, d.Info.ID, d.Info.IP, d.Info.Host)
+	return nil
+}
+
+func (d *DelegateShell) startPoller(ctx context.Context) error {
 	// Start polling for bijou events
-	eventsServer := poller.New(managerClient, router.NewRouter(delegate.GetTaskContext(config, info.ID)), config.Delegate.TaskStatusV2)
+	d.Poller = poller.New(d.ManagerClient, router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID)), d.Config.Delegate.TaskStatusV2)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
-	if err = eventsServer.PollRunnerEvents(ctx, 3, info.ID, time.Second*10); err != nil {
+	if err := d.Poller.PollRunnerEvents(ctx, 3, d.Info.ID, time.Second*10); err != nil {
 		logrus.WithError(err).Errorln("Error when polling task events")
-		return info, err
+		return err
 	}
-	return info, nil
+	return nil
+}
+
+func (d *DelegateShell) Shutdown() {
+	d.Poller.Shutdown()
 }

@@ -7,15 +7,18 @@ package server
 
 import (
 	"context"
-	"os"
-	"os/signal"
-
+	"errors"
+	"github.com/harness/godotenv/v3"
 	"github.com/harness/runner/delegateshell"
+	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger/runnerlogs"
-	"github.com/harness/godotenv/v3"
 	"github.com/sirupsen/logrus"
+	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
+	"net/http"
+	"os"
+	"os/signal"
 )
 
 type serverCommand struct {
@@ -39,40 +42,81 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	runnerlogs.SetLogrus()
 
-	// create the http serverInstance.
-	serverInstance := Server{
-		Addr:     loadedConfig.Server.Bind,
-		CAFile:   loadedConfig.Server.CACertFile, // CA certificate file
-		CertFile: loadedConfig.Server.CertFile,   // Server certificate PEM file
-		KeyFile:  loadedConfig.Server.KeyFile,    // Server key file
-		Insecure: loadedConfig.Server.Insecure,   // Skip server certificate verification
-	}
-
-	// trap the os signal to gracefully shutdown the http server.
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
+	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
+	delegateShell := delegateshell.NewDelegateShell(&loadedConfig, managerClient)
+
+	// trap the os signal to gracefully shut down the http server.
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt)
-	defer func() {
-		signal.Stop(s)
-		cancel()
-	}()
 	go func() {
 		select {
 		case val := <-s:
-			logrus.Infof("received OS Signal to exit server: %s", val)
+			logrus.Infof("Received OS Signal to exit server: %s", val)
+			logRunnerResourceStats()
+			delegateShell.Shutdown()
 			cancel()
 		case <-ctx.Done():
-			logrus.Infoln("received a done signal to exit server")
+			logrus.Errorln("Received a done signal to exit server, this should not happen")
+			logRunnerResourceStats()
+		}
+	}()
+	defer signal.Stop(s)
+
+	runnerInfo, err := delegateShell.Register(ctx)
+	if err != nil {
+		logrus.Errorf("Registering Runner with Harness manager failed. Error: %v", err)
+		return err
+	}
+	logrus.Infoln("Runner registered", runnerInfo)
+
+	defer func() {
+		logrus.Infoln("Unregistering runner...")
+		err = delegateShell.Unregister(context.Background())
+		if err != nil {
+			logrus.Errorf("Error while unregistering runner: %v", err)
 		}
 	}()
 
-	logrus.Info("registering")
+	var g errgroup.Group
 
-	err = startHarnessTasks(ctx, &loadedConfig)
-	if err != nil {
-		cancel()
-		logrus.Error("Error starting polling tasks from Harness")
+	g.Go(func() error {
+		return delegateShell.StartRunnerProcesses(ctx)
+	})
+
+	g.Go(func() error {
+		if err := startHTTPServer(ctx, &loadedConfig); err != nil {
+			if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
+				logrus.Infoln("Program gracefully terminated")
+				return nil
+			}
+			logrus.Errorf("Program terminated with error: %s", err)
+			return err
+		}
+		return nil
+	})
+
+	if err := g.Wait(); err != nil {
+		logrus.WithError(err).Errorln("One or more runner processes failed")
+		return err
+	}
+
+	logrus.Infoln("All runner processes terminated")
+	return err
+}
+
+func startHTTPServer(ctx context.Context, config *delegate.Config) error {
+	logrus.Infoln("Starting HTTP server")
+
+	serverInstance := Server{
+		Addr:     config.Server.Bind,
+		CAFile:   config.Server.CACertFile, // CA certificate file
+		CertFile: config.Server.CertFile,   // Server certificate PEM file
+		KeyFile:  config.Server.KeyFile,    // Server key file
+		Insecure: config.Server.Insecure,   // Skip server certificate verification
 	}
 
 	// TODO: INIT_SCRIPT feature, how to and where to
@@ -82,18 +126,8 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	// } else {
 	// 	setup.PrepareSystem()
 	// }
-	// starts the http server.
-	err = serverInstance.Start(ctx)
-	if err == context.Canceled {
-		logrus.Infoln("program gracefully terminated")
-		return nil
-	}
-
-	if err != nil {
-		logrus.Errorf("program terminated with error: %s", err)
-	}
-
-	return err
+	// Start the HTTP server
+	return serverInstance.Start(ctx)
 }
 
 func Register(app *kingpin.Application) {
@@ -105,9 +139,4 @@ func Register(app *kingpin.Application) {
 	cmd.Flag("env-file", "environment file").
 		Default(".env").
 		StringVar(&c.envFile)
-}
-
-func startHarnessTasks(ctx context.Context, config *delegate.Config) error {
-	_, err := delegateshell.Start(ctx, config)
-	return err
 }

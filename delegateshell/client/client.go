@@ -17,7 +17,7 @@ type Client interface {
 	// Heartbeat pings the task server to let it know that the runner is still alive
 	Heartbeat(ctx context.Context, r *RegisterRequest) error
 
-	// GetTaskEvents gets a list of pending tasks that need to be executed for this runner
+	// GetRunnerEvents gets a list of pending tasks that need to be executed for this runner
 	GetRunnerEvents(ctx context.Context, delegateID string) (*RunnerEventsResponse, error)
 
 	// Acquire tells the task server that the runner is ready to execute a task ID
@@ -28,4 +28,7 @@ type Client interface {
 
 	// SendStatusV2 sends a response to the task server (updated workflow which uses message queues on the server side).
 	SendStatusV2(ctx context.Context, delegateID, taskID string, req *TaskResponseV2) error
+
+	// Unregister registers the runner with the task server
+	Unregister(ctx context.Context, r *UnregisterRequest) error
 }

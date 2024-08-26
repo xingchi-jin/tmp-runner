@@ -112,4 +112,14 @@ type (
 	RunnerAcquiredTasks struct {
 		Requests []*task.Request `json:"requests"`
 	}
+
+	UnregisterRequest struct {
+		ID        string `json:"delegateId,omitempty"`
+		HostName  string `json:"hostName,omitempty"`
+		NG        bool   `json:"ng,omitempty"`
+		Type      string `json:"delegateType,omitempty"`
+		IP        string `json:"ipAddress,omitempty"`
+		OrgID     string `json:"orgIdentifier,omitempty"`
+		ProjectID string `json:"projectIdentifier,omitempty"`
+	}
 )

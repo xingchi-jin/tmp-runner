@@ -1,6 +1,6 @@
 module github.com/harness/runner
 
-go 1.22
+go 1.22.0
 
 replace github.com/docker/docker => github.com/moby/moby v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible
 
@@ -79,6 +79,7 @@ require (
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
+	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
 	github.com/shirou/gopsutil/v3 v3.23.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816 // indirect
