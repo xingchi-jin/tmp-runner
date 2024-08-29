@@ -82,7 +82,7 @@ func (d *DelegateShell) startPoller(ctx context.Context) error {
 	d.Poller = poller.New(d.ManagerClient, router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID)), d.Config.Delegate.TaskStatusV2)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
-	if err := d.Poller.PollRunnerEvents(ctx, 3, d.Info.ID, time.Second*10); err != nil {
+	if err := d.Poller.PollRunnerEvents(ctx, 3, d.Info.ID, d.Info.Name, time.Second*10); err != nil {
 		logrus.WithError(err).Errorln("Error when polling task events")
 		return err
 	}

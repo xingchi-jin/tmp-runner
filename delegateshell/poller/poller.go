@@ -55,7 +55,7 @@ func (p *Poller) SetFilter(filter FilterFn) {
 }
 
 // PollRunnerEvents continually asks the task server for tasks to execute.
-func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interval time.Duration) error {
+func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, interval time.Duration) error {
 
 	events := make(chan *client.RunnerEvent, n)
 	var wg sync.WaitGroup
@@ -114,7 +114,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 		go func(i int) {
 			defer wg.Done()
 			for acquiredTask := range events { // Read from events channel until it's closed
-				err := p.process(ctx, id, *acquiredTask)
+				err := p.process(ctx, id, name, *acquiredTask)
 				if err != nil {
 					logrus.WithError(err).WithField("task_id", acquiredTask.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
 				}
@@ -129,13 +129,13 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id string, interva
 }
 
 // execute tries to acquire the task and executes the handler for it
-func (p *Poller) process(ctx context.Context, delegateID string, rv client.RunnerEvent) error {
+func (p *Poller) process(ctx context.Context, delegateID, delegateName string, rv client.RunnerEvent) error {
 	taskID := rv.TaskID
 	if _, loaded := p.m.LoadOrStore(taskID, true); loaded {
 		return nil
 	}
 	defer p.m.Delete(taskID)
-	payloads, err := p.Client.GetExecutionPayload(ctx, delegateID, taskID)
+	payloads, err := p.Client.GetExecutionPayload(ctx, delegateID, delegateName, taskID)
 	if err != nil {
 		return errors.Wrap(err, "failed to get payload")
 	}
