@@ -198,7 +198,7 @@ func (d *Driver) handleRunningWithDifferentConfig(in *DaemonSetUpsertRequest) er
 
 // download the daemon set's repository or executable file
 func (d *Driver) download(ctx context.Context, in *DaemonSetUpsertRequest) (string, error) {
-	path, err := d.downloader.Download(ctx, in.Config.Repository, in.Config.ExecutableUrls)
+	path, err := d.downloader.Download(ctx, in.Type, in.Config.Repository, in.Config.Executable)
 	if err != nil {
 		logrus.WithError(err).Error("task code download failed")
 		return "", err
@@ -208,7 +208,7 @@ func (d *Driver) download(ctx context.Context, in *DaemonSetUpsertRequest) (stri
 
 // build the daemon set's executable and returns its full path
 func (d *Driver) build(ctx context.Context, in *DaemonSetUpsertRequest, path string) (string, error) {
-	if *in.Config.ExecutableUrls != nil {
+	if in.Config.Executable != nil {
 		// if an executable is downloaded directly via url, no need to use `builder`
 		return path, nil
 	}

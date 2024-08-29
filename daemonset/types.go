@@ -34,13 +34,13 @@ type (
 
 	// configuration for spawning new daemon set
 	DaemonSetOperationalConfig struct {
-		Cpu            float64              `json:"cpu"`
-		Envs           []string             `json:"envs"`
-		ExecutableUrls *task.ExecutableUrls `json:"executable_urls"`
-		MemoryBytes    int64                `json:"memory_bytes"`
-		Image          string               `json:"image"`
-		Repository     *task.Repository     `json:"repository"`
-		Version        string               `json:"version"`
+		Cpu         float64          `json:"cpu"`
+		Envs        []string         `json:"envs"`
+		Executable  *task.Executable `json:"executable"`
+		MemoryBytes int64            `json:"memory_bytes"`
+		Image       string           `json:"image"`
+		Repository  *task.Repository `json:"repository"`
+		Version     string           `json:"version"`
 	}
 
 	// request for upserting (spawning) a new daemon set
