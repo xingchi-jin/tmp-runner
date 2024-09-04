@@ -45,7 +45,7 @@ func New(d download.Downloader, isK8s bool) *Manager {
 	return &Manager{downloader: d, daemonsets: sync.Map{}, lock: NewKeyLock(), driver: drivers.NewHttpServerDriver()}
 }
 
-// HandleUpsert handles upserting a daemon set process
+// HandleUpsert handles runner tasks for upserting a daemon set
 func (m *Manager) HandleUpsert(ctx context.Context, req *task.Request) task.Response {
 	spec := new(daemonset.DaemonSetUpsertRequest)
 	err := json.Unmarshal(req.Task.Data, spec)
@@ -62,7 +62,7 @@ func (m *Manager) HandleUpsert(ctx context.Context, req *task.Request) task.Resp
 	return task.Respond(&daemonset.DaemonSetUpsertResponse{DaemonSetId: ds.DaemonSetId, State: daemonset.StateSuccess})
 }
 
-// HandleTaskAssign handles assigning a new daemon task to a daemon set
+// HandleTaskAssign handles runner tasks for assigning a new daemon task to a daemon set
 func (m *Manager) HandleTaskAssign(ctx context.Context, req *task.Request) task.Response {
 	spec := new(daemonset.DaemonTaskAssignRequest)
 	err := json.Unmarshal(req.Task.Data, spec)
@@ -98,7 +98,7 @@ func (m *Manager) HandleTaskAssign(ctx context.Context, req *task.Request) task.
 	return task.Respond(&daemonset.DaemonTaskAssignResponse{DaemonTaskId: spec.DaemonTaskId, State: daemonset.StateSuccess})
 }
 
-// upsertHttp will handle upserting a daemon set process that runs as http server
+// upsertDaemonSet will handle upserting a daemon set
 func (m *Manager) upsertDaemonSet(ctx context.Context, ds *daemonset.DaemonSet) error {
 	if runningWithIdenticalConfig := m.handleRunningWithSameConfig(ds); runningWithIdenticalConfig {
 		return nil
