@@ -5,6 +5,9 @@
 package router
 
 import (
+	"log"
+	"os"
+
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/cloner"
 	"github.com/drone/go-task/task/download"
@@ -30,11 +33,14 @@ func NewRouter(taskContext *delegate.TaskContext) *task.Router {
 	r.Register("delegate_task", delegatetask.NewDelegateTaskHandler(taskContext))
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
 
-	downloader := download.New(cloner.Default(), "pkgs")
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	downloader := download.New(cloner.Default(), cache)
 	daemonSetDriver := daemonset.New(downloader, delegate.IsK8sRunner(taskContext.RunnerType))
 	r.RegisterFunc("daemonset/upsert", daemonSetDriver.HandleUpsert)
 	r.RegisterFunc("daemonset/tasks/assign", daemonSetDriver.HandleTaskAssign)
-	r.RegisterFunc("daemonset/tasks/remove", daemonSetDriver.HandleTaskRemove)
 	r.NotFound(cgi.New(downloader))
 	return r
 }

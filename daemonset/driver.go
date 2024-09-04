@@ -1,3 +1,7 @@
+// Copyright 2024 Harness Inc. All rights reserved.
+// Use of this source code is governed by the PolyForm Shield 1.0.0 license
+// that can be found in the licenses directory at the root of this repository, also available at
+// https://polyformproject.org/wp-content/uploads/2020/06/PolyForm-Shield-1.0.0.txt.
 package daemonset
 
 import (
@@ -23,15 +27,22 @@ var (
 type Driver struct {
 	client     *Client
 	downloader download.Downloader
-	daemonsets map[string]*DaemonSet
+	// we use `sync.Map` to store running daemon sets. This is because, even though operations are atomic
+	// per daemon set type (see comment on `lock` below), there can be multiple simultaneous operations
+	// for different daemon set types. `sync.Map` is an appropriate date structure for this use case.
+	// From https://pkg.go.dev/sync#Map: "the (sync.Map) type is optimized for two common use cases: ...
+	// when multiple goroutines read, write, and overwrite entries for disjoint sets of keys. ..."
+	daemonsets sync.Map
 	isK8s      bool
-	lock       sync.Mutex
-	nextPort   int
+	// the `lock` here is a wrapper for a map of locks, indexed by daemon set's type
+	// so that we can make sure operations are atomic for each daemon set type
+	lock     *KeyLock
+	nextPort int
 }
 
 // New returns the daemon set task execution driver
 func New(d download.Downloader, isK8s bool) *Driver {
-	return &Driver{client: newClient(), downloader: d, daemonsets: make(map[string]*DaemonSet), isK8s: isK8s, nextPort: 9000}
+	return &Driver{client: newClient(), downloader: d, daemonsets: sync.Map{}, isK8s: isK8s, lock: NewKeyLock(), nextPort: 9000}
 }
 
 // HandleUpsert handles upserting a daemon set process
@@ -61,11 +72,11 @@ func (d *Driver) HandleTaskAssign(ctx context.Context, req *task.Request) task.R
 		return task.Error(err)
 	}
 
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.lock.Lock(spec.Type)
+	defer d.lock.Unlock(spec.Type)
 
 	// check if the daemon set is running
-	ds, running := d.daemonsets[spec.Type]
+	ds, running := d.get(spec.Type)
 	if !running {
 		errMsg := fmt.Sprintf("no daemon set of type [%s] is currently running", spec.Type)
 		return task.Respond(&DaemonTaskAssignResponse{DaemonTaskId: spec.DaemonTaskId, State: StateFailure, Error: errMsg})
@@ -97,11 +108,11 @@ func (d *Driver) HandleTaskRemove(ctx context.Context, req *task.Request) task.R
 		return task.Error(err)
 	}
 
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.lock.Lock(spec.Type)
+	defer d.lock.Unlock(spec.Type)
 
 	// check if the daemon set is running
-	ds, running := d.daemonsets[spec.Type]
+	ds, running := d.get(spec.Type)
 	if !running {
 		errMsg := fmt.Sprintf("no daemon set of type [%s] is currently running", spec.Type)
 		return task.Respond(&DaemonTaskRemoveResponse{DaemonTaskId: spec.DaemonTaskId, State: StateFailure, Error: errMsg})
@@ -126,8 +137,8 @@ func (d *Driver) HandleTaskRemove(ctx context.Context, req *task.Request) task.R
 
 // upsertHttp will handle upserting a daemon set process that runs as http server
 func (d *Driver) upsertHttp(ctx context.Context, in *DaemonSetUpsertRequest) task.Response {
-	d.lock.Lock()
-	defer d.lock.Unlock()
+	d.lock.Lock(in.Type)
+	defer d.lock.Unlock(in.Type)
 
 	if runningWithIdenticalConfig := d.handleRunningWithSameConfig(in); runningWithIdenticalConfig {
 		return task.Respond(&DaemonSetUpsertResponse{DaemonSetId: in.DaemonSetId, State: StateSuccess})
@@ -155,8 +166,8 @@ func (d *Driver) upsertHttp(ctx context.Context, in *DaemonSetUpsertRequest) tas
 	}
 
 	ds := &DaemonSet{DaemonSetId: in.DaemonSetId, Type: in.Type, Config: in.Config, Execution: cmd, Port: port, Tasks: make(map[string]bool)}
-	d.daemonsets[in.Type] = ds
 
+	d.daemonsets.Store(in.Type, ds)
 	dsLogger(ds).Info("started daemon set process")
 
 	return task.Respond(&DaemonSetUpsertResponse{DaemonSetId: in.DaemonSetId, State: StateSuccess})
@@ -166,7 +177,7 @@ func (d *Driver) upsertHttp(ctx context.Context, in *DaemonSetUpsertRequest) tas
 // if this is the case, set the currently running daemon set's ID to the one passed in the request, and return true
 // otherwise, return false
 func (d *Driver) handleRunningWithSameConfig(in *DaemonSetUpsertRequest) bool {
-	ds, running := d.daemonsets[in.Type]
+	ds, running := d.get(in.Type)
 	if running {
 		// check if the config passed in the request is the same as the existing daemon set's
 		if reflect.DeepEqual(ds.Config, in.Config) {
@@ -183,15 +194,15 @@ func (d *Driver) handleRunningWithSameConfig(in *DaemonSetUpsertRequest) bool {
 // check if the daemon set is already running with config different from requested
 // if this is the case, kill the current daemon set process
 func (d *Driver) handleRunningWithDifferentConfig(in *DaemonSetUpsertRequest) error {
-	ds, running := d.daemonsets[in.Type]
+	ds, running := d.get(in.Type)
 	if running {
 		dsLogger(ds).Infof("daemon set of type [%s] is running. Stopping the process now", in.Type)
-		err := d.kill(in.Type)
+		err := ds.Execution.Process.Kill()
 		if err != nil {
 			dsLogger(ds).WithError(err).Error("failed to kill daemon set process")
 			return err
 		}
-		delete(d.daemonsets, in.Type)
+		d.daemonsets.Delete(in.Type)
 	}
 	return nil
 }
@@ -241,7 +252,7 @@ func (d *Driver) startProcess(in *DaemonSetUpsertRequest, binpath string, port i
 // getPort checks whether a daemon set of given type is running and returns its port
 // if not running, returns the port where it should listen when started
 func (d *Driver) getPort(t string) int {
-	daemonset, running := d.daemonsets[t]
+	daemonset, running := d.get(t)
 	var port int
 	if running {
 		port = daemonset.Port
@@ -252,9 +263,14 @@ func (d *Driver) getPort(t string) int {
 	return port
 }
 
-// kill will stop a daemon set process, given the daemon set's type
-func (d *Driver) kill(t string) error {
-	return d.daemonsets[t].Execution.Process.Kill()
+// get will return a *DaemonSet struct from the d.daemonsets synchronized map
+// the returned struct (if present) will be type-asserted to the *DaemonSet type
+func (d *Driver) get(t string) (*DaemonSet, bool) {
+	ds, ok := d.daemonsets.Load(t)
+	if !ok {
+		return nil, false
+	}
+	return ds.(*DaemonSet), true
 }
 
 // returns a logrus *Entry with daemon set's data as fields

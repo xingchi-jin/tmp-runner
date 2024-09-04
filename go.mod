@@ -4,14 +4,12 @@ go 1.22.0
 
 replace github.com/docker/docker => github.com/moby/moby v17.12.0-ce-rc1.0.20200618181300-9dc6525e6118+incompatible
 
-replace github.com/drone/go-task => /Users/vcalasans/projects/go-task
-
 require (
 	github.com/cenkalti/backoff v2.2.1+incompatible
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/drone/go-task v0.0.0-20240815160432-32375929f390
+	github.com/drone/go-task v0.0.0-20240904120644-3605f9300ff7
 	github.com/google/uuid v1.6.0
 	github.com/harness/godotenv/v3 v3.0.0
 	github.com/harness/lite-engine v1.0.0-rc.137.0.20240823100307-59d20158489b
@@ -88,7 +86,7 @@ require (
 	github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
-	github.com/ulikunitz/xz v0.5.11 // indirect
+	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/wings-software/dlite v1.0.0-rc.11 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
