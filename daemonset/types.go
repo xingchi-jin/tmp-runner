@@ -28,11 +28,12 @@ type (
 		DaemonSetId string
 		Type        string
 		Config      DaemonSetOperationalConfig
-		HttpSever   DaemonSetHttpServer
+		ServerInfo  *DaemonSetServerInfo
 		Tasks       map[string]bool
+		Healthy     bool
 	}
 
-	DaemonSetHttpServer struct {
+	DaemonSetServerInfo struct {
 		Execution *exec.Cmd
 		Port      int
 	}
@@ -81,7 +82,7 @@ type (
 	// task processed by a daemon set
 	DaemonTask struct {
 		ID     string           `json:"id"`
-		Params DaemonTaskParams `json:"params"`
+		Params DaemonTaskParams `json:"params,omitempty"`
 	}
 
 	// list of tasks processed by a daemon set

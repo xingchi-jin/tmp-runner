@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/drone/go-task/task"
+	"github.com/harness/runner/daemonset"
 )
 
 // StatusCode represents status code of a task.
@@ -121,5 +122,36 @@ type (
 		IP        string `json:"ipAddress,omitempty"`
 		OrgID     string `json:"orgIdentifier,omitempty"`
 		ProjectID string `json:"projectIdentifier,omitempty"`
+	}
+
+	// Types for daemon set reconciliation flow
+	DaemonSetReconcileRequest struct {
+		Data []DaemonSetReconcileRequestEntry `json:"data"`
+	}
+
+	DaemonSetReconcileRequestEntry struct {
+		DaemonSetId string                               `json:"daemon_set_id"`
+		Type        string                               `json:"type"`
+		Config      daemonset.DaemonSetOperationalConfig `json:"config"`
+		Healthy     bool                                 `json:"healthy"`
+	}
+
+	DaemonSetReconcileResponse struct {
+		Data []DaemonSetReconcileResponseEntry `json:"data"`
+	}
+
+	DaemonSetReconcileResponseEntry struct {
+		DaemonSetId string                               `json:"daemon_set_id"`
+		Type        string                               `json:"type"`
+		Config      daemonset.DaemonSetOperationalConfig `json:"config"`
+		TaskIds     []string                             `json:"task_ids"`
+	}
+
+	DaemonTaskAcquireRequest struct {
+		TaskIds []string `json:"task_ids"`
+	}
+
+	DaemonTaskAcquireResponse struct {
+		Tasks []daemonset.DaemonTaskAssignRequest `json:"tasks"`
 	}
 )

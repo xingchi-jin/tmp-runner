@@ -7,6 +7,13 @@ package delegateshell
 
 import (
 	"context"
+	"log"
+	"os"
+	"time"
+
+	"github.com/drone/go-task/task/cloner"
+	"github.com/drone/go-task/task/download"
+	"github.com/harness/runner/daemonset/manager"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
@@ -14,25 +21,32 @@ import (
 	"github.com/harness/runner/router"
 	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
-	"time"
 )
 
 type DelegateShell struct {
-	Info          *heartbeat.DelegateInfo
-	Config        *delegate.Config
-	ManagerClient *client.ManagerClient
-	KeepAlive     *heartbeat.KeepAlive
-	Poller        *poller.Poller
+	Info             *heartbeat.DelegateInfo
+	Config           *delegate.Config
+	ManagerClient    *client.ManagerClient
+	KeepAlive        *heartbeat.KeepAlive
+	Poller           *poller.Poller
+	Downloader       download.Downloader
+	DaemonSetManager *manager.Manager
 }
 
 func NewDelegateShell(config *delegate.Config, managerClient *client.ManagerClient) *DelegateShell {
 
+	cache, err := os.UserCacheDir()
+	if err != nil {
+		log.Fatalln(err)
+	}
+	downloader := download.New(cloner.Default(), cache)
 	// The poller needs a client that interacts with the task management system and a router to route the tasks
 	keepAlive := heartbeat.New(config.Delegate.AccountID, config.Delegate.Name, config.GetTags(), managerClient)
 	return &DelegateShell{
 		Config:        config,
 		KeepAlive:     keepAlive,
 		ManagerClient: managerClient,
+		Downloader:    downloader,
 	}
 }
 
@@ -44,6 +58,7 @@ func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, 
 		return nil, err
 	}
 	d.Info = runnerInfo
+	d.DaemonSetManager = manager.New(d.ManagerClient, d.Downloader, delegate.IsK8sRunner(delegate.GetTaskContext(d.Config, d.Info.ID).RunnerType))
 	return runnerInfo, nil
 }
 
@@ -62,6 +77,10 @@ func (d *DelegateShell) StartRunnerProcesses(ctx context.Context) error {
 	var rg errgroup.Group
 
 	rg.Go(func() error {
+		return d.startDaemonSetReconcile(ctx)
+	})
+
+	rg.Go(func() error {
 		return d.startPoller(ctx)
 	})
 
@@ -77,9 +96,17 @@ func (d *DelegateShell) sendHeartbeat(ctx context.Context) error {
 	return nil
 }
 
+func (d *DelegateShell) startDaemonSetReconcile(ctx context.Context) error {
+	if err := d.DaemonSetManager.StartReconcile(ctx, d.Info.ID, time.Second*15); err != nil {
+		logrus.WithError(err).Errorln("Error when starting reconcile flow for daemon sets")
+		return err
+	}
+	return nil
+}
+
 func (d *DelegateShell) startPoller(ctx context.Context) error {
 	// Start polling for bijou events
-	d.Poller = poller.New(d.ManagerClient, router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID)), d.Config.Delegate.TaskStatusV2)
+	d.Poller = poller.New(d.ManagerClient, router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID), d.Downloader, d.DaemonSetManager), d.Config.Delegate.TaskStatusV2)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
 	if err := d.Poller.PollRunnerEvents(ctx, 3, d.Info.ID, d.Info.Name, time.Second*10); err != nil {
@@ -90,5 +117,6 @@ func (d *DelegateShell) startPoller(ctx context.Context) error {
 }
 
 func (d *DelegateShell) Shutdown() {
+	d.DaemonSetManager.StopReconcile()
 	d.Poller.Shutdown()
 }

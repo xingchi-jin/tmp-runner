@@ -20,13 +20,15 @@ import (
 )
 
 const (
-	registerEndpoint         = "/api/agent/delegates/register?accountId=%s"
-	unregisterEndpoint       = "/api/agent/delegates/unregister?accountId=%s"
-	heartbeatEndpoint        = "/api/agent/delegates/heartbeat-with-polling?accountId=%s"
-	taskStatusEndpoint       = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
-	runnerEventsPollEndpoint = "/api/executions/%s/runner-events?accountId=%s"
-	executionPayloadEndpoint = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s&delegateName=%s"
-	taskStatusEndpointV2     = "/api/executions/%s/response?delegateId=%s&accountId=%s"
+	registerEndpoint           = "/api/agent/delegates/register?accountId=%s"
+	unregisterEndpoint         = "/api/agent/delegates/unregister?accountId=%s"
+	heartbeatEndpoint          = "/api/agent/delegates/heartbeat-with-polling?accountId=%s"
+	taskStatusEndpoint         = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
+	runnerEventsPollEndpoint   = "/api/executions/%s/runner-events?accountId=%s"
+	executionPayloadEndpoint   = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s&delegateName=%s"
+	taskStatusEndpointV2       = "/api/executions/%s/response?delegateId=%s&accountId=%s"
+	daemonSetReconcileEndpoint = "/api/daemons/%s/reconcile?accountId=%s"
+	acquireDaemonTasksEndpoint = "/api/daemons/%s/tasks?accountId=%s&daemonSetId=%s"
 )
 
 var (
@@ -48,6 +50,22 @@ func NewManagerClient(endpoint, id, secret string, skipverify bool, additionalCe
 		AccountID:  id,
 		TokenCache: delegate.NewTokenCache(id, secret),
 	}
+}
+
+func (p *ManagerClient) ReconcileDaemonSets(ctx context.Context, runnerId string, r *DaemonSetReconcileRequest) (*DaemonSetReconcileResponse, error) {
+	req := r
+	resp := &DaemonSetReconcileResponse{}
+	path := fmt.Sprintf(daemonSetReconcileEndpoint, runnerId, p.AccountID)
+	_, err := p.doJson(ctx, path, "POST", req, resp)
+	return resp, err
+}
+
+func (p *ManagerClient) AcquireDaemonTasks(ctx context.Context, runnerId string, daemonSetId string, r *DaemonTaskAcquireRequest) (*DaemonTaskAcquireResponse, error) {
+	req := r
+	resp := &DaemonTaskAcquireResponse{}
+	path := fmt.Sprintf(acquireDaemonTasksEndpoint, runnerId, p.AccountID, daemonSetId)
+	_, err := p.retry(ctx, path, "POST", req, resp, createBackoff(ctx, registerTimeout), false) //nolint: bodyclose
+	return resp, err
 }
 
 // Register registers the runner with the manager

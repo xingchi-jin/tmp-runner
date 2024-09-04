@@ -24,6 +24,14 @@ func (k *KeyLock) Unlock(key string) {
 	k.getLockBy(key).Unlock()
 }
 
+func (k *KeyLock) LockAll() {
+	k.mapLock.Lock()
+}
+
+func (k *KeyLock) UnlockAll() {
+	k.mapLock.Unlock()
+}
+
 func (k *KeyLock) getLockBy(key string) *sync.Mutex {
 	k.mapLock.Lock()
 	defer k.mapLock.Unlock()
