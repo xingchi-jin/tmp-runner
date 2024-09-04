@@ -32,7 +32,7 @@ type Manager struct {
 	// for different daemon set types. `sync.Map` is an appropriate date structure for this use case.
 	// From https://pkg.go.dev/sync#Map: "the (sync.Map) type is optimized for two common use cases: ...
 	// when multiple goroutines read, write, and overwrite entries for disjoint sets of keys. ..."
-	daemonsets sync.Map
+	daemonsets *sync.Map
 	// the `lock` here is a wrapper for a map of locks, indexed by daemon set's type
 	// so that we can make sure operations are atomic for each daemon set type
 	lock   *KeyLock
@@ -42,7 +42,7 @@ type Manager struct {
 // New returns the daemon set task execution driver
 func New(d download.Downloader, isK8s bool) *Manager {
 	// TODO: Add suport for daemon sets in k8s runner
-	return &Manager{downloader: d, daemonsets: sync.Map{}, lock: NewKeyLock(), driver: drivers.NewHttpServerDriver()}
+	return &Manager{downloader: d, daemonsets: &sync.Map{}, lock: NewKeyLock(), driver: drivers.NewHttpServerDriver()}
 }
 
 // HandleUpsert handles runner tasks for upserting a daemon set
@@ -52,10 +52,12 @@ func (m *Manager) HandleUpsert(ctx context.Context, req *task.Request) task.Resp
 	if err != nil {
 		return task.Error(err)
 	}
+
 	m.lock.Lock(spec.Type)
 	defer m.lock.Unlock(spec.Type)
+
 	ds := &daemonset.DaemonSet{DaemonSetId: spec.DaemonSetId, Type: spec.Type, Config: spec.Config, Tasks: make(map[string]bool)}
-	err = m.upsertDaemonSet(ctx, ds)
+	_, err = m.upsertDaemonSet(ctx, ds)
 	if err != nil {
 		return task.Respond(&daemonset.DaemonSetUpsertResponse{DaemonSetId: ds.DaemonSetId, State: daemonset.StateFailure, Error: err.Error()})
 	}
@@ -87,46 +89,75 @@ func (m *Manager) HandleTaskAssign(ctx context.Context, req *task.Request) task.
 		return task.Respond(&daemonset.DaemonTaskAssignResponse{DaemonTaskId: spec.DaemonTaskId, State: daemonset.StateFailure, Error: errMsg})
 	}
 
-	utils.DsLogger(ds).Infof("assigning task [%s] to daemon set", spec.DaemonTaskId)
 	daemonTask := daemonset.DaemonTask{ID: spec.DaemonTaskId, Params: spec.Params}
-	_, err = m.driver.AssignDaemonTasks(ctx, ds, &daemonset.DaemonTasks{Tasks: []daemonset.DaemonTask{daemonTask}})
+	_, err = m.assignDaemonTasks(ctx, ds, &daemonset.DaemonTasks{Tasks: []daemonset.DaemonTask{daemonTask}})
 	if err != nil {
 		return task.Error(err)
 	}
-	// insert the new task's ID in the daemonset's task set
-	ds.Tasks[spec.DaemonTaskId] = true
 	return task.Respond(&daemonset.DaemonTaskAssignResponse{DaemonTaskId: spec.DaemonTaskId, State: daemonset.StateSuccess})
 }
 
-// upsertDaemonSet will handle upserting a daemon set
-func (m *Manager) upsertDaemonSet(ctx context.Context, ds *daemonset.DaemonSet) error {
-	if runningWithIdenticalConfig := m.handleRunningWithSameConfig(ds); runningWithIdenticalConfig {
-		return nil
+// upsertDaemonSet handles upserting a daemon set
+func (m *Manager) upsertDaemonSet(ctx context.Context, ds *daemonset.DaemonSet) (*daemonset.DaemonSet, error) {
+	if runningWithIdenticalConfig := m.handleRunningWithSameConfig(ds); runningWithIdenticalConfig != nil {
+		return runningWithIdenticalConfig, nil
 	}
 	path, err := m.download(ctx, ds)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	binpath, err := m.build(ctx, ds, path)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	if err = m.handleRunningWithDifferentConfig(ds); err != nil {
-		return err
+		return nil, err
 	}
 	ds, err = m.driver.StartDaemonSet(binpath, ds)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	m.daemonsets.Store(ds.Type, ds)
 	utils.DsLogger(ds).Info("started daemon set process")
-	return nil
+	return ds, nil
+}
+
+// assignDaemonTasks handles assigning daemon tasks to a daemon set
+func (m *Manager) assignDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet, tasks *daemonset.DaemonTasks) (*daemonset.DaemonSet, error) {
+	taskIds := make([]string, len(tasks.Tasks))
+	for i, s := range tasks.Tasks {
+		taskIds[i] = s.ID
+	}
+	utils.DsLogger(ds).Infof("assigning tasks [%s] to daemon set", taskIds)
+	_, err := m.driver.AssignDaemonTasks(ctx, ds, tasks)
+	if err != nil {
+		return nil, err
+	}
+	// insert the new task IDs in the daemonset's task set
+	for _, taskId := range taskIds {
+		ds.Tasks[taskId] = true
+	}
+	return ds, nil
+}
+
+// removeDaemonTasks handles removing daemon tasks from a daemon set
+func (m *Manager) removeDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet, taskIds *[]string) (*daemonset.DaemonSet, error) {
+	utils.DsLogger(ds).Infof("removing tasks [%s] from daemon set", taskIds)
+	_, err := m.driver.RemoveDaemonTasks(ctx, ds, taskIds)
+	if err != nil {
+		return nil, err
+	}
+	// insert the new task IDs in the daemonset's task set
+	for _, taskId := range *taskIds {
+		delete(ds.Tasks, taskId)
+	}
+	return ds, nil
 }
 
 // check if the daemon set is already running with same config as requested
 // if this is the case, set the currently running daemon set's ID to the one passed in the request, and return true
 // otherwise, return false
-func (m *Manager) handleRunningWithSameConfig(ds *daemonset.DaemonSet) bool {
+func (m *Manager) handleRunningWithSameConfig(ds *daemonset.DaemonSet) *daemonset.DaemonSet {
 	dsOld, running := m.get(ds.Type)
 	if running {
 		// check if the config passed in the request is the same as the existing daemon set's
@@ -135,10 +166,10 @@ func (m *Manager) handleRunningWithSameConfig(ds *daemonset.DaemonSet) bool {
 			utils.DsLogger(ds).Infof("daemon set of type [%s] is running with identical configuration. "+
 				"Resetting its id to [%s]", ds.Type, ds.DaemonSetId)
 			dsOld.DaemonSetId = ds.DaemonSetId
-			return true
+			return dsOld
 		}
 	}
-	return false
+	return nil
 }
 
 // check if the daemon set is already running with config different from requested
