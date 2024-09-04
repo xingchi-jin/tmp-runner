@@ -2,7 +2,7 @@
 // Use of this source code is governed by the PolyForm Shield 1.0.0 license
 // that can be found in the licenses directory at the root of this repository, also available at
 // https://polyformproject.org/wp-content/uploads/2020/06/PolyForm-Shield-1.0.0.txt.
-package daemonset
+package client
 
 import (
 	"bytes"
@@ -12,36 +12,37 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/harness/runner/daemonset"
 	"github.com/harness/runner/utils"
 )
 
 const (
-	endpoint = "%d/tasks"
+	endpoint = "%s/tasks"
 )
 
 type Client struct {
 	utils.HTTPClient
 }
 
-func newClient() *Client {
+func NewClient(baseUrl string) *Client {
 	return &Client{
-		HTTPClient: *utils.New("http://localhost:", true, ""),
+		HTTPClient: *utils.New(baseUrl, true, ""),
 	}
 }
 
 // Assign sends a new daemon task to a daemon set specified by the `port` argument
-func (p *Client) Assign(ctx context.Context, port int, r *DaemonTasks) (*DaemonSetResponse, error) {
+func (p *Client) Assign(ctx context.Context, path string, r *daemonset.DaemonTasks) (*daemonset.DaemonSetResponse, error) {
 	req := r
-	resp := &DaemonSetResponse{}
-	path := fmt.Sprintf(endpoint, port)
-	_, err := p.doJson(ctx, path, "POST", req, resp)
+	resp := &daemonset.DaemonSetResponse{}
+	fullpath := fmt.Sprintf(endpoint, path)
+	_, err := p.doJson(ctx, fullpath, "POST", req, resp)
 	return resp, err
 }
 
 // Remove removes a daemon task from a daemon set, specified by the `port` argument
-func (p *Client) Remove(ctx context.Context, port int, r *[]string) (*DaemonSetResponse, error) {
-	resp := &DaemonSetResponse{}
-	path := fmt.Sprintf(endpoint, port)
+func (p *Client) Remove(ctx context.Context, path string, r *[]string) (*daemonset.DaemonSetResponse, error) {
+	resp := &daemonset.DaemonSetResponse{}
+	fullpath := fmt.Sprintf(endpoint, path)
 
 	// Build the query params
 	queryParams := url.Values{}
@@ -50,8 +51,8 @@ func (p *Client) Remove(ctx context.Context, port int, r *[]string) (*DaemonSetR
 	}
 
 	// Append query parameters to the path
-	pathWithQuery := fmt.Sprintf("%s?%s", path, queryParams.Encode())
-	_, err := p.doJson(ctx, pathWithQuery, "DELETE", nil, resp)
+	fullpathWithQuery := fmt.Sprintf("%s?%s", fullpath, queryParams.Encode())
+	_, err := p.doJson(ctx, fullpathWithQuery, "DELETE", nil, resp)
 	return resp, err
 }
 

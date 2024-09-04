@@ -12,14 +12,11 @@ import (
 
 // StatusCode represents status code of a task assignment/deletion.
 type StatusCode string
-type InstanceType string
 type State string
 
 const (
 	StatusCodeSuccess StatusCode = "OK"
 	StatusCodeFailed  StatusCode = "FAILED"
-
-	InstanceTypeHttp InstanceType = "HTTP"
 
 	StateSuccess State = "SUCCESS"
 	StateFailure State = "FAILURE"
@@ -31,9 +28,13 @@ type (
 		DaemonSetId string
 		Type        string
 		Config      DaemonSetOperationalConfig
-		Execution   *exec.Cmd
-		Port        int
+		HttpSever   DaemonSetHttpServer
 		Tasks       map[string]bool
+	}
+
+	DaemonSetHttpServer struct {
+		Execution *exec.Cmd
+		Port      int
 	}
 
 	// configuration for spawning new daemon set
@@ -68,18 +69,6 @@ type (
 	}
 
 	DaemonTaskAssignResponse struct {
-		DaemonTaskId string `json:"daemon_task_id"`
-		State        State  `json:"state,omitempty"`
-		Error        string `json:"error_message,omitempty"`
-	}
-
-	// request for runner to remove a daemon task from a daemon set
-	DaemonTaskRemoveRequest struct {
-		DaemonTaskId string `json:"daemon_task_id"`
-		Type         string `json:"type"`
-	}
-
-	DaemonTaskRemoveResponse struct {
 		DaemonTaskId string `json:"daemon_task_id"`
 		State        State  `json:"state,omitempty"`
 		Error        string `json:"error_message,omitempty"`
