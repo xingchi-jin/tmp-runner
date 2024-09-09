@@ -152,6 +152,8 @@ func (m *Manager) removeDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet
 // if this is the case, set the currently running daemon set's ID to the one passed in the request, and return true
 // otherwise, return false
 func (m *Manager) handleRunningWithSameConfig(ds *daemonset.DaemonSet) *daemonset.DaemonSet {
+	// TODO: Here we need to check whether the pre-existing daemon set is healthy, before returning it.
+	// This will be implemented in the next PR.
 	dsOld, running := m.get(ds.Type)
 	if running {
 		// check if the config passed in the request is the same as the existing daemon set's

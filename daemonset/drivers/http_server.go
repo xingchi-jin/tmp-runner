@@ -58,6 +58,7 @@ func (h *HttpServerDriver) RemoveDaemonTasks(ctx context.Context, ds *daemonset.
 
 // spawns daemon set process passing it the -port param
 func (h *HttpServerDriver) startProcess(envs []string, binpath string, port int) (*exec.Cmd, error) {
+	// TODO: Here we need to check if the daemon set is healthy before returning success (next PR will do it).
 	// create the command to run the executable with the -port flag
 	cmd := exec.Command(binpath, "-port", fmt.Sprintf("%d", port))
 
