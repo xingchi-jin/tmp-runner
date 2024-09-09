@@ -8,12 +8,10 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"path/filepath"
 	"reflect"
 	"sync"
 
 	"github.com/drone/go-task/task"
-	"github.com/drone/go-task/task/builder"
 	"github.com/drone/go-task/task/download"
 	"github.com/harness/runner/daemonset"
 	"github.com/harness/runner/daemonset/drivers"
@@ -102,11 +100,7 @@ func (m *Manager) upsertDaemonSet(ctx context.Context, ds *daemonset.DaemonSet) 
 	if runningWithIdenticalConfig := m.handleRunningWithSameConfig(ds); runningWithIdenticalConfig != nil {
 		return runningWithIdenticalConfig, nil
 	}
-	path, err := m.download(ctx, ds)
-	if err != nil {
-		return nil, err
-	}
-	binpath, err := m.build(ctx, ds, path)
+	binpath, err := m.download(ctx, ds)
 	if err != nil {
 		return nil, err
 	}
@@ -128,7 +122,7 @@ func (m *Manager) assignDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet
 	for i, s := range tasks.Tasks {
 		taskIds[i] = s.ID
 	}
-	utils.DsLogger(ds).Infof("assigning tasks [%s] to daemon set", taskIds)
+	utils.DsLogger(ds).Infof("assigning tasks %s to daemon set", taskIds)
 	_, err := m.driver.AssignDaemonTasks(ctx, ds, tasks)
 	if err != nil {
 		return nil, err
@@ -142,7 +136,7 @@ func (m *Manager) assignDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet
 
 // removeDaemonTasks handles removing daemon tasks from a daemon set
 func (m *Manager) removeDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet, taskIds *[]string) (*daemonset.DaemonSet, error) {
-	utils.DsLogger(ds).Infof("removing tasks [%s] from daemon set", taskIds)
+	utils.DsLogger(ds).Infof("removing tasks %s from daemon set", taskIds)
 	_, err := m.driver.RemoveDaemonTasks(ctx, ds, taskIds)
 	if err != nil {
 		return nil, err
@@ -188,30 +182,17 @@ func (m *Manager) handleRunningWithDifferentConfig(ds *daemonset.DaemonSet) erro
 	return nil
 }
 
-// download the daemon set's repository or executable file
+// download the daemon set's executable file
 func (m *Manager) download(ctx context.Context, ds *daemonset.DaemonSet) (string, error) {
-	path, err := m.downloader.Download(ctx, ds.Type, ds.Config.Repository, ds.Config.Executable)
+	if ds.Config.ExecutableConfig == nil {
+		return "", fmt.Errorf("no executable configuration provided for daemon set")
+	}
+	path, err := m.downloader.Download(ctx, ds.Type, ds.Config.Repository, ds.Config.ExecutableConfig)
 	if err != nil {
 		logrus.WithError(err).Error("task code download failed")
 		return "", err
 	}
 	return path, nil
-}
-
-// build the daemon set's executable and returns its full path
-func (m *Manager) build(ctx context.Context, ds *daemonset.DaemonSet, path string) (string, error) {
-	if ds.Config.Executable != nil {
-		// if an executable is downloaded directly via url, no need to use `builder`
-		return path, nil
-	}
-	// build the daemon set's binary
-	builder := builder.New(filepath.Join(path, taskYmlPath))
-	binpath, err := builder.Build(ctx)
-	if err != nil {
-		logrus.WithError(err).Error("task build failed")
-		return "", err
-	}
-	return binpath, nil
 }
 
 // get will return a *DaemonSet struct from the m.daemonsets synchronized map

@@ -9,7 +9,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/drone/go-task v0.0.0-20240904120644-3605f9300ff7
+	github.com/drone/go-task v0.0.0-20240909165156-c448d2e4d33d
 	github.com/google/uuid v1.6.0
 	github.com/harness/godotenv/v3 v3.0.0
 	github.com/harness/lite-engine v1.0.0-rc.137.0.20240823100307-59d20158489b
