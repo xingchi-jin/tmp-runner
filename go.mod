@@ -9,7 +9,7 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/drone/go-task v0.0.0-20240523164958-666e94a56881
+	github.com/drone/go-task v0.0.0-20240909165156-c448d2e4d33d
 	github.com/google/uuid v1.6.0
 	github.com/harness/godotenv/v3 v3.0.0
 	github.com/harness/lite-engine v1.0.0-rc.137.0.20240823100307-59d20158489b
@@ -18,6 +18,7 @@ require (
 	github.com/kelseyhightower/envconfig v1.4.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
+	github.com/shirou/gopsutil/v3 v3.23.5
 	github.com/sirupsen/logrus v1.9.3
 	golang.org/x/sync v0.6.0
 	gopkg.in/alecthomas/kingpin.v2 v2.2.6
@@ -43,7 +44,8 @@ require (
 	github.com/drone/envsubst v1.0.3 // indirect
 	github.com/drone/runner-go v1.12.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
-	github.com/go-chi/chi/v5 v5.0.8 // indirect
+	github.com/frankban/quicktest v1.14.6 // indirect
+	github.com/ghodss/yaml v1.0.0 // indirect
 	github.com/go-jose/go-jose/v3 v3.0.3 // indirect
 	github.com/go-ole/go-ole v1.2.6 // indirect
 	github.com/gofrs/uuid v4.4.0+incompatible // indirect
@@ -64,10 +66,10 @@ require (
 	github.com/hashicorp/hcl v1.0.0 // indirect
 	github.com/klauspost/compress v1.16.3 // indirect
 	github.com/klauspost/pgzip v1.2.5 // indirect
-	github.com/kr/text v0.2.0 // indirect
 	github.com/linkedin/goavro/v2 v2.12.0 // indirect
 	github.com/lufia/plan9stats v0.0.0-20211012122336-39d0f177ccd0 // indirect
 	github.com/mattn/go-zglob v0.0.4 // indirect
+	github.com/mholt/archiver v3.1.1+incompatible // indirect
 	github.com/mholt/archiver/v3 v3.5.1 // indirect
 	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
@@ -75,17 +77,16 @@ require (
 	github.com/nwaples/rardecode v1.1.3 // indirect
 	github.com/opencontainers/go-digest v1.0.0 // indirect
 	github.com/opencontainers/image-spec v1.1.0-rc2.0.20221005185240-3a7f492d3f1b // indirect
+	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/rogpeppe/go-internal v1.12.0 // indirect
 	github.com/ryanuber/go-glob v1.0.0 // indirect
-	github.com/shirou/gopsutil v3.21.11+incompatible // indirect
-	github.com/shirou/gopsutil/v3 v3.23.5 // indirect
 	github.com/shoenig/go-m1cpu v0.1.6 // indirect
 	github.com/t-tomalak/logrus-easy-formatter v0.0.0-20190827215021-c074f06c5816 // indirect
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
-	github.com/ulikunitz/xz v0.5.11 // indirect
+	github.com/ulikunitz/xz v0.5.12 // indirect
 	github.com/wings-software/dlite v1.0.0-rc.11 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
