@@ -10,8 +10,7 @@ import (
 	"os"
 	"os/exec"
 
-	"github.com/harness/runner/daemonset"
-	"github.com/harness/runner/daemonset/client"
+	"github.com/harness/runner/delegateshell/daemonset/client"
 	"github.com/sirupsen/logrus"
 )
 
@@ -26,7 +25,7 @@ func NewHttpServerDriver() *HttpServerDriver {
 }
 
 // StartDaemonSet handles starting a daemon set process that runs as http server
-func (h *HttpServerDriver) StartDaemonSet(binpath string, ds *daemonset.DaemonSet) (*daemonset.DaemonSetServerInfo, error) {
+func (h *HttpServerDriver) StartDaemonSet(binpath string, ds *client.DaemonSet) (*client.DaemonSetServerInfo, error) {
 	port := h.getPort()
 
 	cmd, err := h.startProcess(ds.Config.Envs, binpath, port)
@@ -35,11 +34,11 @@ func (h *HttpServerDriver) StartDaemonSet(binpath string, ds *daemonset.DaemonSe
 	}
 
 	// TODO: wait for daemon set to be ready before returning here
-	return &daemonset.DaemonSetServerInfo{Execution: cmd, Port: port}, nil
+	return &client.DaemonSetServerInfo{Execution: cmd, Port: port}, nil
 }
 
 // StopDaemonSet handles stopping a daemon set process that runs as http server
-func (h *HttpServerDriver) StopDaemonSet(ds *daemonset.DaemonSet) error {
+func (h *HttpServerDriver) StopDaemonSet(ds *client.DaemonSet) error {
 	if ds.ServerInfo == nil {
 		return nil
 	}
@@ -47,20 +46,29 @@ func (h *HttpServerDriver) StopDaemonSet(ds *daemonset.DaemonSet) error {
 }
 
 // AssignDaemonTasks will handle assigning tasks to a daemon set process that runs as http server
-func (h *HttpServerDriver) FetchDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet) (*daemonset.DaemonTasks, error) {
-	dsUrl := getUrl(ds)
+func (h *HttpServerDriver) ListDaemonTasks(ctx context.Context, ds *client.DaemonSet) (*client.DaemonTasks, error) {
+	dsUrl, err := getUrl(ds)
+	if err != nil {
+		return nil, err
+	}
 	return h.client.GetTasks(ctx, dsUrl)
 }
 
 // AssignDaemonTasks will handle assigning tasks to a daemon set process that runs as http server
-func (h *HttpServerDriver) AssignDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet, tasks *daemonset.DaemonTasks) (*daemonset.DaemonSetResponse, error) {
-	dsUrl := getUrl(ds)
+func (h *HttpServerDriver) AssignDaemonTasks(ctx context.Context, ds *client.DaemonSet, tasks *client.DaemonTasks) (*client.DaemonSetResponse, error) {
+	dsUrl, err := getUrl(ds)
+	if err != nil {
+		return nil, err
+	}
 	return h.client.Assign(ctx, dsUrl, tasks)
 }
 
 // RemoveDaemonTasks will handle removing tasks from a daemon set process that runs as http server
-func (h *HttpServerDriver) RemoveDaemonTasks(ctx context.Context, ds *daemonset.DaemonSet, taskIds *[]string) (*daemonset.DaemonSetResponse, error) {
-	dsUrl := getUrl(ds)
+func (h *HttpServerDriver) RemoveDaemonTasks(ctx context.Context, ds *client.DaemonSet, taskIds *[]string) (*client.DaemonSetResponse, error) {
+	dsUrl, err := getUrl(ds)
+	if err != nil {
+		return nil, err
+	}
 	return h.client.Remove(ctx, dsUrl, taskIds)
 }
 
@@ -89,6 +97,9 @@ func (h *HttpServerDriver) getPort() int {
 }
 
 // getUrl gets the top part of the daemon set http server's url
-func getUrl(ds *daemonset.DaemonSet) string {
-	return fmt.Sprintf("%d", ds.ServerInfo.Port)
+func getUrl(ds *client.DaemonSet) (string, error) {
+	if ds.ServerInfo == nil {
+		return "", fmt.Errorf("no ServerInfo in daemon set")
+	}
+	return fmt.Sprintf("%d", ds.ServerInfo.Port), nil
 }

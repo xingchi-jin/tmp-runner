@@ -8,16 +8,17 @@ import (
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/download"
 	"github.com/drone/go-task/task/drivers/cgi"
-	"github.com/harness/runner/daemonset/manager"
+	"github.com/harness/runner/delegateshell/daemonset"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger/logstream"
+	"github.com/harness/runner/tasks/daemontask"
 	"github.com/harness/runner/tasks/delegatetask"
 	"github.com/harness/runner/tasks/local"
 	"github.com/harness/runner/tasks/secrets"
 	"github.com/harness/runner/tasks/secrets/vault"
 )
 
-func NewRouter(taskContext *delegate.TaskContext, downloader download.Downloader, daemonSetManager *manager.Manager) *task.Router {
+func NewRouter(taskContext *delegate.TaskContext, downloader download.Downloader, daemonSetManager *daemonset.DaemonSetManager) *task.Router {
 	r := task.NewRouter()
 	r.Use(logstream.Middleware())
 
@@ -28,8 +29,11 @@ func NewRouter(taskContext *delegate.TaskContext, downloader download.Downloader
 	r.RegisterFunc("secret/vault/edit", vault.Handler)
 	r.Register("delegate_task", delegatetask.NewDelegateTaskHandler(taskContext))
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
-	r.RegisterFunc("daemonset/upsert", daemonSetManager.HandleUpsert)
-	r.RegisterFunc("daemonset/tasks/assign", daemonSetManager.HandleTaskAssign)
+
+	daemonSetTaskHandler := daemontask.NewDaemonSetTaskHandler(daemonSetManager)
+	r.RegisterFunc("daemonset/upsert", daemonSetTaskHandler.HandleUpsert)
+	r.RegisterFunc("daemonset/tasks/assign", daemonSetTaskHandler.HandleTaskAssign)
+
 	r.NotFound(cgi.New(downloader))
 	return r
 }

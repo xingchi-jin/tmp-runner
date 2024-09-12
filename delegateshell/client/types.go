@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 
 	"github.com/drone/go-task/task"
-	"github.com/harness/runner/daemonset"
+	"github.com/harness/runner/delegateshell/daemonset/client"
 )
 
 // StatusCode represents status code of a task.
@@ -130,10 +130,10 @@ type (
 	}
 
 	DaemonSetReconcileRequestEntry struct {
-		DaemonSetId string                               `json:"daemon_set_id"`
-		Type        string                               `json:"type"`
-		Config      daemonset.DaemonSetOperationalConfig `json:"config"`
-		Healthy     bool                                 `json:"healthy"`
+		DaemonSetId string                            `json:"daemon_set_id"`
+		Type        string                            `json:"type"`
+		Config      client.DaemonSetOperationalConfig `json:"config"`
+		Healthy     bool                              `json:"healthy"`
 	}
 
 	DaemonSetReconcileResponse struct {
@@ -141,10 +141,11 @@ type (
 	}
 
 	DaemonSetReconcileResponseEntry struct {
-		DaemonSetId string                               `json:"daemon_set_id"`
-		Type        string                               `json:"type"`
-		Config      daemonset.DaemonSetOperationalConfig `json:"config"`
-		TaskIds     []string                             `json:"task_ids"`
+		DaemonSetId string                            `json:"daemon_set_id"`
+		Config      client.DaemonSetOperationalConfig `json:"config"`
+		SkipUpdate  bool                              `json:"skip_update"`
+		TaskIds     []string                          `json:"task_ids"`
+		Type        string                            `json:"type"`
 	}
 
 	DaemonTaskAcquireRequest struct {
@@ -152,6 +153,12 @@ type (
 	}
 
 	DaemonTaskAcquireResponse struct {
-		Tasks []daemonset.DaemonTaskAssignRequest `json:"tasks"`
+		Tasks []AcquiredDaemonTask `json:"tasks"`
+	}
+
+	AcquiredDaemonTask struct {
+		DaemonTaskId string                  `json:"daemon_task_id"`
+		Params       client.DaemonTaskParams `json:"params"`
+		Type         string                  `json:"type"`
 	}
 )

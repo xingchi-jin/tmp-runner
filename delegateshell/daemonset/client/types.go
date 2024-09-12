@@ -2,7 +2,7 @@
 // Use of this source code is governed by the PolyForm Shield 1.0.0 license
 // that can be found in the licenses directory at the root of this repository, also available at
 // https://polyformproject.org/wp-content/uploads/2020/06/PolyForm-Shield-1.0.0.txt.
-package daemonset
+package client
 
 import (
 	"os/exec"
@@ -17,9 +17,6 @@ type State string
 const (
 	StatusCodeSuccess StatusCode = "OK"
 	StatusCodeFailed  StatusCode = "FAILED"
-
-	StateSuccess State = "SUCCESS"
-	StateFailure State = "FAILURE"
 )
 
 type (
@@ -27,9 +24,8 @@ type (
 	DaemonSet struct {
 		DaemonSetId string
 		Type        string
-		Config      DaemonSetOperationalConfig
+		Config      *DaemonSetOperationalConfig
 		ServerInfo  *DaemonSetServerInfo
-		Tasks       map[string]bool
 		Healthy     bool
 	}
 
@@ -47,32 +43,6 @@ type (
 		Image            string                 `json:"image"`
 		Repository       *task.Repository       `json:"repository"`
 		Version          string                 `json:"version"`
-	}
-
-	// request for upserting (spawning) a new daemon set
-	DaemonSetUpsertRequest struct {
-		Config      DaemonSetOperationalConfig `json:"config"`
-		DaemonSetId string                     `json:"daemon_set_id"`
-		Type        string                     `json:"type"`
-	}
-
-	DaemonSetUpsertResponse struct {
-		DaemonSetId string `json:"daemon_set_id"`
-		State       State  `json:"state,omitempty"`
-		Error       string `json:"error_message,omitempty"`
-	}
-
-	// request for runner to assign a new daemon task to a daemon set
-	DaemonTaskAssignRequest struct {
-		DaemonTaskId string           `json:"daemon_task_id"`
-		Params       DaemonTaskParams `json:"params"`
-		Type         string           `json:"type"`
-	}
-
-	DaemonTaskAssignResponse struct {
-		DaemonTaskId string `json:"daemon_task_id"`
-		State        State  `json:"state,omitempty"`
-		Error        string `json:"error_message,omitempty"`
 	}
 
 	DaemonTaskParams struct {
