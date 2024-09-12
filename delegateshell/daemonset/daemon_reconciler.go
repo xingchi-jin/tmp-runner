@@ -137,13 +137,11 @@ func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, r
 
 func GetAllDaemonSetTypes(resp *client.DaemonSetReconcileResponse) map[string]bool {
 	set := make(map[string]bool)
-
 	if resp.Data != nil {
 		for _, entry := range resp.Data {
 			set[entry.Type] = true
 		}
 	}
-
 	return set
 }
 
@@ -162,14 +160,12 @@ func compareSets(set1, set2 map[string]bool) (missingInSet1, missingInSet2 []str
 			missingInSet1 = append(missingInSet1, item)
 		}
 	}
-
 	// find items in set1 that are missing in set2
 	for item := range set1 {
 		if !set2[item] {
 			missingInSet2 = append(missingInSet2, item)
 		}
 	}
-
 	return missingInSet1, missingInSet2
 }
 
