@@ -28,6 +28,7 @@ func NewDaemonSetReconciler(daemonSetManager *DaemonSetManager, managerClient *c
 	return &DaemonSetReconciler{daemonSetManager: daemonSetManager, managerClient: managerClient, stopChannel: make(chan struct{})}
 }
 
+// Start will start the daemon set reconciling job
 func (d *DaemonSetReconciler) Start(ctx context.Context, id string, interval time.Duration) error {
 	// Task event poller
 	go func() {
@@ -56,10 +57,12 @@ func (d *DaemonSetReconciler) Start(ctx context.Context, id string, interval tim
 	return nil
 }
 
+// Stop will stop the daemon set reconciling job
 func (d *DaemonSetReconciler) Stop() {
 	close(d.stopChannel) // Notify to stop reconcile job
 }
 
+// reconcile runs the daemon set reconcile flow
 func (d *DaemonSetReconciler) reconcile(ctx context.Context, runnerId string) error {
 	daemonSetTypes := d.daemonSetManager.GetAllTypes()
 	d.syncDaemonSets(ctx, daemonSetTypes)
@@ -72,12 +75,16 @@ func (d *DaemonSetReconciler) reconcile(ctx context.Context, runnerId string) er
 	return nil
 }
 
+// syncDaemonSets will call DaemonSetManager.SyncDaemonSet,
+// for the set of daemon set types passed as arguments
 func (d *DaemonSetReconciler) syncDaemonSets(ctx context.Context, dsTypes map[string]bool) {
 	for dsType := range dsTypes {
 		d.daemonSetManager.SyncDaemonSet(ctx, dsType)
 	}
 }
 
+// getReconcileRequest generates the reconcile request that
+// will be sent to Harness manager
 func (d *DaemonSetReconciler) getReconcileRequest(daemonSetTypes map[string]bool) client.DaemonSetReconcileRequest {
 	data := []client.DaemonSetReconcileRequestEntry{}
 	for dsType := range daemonSetTypes {
@@ -91,9 +98,12 @@ func (d *DaemonSetReconciler) getReconcileRequest(daemonSetTypes map[string]bool
 	return client.DaemonSetReconcileRequest{Data: data}
 }
 
+// syncDaemonSetsWithHarnessServer attempts to ensure the state of the daemon sets is as reported by the server
+// i.e. the daemon sets reported by the server are running; and
+// the tasks for each daemon set are assigned, as reported by the server
 func (d *DaemonSetReconciler) syncDaemonSetsWithHarnessServer(ctx context.Context, runnerId string, dsTypesFromRunner map[string]bool, resp *client.DaemonSetReconcileResponse) {
 	// kill daemon sets which are not supposed to be running
-	dsTypesFromServer := GetAllDaemonSetTypes(resp)
+	dsTypesFromServer := getAllDaemonSetTypes(resp)
 	dsTypesToRemove, _ := compareSets(dsTypesFromServer, dsTypesFromRunner)
 	for _, dsType := range dsTypesToRemove {
 		d.daemonSetManager.RemoveDaemonSet(dsType)
@@ -121,6 +131,8 @@ func (d *DaemonSetReconciler) syncDaemonSetsWithHarnessServer(ctx context.Contex
 	}
 }
 
+// acquireAndAssignDaemonTasks fetches params of tasks from Harness manager
+// and assigns these tasks to a daemon set of the given type (`dsType`)
 func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, runnerId string, dsId string, dsType string, taskIds []string) {
 	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, dsId, &client.DaemonTaskAcquireRequest{TaskIds: taskIds})
 	if err != nil {
@@ -133,7 +145,9 @@ func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, r
 	_ = d.daemonSetManager.AssignDaemonTasks(ctx, dsType, &dsclient.DaemonTasks{Tasks: daemonTasks})
 }
 
-func GetAllDaemonSetTypes(resp *client.DaemonSetReconcileResponse) map[string]bool {
+// getAllDaemonSetTypes returns a set of daemon set types that exist
+// in the reconcile response from Harness manager
+func getAllDaemonSetTypes(resp *client.DaemonSetReconcileResponse) map[string]bool {
 	set := make(map[string]bool)
 	if resp.Data != nil {
 		for _, entry := range resp.Data {
@@ -143,6 +157,9 @@ func GetAllDaemonSetTypes(resp *client.DaemonSetReconcileResponse) map[string]bo
 	return set
 }
 
+// compareTasks compares a daemon set task data from server (Harness manager) with local data (daemon sets)
+// it returns a pair of lists. The first one contains the taskIds that are in local data but not in server.
+// the second one contains the taskIds that are in server but not in local data
 func compareTasks(serverResponse client.DaemonSetReconcileResponseEntry, runnerResponse *dsclient.DaemonTasks) ([]string, []string) {
 	taskIdsFromRunner := make(map[string]bool)
 	for _, task := range runnerResponse.Tasks {
@@ -151,6 +168,9 @@ func compareTasks(serverResponse client.DaemonSetReconcileResponseEntry, runnerR
 	return compareSets(listToSet(serverResponse.TaskIds), taskIdsFromRunner)
 }
 
+// compareSets compares two sets and returns entries that are
+// missing in the first set (`missingInSet1`),
+// and missing in the second set (`missingInSet2`)
 func compareSets(set1, set2 map[string]bool) (missingInSet1, missingInSet2 []string) {
 	// find items in set2 that are missing in set1
 	for item := range set2 {
@@ -167,6 +187,7 @@ func compareSets(set1, set2 map[string]bool) (missingInSet1, missingInSet2 []str
 	return missingInSet1, missingInSet2
 }
 
+// listToSet converts a list to a set
 func listToSet(l []string) map[string]bool {
 	set := make(map[string]bool)
 	for _, v := range l {

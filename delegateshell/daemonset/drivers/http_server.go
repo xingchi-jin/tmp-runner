@@ -45,7 +45,7 @@ func (h *HttpServerDriver) StopDaemonSet(ds *client.DaemonSet) error {
 	return ds.ServerInfo.Execution.Process.Kill()
 }
 
-// AssignDaemonTasks will handle assigning tasks to a daemon set process that runs as http server
+// ListDaemonTasks will handle listing daemon tasks in a daemon set running as http server
 func (h *HttpServerDriver) ListDaemonTasks(ctx context.Context, ds *client.DaemonSet) (*client.DaemonTasks, error) {
 	dsUrl, err := getUrl(ds)
 	if err != nil {
