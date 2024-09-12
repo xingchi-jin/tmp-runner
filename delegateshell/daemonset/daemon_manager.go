@@ -70,7 +70,7 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 	ds, ok := d.Get(dsType)
 	// if daemon set is running healthy with same config as requested,
 	// set the currently running daemon set's ID to the one passed in the request,
-	// and and return the tasks assigned to it
+	// and return the tasks assigned to it
 	if ok && d.isConfigIdentical(ds, dsConfig) {
 		tasks, err := d.driver.ListDaemonTasks(ctx, ds)
 		if err == nil {
@@ -81,7 +81,15 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 	}
 
 	ds = &dsclient.DaemonSet{DaemonSetId: dsId, Type: dsType, Config: dsConfig}
-	return d.startDaemonSet(ctx, ds)
+
+	tasks, err := d.startDaemonSet(ctx, ds)
+	if err != nil {
+		ds.Healthy = false
+	} else {
+		ds.Healthy = true
+	}
+	d.daemonsets.Store(ds.Type, ds)
+	return tasks, err
 }
 
 // RemoveDaemonSet handles removing a daemon set
@@ -123,7 +131,14 @@ func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 		return
 	}
 	dsLogger(ds).Error("failed to list tasks, respawning this daemon set")
-	d.startDaemonSet(ctx, ds)
+
+	_, err = d.startDaemonSet(ctx, ds)
+	if err != nil {
+		ds.Healthy = false
+	} else {
+		ds.Healthy = true
+	}
+	d.daemonsets.Store(ds.Type, ds)
 }
 
 // ListDaemonTasks handles listing the tasks assigned to a daemon set
@@ -182,15 +197,12 @@ func (d *DaemonSetManager) RemoveDaemonTasks(ctx context.Context, dsType string,
 }
 
 // startDaemonSet is an internal method which is used to start daemon sets
-// calling this method should always be wrapped by a lock in the daemon set's type,
-// since here we are both reading and writing to the `d.daemonsets` map
+// calling this method should always be wrapped by a lock in the daemon set's type
 func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.DaemonSet) (*dsclient.DaemonTasks, error) {
 	tasks := &dsclient.DaemonTasks{}
 
 	binpath, err := d.download(ctx, ds)
 	if err != nil {
-		ds.Healthy = false
-		d.daemonsets.Store(ds.Type, ds)
 		return tasks, err
 	}
 
@@ -208,21 +220,15 @@ func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.Daem
 
 	serverInfo, err := d.driver.StartDaemonSet(binpath, ds)
 	if err != nil {
-		ds.Healthy = false
-		d.daemonsets.Store(ds.Type, ds)
 		return tasks, err
 	}
 	ds.ServerInfo = serverInfo
 
 	tasks, err = d.waitForHealthyState(ctx, ds)
 	if err != nil {
-		ds.Healthy = false
-		d.daemonsets.Store(ds.Type, ds)
 		return tasks, err
 	}
 
-	ds.Healthy = true
-	d.daemonsets.Store(ds.Type, ds)
 	dsLogger(ds).Info("started daemon set process")
 	return tasks, nil
 }

@@ -61,7 +61,6 @@ func (d *DaemonSetReconciler) Stop() {
 }
 
 func (d *DaemonSetReconciler) reconcile(ctx context.Context, runnerId string) error {
-	logrus.Info("Starting reconcile flow...")
 	daemonSetTypes := d.daemonSetManager.GetAllTypes()
 	d.syncDaemonSets(ctx, daemonSetTypes)
 	req := d.getReconcileRequest(daemonSetTypes)
@@ -70,7 +69,6 @@ func (d *DaemonSetReconciler) reconcile(ctx context.Context, runnerId string) er
 		return err
 	}
 	d.syncDaemonSetsWithHarnessServer(ctx, runnerId, daemonSetTypes, resp)
-	logrus.Info("Done with reconcile flow...")
 	return nil
 }
 
