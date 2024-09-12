@@ -52,6 +52,7 @@ func NewManagerClient(endpoint, id, secret string, skipverify bool, additionalCe
 	}
 }
 
+// ReconcileDaemonSets calls the daemon set reconciliation endpoint in manager
 func (p *ManagerClient) ReconcileDaemonSets(ctx context.Context, runnerId string, r *DaemonSetReconcileRequest) (*DaemonSetReconcileResponse, error) {
 	req := r
 	resp := &DaemonSetReconcileResponse{}
@@ -60,6 +61,7 @@ func (p *ManagerClient) ReconcileDaemonSets(ctx context.Context, runnerId string
 	return resp, err
 }
 
+// AcquireDaemonTasks fetches daemon task data from manager
 func (p *ManagerClient) AcquireDaemonTasks(ctx context.Context, runnerId string, daemonSetId string, r *DaemonTaskAcquireRequest) (*DaemonTaskAcquireResponse, error) {
 	req := r
 	resp := &DaemonTaskAcquireResponse{}

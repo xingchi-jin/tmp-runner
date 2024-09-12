@@ -50,6 +50,7 @@ func (d *DaemonSetManager) Get(t string) (*dsclient.DaemonSet, bool) {
 	return ds.(*dsclient.DaemonSet), true
 }
 
+// GetAllTypes returns a set of all the daemon set types currently existing in `d.daemonsets`
 func (d *DaemonSetManager) GetAllTypes() map[string]bool {
 	m := make(map[string]bool)
 	d.daemonsets.Range(func(key, value interface{}) bool {
