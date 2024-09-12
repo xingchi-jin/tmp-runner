@@ -140,9 +140,6 @@ func (d *DaemonSetManager) RemoveDaemonSet(dsType string) {
 
 // ListDaemonTasks handles listing the tasks assigned to a daemon set
 func (d *DaemonSetManager) ListDaemonTasks(ctx context.Context, dsType string) (*dsclient.DaemonTasks, error) {
-	d.lock.Lock(dsType)
-	defer d.lock.Unlock(dsType)
-
 	ds, ok := d.Get(dsType)
 	if !ok {
 		return nil, fmt.Errorf("daemon set of type [%s] does not exist", dsType)
@@ -159,9 +156,6 @@ func (d *DaemonSetManager) ListDaemonTasks(ctx context.Context, dsType string) (
 
 // AssignDaemonTasks handles assigning daemon tasks to a daemon set
 func (d *DaemonSetManager) AssignDaemonTasks(ctx context.Context, dsType string, tasks *dsclient.DaemonTasks) error {
-	d.lock.Lock(dsType)
-	defer d.lock.Unlock(dsType)
-
 	ds, ok := d.Get(dsType)
 	if !ok {
 		return fmt.Errorf("daemon set of type [%s] does not exist", dsType)
@@ -184,9 +178,6 @@ func (d *DaemonSetManager) AssignDaemonTasks(ctx context.Context, dsType string,
 
 // RemoveDaemonTasks handles removing daemon tasks from a daemon set
 func (d *DaemonSetManager) RemoveDaemonTasks(ctx context.Context, dsType string, taskIds *[]string) error {
-	d.lock.Lock(dsType)
-	defer d.lock.Unlock(dsType)
-
 	ds, ok := d.Get(dsType)
 	if !ok {
 		return fmt.Errorf("daemon set of type [%s] does not exist", dsType)
