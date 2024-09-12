@@ -66,8 +66,6 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 	d.lock.Lock(dsType)
 	defer d.lock.Unlock(dsType)
 
-	tasks := &dsclient.DaemonTasks{}
-
 	// check if daemon set already exists in daemon set map
 	ds, ok := d.Get(dsType)
 	// if daemon set is running healthy with same config as requested,
@@ -83,44 +81,7 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 	}
 
 	ds = &dsclient.DaemonSet{DaemonSetId: dsId, Type: dsType, Config: dsConfig}
-
-	binpath, err := d.download(ctx, ds)
-	if err != nil {
-		ds.Healthy = false
-		d.daemonsets.Store(ds.Type, ds)
-		return tasks, err
-	}
-
-	// if daemon set exists in daemon set map
-	// attempt to kill its process and remove
-	// it from the map
-	if ok {
-		err := d.driver.StopDaemonSet(ds)
-		if err != nil {
-			dsLogger(ds).WithError(err).Warn("failed to kill daemon set process")
-		}
-		d.daemonsets.Delete(dsType)
-	}
-
-	serverInfo, err := d.driver.StartDaemonSet(binpath, ds)
-	if err != nil {
-		ds.Healthy = false
-		d.daemonsets.Store(ds.Type, ds)
-		return tasks, err
-	}
-	ds.ServerInfo = serverInfo
-
-	tasks, err = d.waitForHealthyState(ctx, ds)
-	if err != nil {
-		ds.Healthy = false
-		d.daemonsets.Store(ds.Type, ds)
-		return tasks, err
-	}
-
-	ds.Healthy = true
-	d.daemonsets.Store(ds.Type, ds)
-	dsLogger(ds).Info("started daemon set process")
-	return tasks, nil
+	return d.startDaemonSet(ctx, ds)
 }
 
 // RemoveDaemonSet handles removing a daemon set
@@ -136,6 +97,33 @@ func (d *DaemonSetManager) RemoveDaemonSet(dsType string) {
 		}
 		d.daemonsets.Delete(dsType)
 	}
+}
+
+// SyncDaemonSet will check if the daemon set of given type is healthy and running,
+// if the daemon set is not running, it will attempt to re-spawn it
+func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
+	d.lock.Lock(dsType)
+	defer d.lock.Unlock(dsType)
+
+	// check if daemon set already exists in daemon set map
+	ds, ok := d.Get(dsType)
+	if !ok {
+		// daemon set does not exist
+		return
+	}
+	// check if daemon set is running healthy
+	if !ds.Healthy {
+		// daemon set has already been flagged as unhealthy
+		// no point trying to restart it
+		return
+	}
+	_, err := d.driver.ListDaemonTasks(ctx, ds)
+	if err == nil {
+		// daemon set is healthy and running
+		return
+	}
+	dsLogger(ds).Error("failed to list tasks, respawning this daemon set")
+	d.startDaemonSet(ctx, ds)
 }
 
 // ListDaemonTasks handles listing the tasks assigned to a daemon set
@@ -191,6 +179,52 @@ func (d *DaemonSetManager) RemoveDaemonTasks(ctx context.Context, dsType string,
 	}
 
 	return nil
+}
+
+// startDaemonSet is an internal method which is used to start daemon sets
+// calling this method should always be wrapped by a lock in the daemon set's type,
+// since here we are both reading and writing to the `d.daemonsets` map
+func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.DaemonSet) (*dsclient.DaemonTasks, error) {
+	tasks := &dsclient.DaemonTasks{}
+
+	binpath, err := d.download(ctx, ds)
+	if err != nil {
+		ds.Healthy = false
+		d.daemonsets.Store(ds.Type, ds)
+		return tasks, err
+	}
+
+	// if daemon set exists in daemon set map
+	// attempt to kill its process and remove
+	// it from the map
+	_, ok := d.Get(ds.Type)
+	if ok {
+		err := d.driver.StopDaemonSet(ds)
+		if err != nil {
+			dsLogger(ds).WithError(err).Warn("failed to kill daemon set process")
+		}
+		d.daemonsets.Delete(ds.Type)
+	}
+
+	serverInfo, err := d.driver.StartDaemonSet(binpath, ds)
+	if err != nil {
+		ds.Healthy = false
+		d.daemonsets.Store(ds.Type, ds)
+		return tasks, err
+	}
+	ds.ServerInfo = serverInfo
+
+	tasks, err = d.waitForHealthyState(ctx, ds)
+	if err != nil {
+		ds.Healthy = false
+		d.daemonsets.Store(ds.Type, ds)
+		return tasks, err
+	}
+
+	ds.Healthy = true
+	d.daemonsets.Store(ds.Type, ds)
+	dsLogger(ds).Info("started daemon set process")
+	return tasks, nil
 }
 
 // isConfigIdentical checks whether a given daemon set's config is identical to `dsConfig`

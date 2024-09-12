@@ -76,19 +76,8 @@ func (d *DaemonSetReconciler) reconcile(ctx context.Context, runnerId string) er
 
 func (d *DaemonSetReconciler) syncDaemonSets(ctx context.Context, dsTypes map[string]bool) {
 	for dsType := range dsTypes {
-		d.syncDaemonSet(ctx, dsType)
+		d.daemonSetManager.SyncDaemonSet(ctx, dsType)
 	}
-}
-
-func (d *DaemonSetReconciler) syncDaemonSet(ctx context.Context, dsType string) {
-	ds, ok := d.daemonSetManager.Get(dsType)
-	if !ok {
-		return
-	}
-	if !ds.Healthy {
-		return
-	}
-	d.daemonSetManager.UpsertDaemonSet(ctx, ds.DaemonSetId, ds.Type, ds.Config)
 }
 
 func (d *DaemonSetReconciler) getReconcileRequest(daemonSetTypes map[string]bool) client.DaemonSetReconcileRequest {
