@@ -60,9 +60,17 @@ type (
 		Tasks []DaemonTask `json:"tasks"`
 	}
 
+	// metadata of a task processed by a daemon set
+	DaemonTaskMetadata struct {
+		ID string `json:"id"`
+	}
+
+	// list of metadata for tasks processed by a daemon set
+	DaemonTasksMetadata []DaemonTaskMetadata
+
 	// response for daemon set API operations
 	DaemonSetResponse struct {
-		Status StatusCode `json:"status"`
-		Error  string     `json:"error"`
+		TasksMetadata DaemonTasksMetadata `json:"tasks_metadata"`
+		Error         string              `json:"error"`
 	}
 )

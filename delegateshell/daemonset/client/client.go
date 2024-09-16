@@ -30,8 +30,8 @@ func NewClient(baseUrl string) *Client {
 }
 
 // GetTasks retrieves the list of tasks running in a daemon set, specified by the `port` argument
-func (p *Client) GetTasks(ctx context.Context, path string) (*DaemonTasks, error) {
-	resp := &DaemonTasks{}
+func (p *Client) GetTasks(ctx context.Context, path string) (*DaemonSetResponse, error) {
+	resp := &DaemonSetResponse{}
 	fullpath := fmt.Sprintf(endpoint, path)
 	_, err := p.doJson(ctx, fullpath, "GET", nil, resp)
 	return resp, err

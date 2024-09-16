@@ -46,39 +46,50 @@ func (h *HttpServerDriver) StopDaemonSet(ds *client.DaemonSet) error {
 }
 
 // ListDaemonTasks will handle listing daemon tasks in a daemon set running as http server
-func (h *HttpServerDriver) ListDaemonTasks(ctx context.Context, ds *client.DaemonSet) (*client.DaemonTasks, error) {
+func (h *HttpServerDriver) ListDaemonTasks(ctx context.Context, ds *client.DaemonSet) (*client.DaemonTasksMetadata, error) {
 	dsUrl, err := getUrl(ds)
 	if err != nil {
 		return nil, err
 	}
-	return h.client.GetTasks(ctx, dsUrl)
+	resp, err := h.client.GetTasks(ctx, dsUrl)
+	if err != nil || resp.Error != "" {
+		return nil, fmt.Errorf(resp.Error)
+	}
+	return &resp.TasksMetadata, nil
 }
 
 // AssignDaemonTasks will handle assigning tasks to a daemon set process that runs as http server
-func (h *HttpServerDriver) AssignDaemonTasks(ctx context.Context, ds *client.DaemonSet, tasks *client.DaemonTasks) (*client.DaemonSetResponse, error) {
+func (h *HttpServerDriver) AssignDaemonTasks(ctx context.Context, ds *client.DaemonSet, tasks *client.DaemonTasks) (*client.DaemonTasksMetadata, error) {
 	dsUrl, err := getUrl(ds)
 	if err != nil {
 		return nil, err
 	}
-	return h.client.Assign(ctx, dsUrl, tasks)
+	resp, err := h.client.Assign(ctx, dsUrl, tasks)
+	if err != nil || resp.Error != "" {
+		return nil, fmt.Errorf(resp.Error)
+	}
+	return &resp.TasksMetadata, nil
 }
 
 // RemoveDaemonTasks will handle removing tasks from a daemon set process that runs as http server
-func (h *HttpServerDriver) RemoveDaemonTasks(ctx context.Context, ds *client.DaemonSet, taskIds *[]string) (*client.DaemonSetResponse, error) {
+func (h *HttpServerDriver) RemoveDaemonTasks(ctx context.Context, ds *client.DaemonSet, taskIds *[]string) (*client.DaemonTasksMetadata, error) {
 	dsUrl, err := getUrl(ds)
 	if err != nil {
 		return nil, err
 	}
-	return h.client.Remove(ctx, dsUrl, taskIds)
+	resp, err := h.client.Remove(ctx, dsUrl, taskIds)
+	if err != nil || resp.Error != "" {
+		return nil, fmt.Errorf(resp.Error)
+	}
+	return &resp.TasksMetadata, nil
 }
 
 // spawns daemon set process passing it the -port param
 func (h *HttpServerDriver) startProcess(envs []string, binpath string, port int) (*exec.Cmd, error) {
-	// TODO: Here we need to check if the daemon set is healthy before returning success (next PR will do it).
-	// create the command to run the executable with the -port flag
-	cmd := exec.Command(binpath, "-port", fmt.Sprintf("%d", port))
+	cmd := exec.Command(binpath)
 
 	// set the environment variables
+	envs = append(envs, fmt.Sprintf("DAEMON_SERVER_PORT=%d", port))
 	cmd.Env = append(os.Environ(), envs...)
 
 	// start the command

@@ -63,7 +63,7 @@ func (d *DaemonSetManager) GetAllTypes() map[string]bool {
 
 // UpsertDaemonSet is an idempotent method for upserting daemon sets
 // returns the list of tasks assigned to the daemon set
-func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsType string, dsConfig *dsclient.DaemonSetOperationalConfig) (*dsclient.DaemonTasks, error) {
+func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsType string, dsConfig *dsclient.DaemonSetOperationalConfig) (*dsclient.DaemonTasksMetadata, error) {
 	d.lock.Lock(dsType)
 	defer d.lock.Unlock(dsType)
 
@@ -143,7 +143,7 @@ func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 }
 
 // ListDaemonTasks handles listing the tasks assigned to a daemon set
-func (d *DaemonSetManager) ListDaemonTasks(ctx context.Context, dsType string) (*dsclient.DaemonTasks, error) {
+func (d *DaemonSetManager) ListDaemonTasks(ctx context.Context, dsType string) (*dsclient.DaemonTasksMetadata, error) {
 	ds, ok := d.Get(dsType)
 	if !ok {
 		return nil, fmt.Errorf("daemon set of type [%s] does not exist", dsType)
@@ -176,6 +176,7 @@ func (d *DaemonSetManager) AssignDaemonTasks(ctx context.Context, dsType string,
 		dsLogger(ds).Errorf("failed to assign tasks %s to daemon set", taskIds)
 		return err
 	}
+	dsLogger(ds).Infof("assigned tasks %s to daemon set", taskIds)
 
 	return nil
 }
@@ -199,8 +200,8 @@ func (d *DaemonSetManager) RemoveDaemonTasks(ctx context.Context, dsType string,
 
 // startDaemonSet is an internal method which is used to start daemon sets
 // calling this method should always be wrapped by a lock in the daemon set's type
-func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.DaemonSet) (*dsclient.DaemonTasks, error) {
-	tasks := &dsclient.DaemonTasks{}
+func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.DaemonSet) (*dsclient.DaemonTasksMetadata, error) {
+	tasks := &dsclient.DaemonTasksMetadata{}
 
 	binpath, err := d.download(ctx, ds)
 	if err != nil {
@@ -256,7 +257,7 @@ func (d *DaemonSetManager) download(ctx context.Context, ds *dsclient.DaemonSet)
 }
 
 // waitForHealthyState pools a daemon set tasks list API until successful and returns the list of tasks
-func (d *DaemonSetManager) waitForHealthyState(ctx context.Context, ds *dsclient.DaemonSet) (*dsclient.DaemonTasks, error) {
+func (d *DaemonSetManager) waitForHealthyState(ctx context.Context, ds *dsclient.DaemonSet) (*dsclient.DaemonTasksMetadata, error) {
 	timeout := 3 * time.Minute
 	timeoutCtx, cancel := context.WithTimeout(ctx, timeout)
 	defer cancel()

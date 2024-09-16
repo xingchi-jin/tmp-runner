@@ -160,9 +160,9 @@ func getAllDaemonSetTypes(resp *client.DaemonSetReconcileResponse) map[string]bo
 // compareTasks compares a daemon set task data from server (Harness manager) with local data (daemon sets)
 // it returns a pair of lists. The first one contains the taskIds that are in local data but not in server.
 // the second one contains the taskIds that are in server but not in local data
-func compareTasks(serverResponse client.DaemonSetReconcileResponseEntry, runnerResponse *dsclient.DaemonTasks) ([]string, []string) {
+func compareTasks(serverResponse client.DaemonSetReconcileResponseEntry, runnerResponse *dsclient.DaemonTasksMetadata) ([]string, []string) {
 	taskIdsFromRunner := make(map[string]bool)
-	for _, task := range runnerResponse.Tasks {
+	for _, task := range *runnerResponse {
 		taskIdsFromRunner[task.ID] = true
 	}
 	return compareSets(listToSet(serverResponse.TaskIds), taskIdsFromRunner)
