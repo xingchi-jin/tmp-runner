@@ -194,6 +194,7 @@ func (d *DaemonSetManager) RemoveDaemonTasks(ctx context.Context, dsType string,
 		dsLogger(ds).WithError(err).Errorf("failed to remove tasks %s from daemon set", *taskIds)
 		return err
 	}
+	dsLogger(ds).Infof("removed tasks %s from daemon set", *taskIds)
 
 	return nil
 }

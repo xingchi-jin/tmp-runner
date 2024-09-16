@@ -99,7 +99,7 @@ func (d *DelegateShell) sendHeartbeat(ctx context.Context) error {
 }
 
 func (d *DelegateShell) startDaemonSetReconcile(ctx context.Context) error {
-	if err := d.DaemonSetReconciler.Start(ctx, d.Info.ID, time.Second*15); err != nil {
+	if err := d.DaemonSetReconciler.Start(ctx, d.Info.ID, time.Minute*1); err != nil {
 		logrus.WithError(err).Errorln("Error starting reconcile for daemon sets")
 		return err
 	}

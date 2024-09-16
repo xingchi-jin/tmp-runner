@@ -10,15 +10,6 @@ import (
 	"github.com/drone/go-task/task"
 )
 
-// StatusCode represents status code of a task assignment/deletion.
-type StatusCode string
-type State string
-
-const (
-	StatusCodeSuccess StatusCode = "OK"
-	StatusCodeFailed  StatusCode = "FAILED"
-)
-
 type (
 	// represents a daemon set for the in-memory map of daemon sets
 	DaemonSet struct {
