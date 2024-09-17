@@ -212,13 +212,13 @@ func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.Daem
 	// if daemon set exists in daemon set map
 	// attempt to kill its process and remove
 	// it from the map
-	_, ok := d.Get(ds.Type)
+	oldDs, ok := d.Get(ds.Type)
 	if ok {
-		err := d.driver.StopDaemonSet(ds)
+		err := d.driver.StopDaemonSet(oldDs)
 		if err != nil {
-			dsLogger(ds).WithError(err).Warn("failed to kill daemon set process")
+			dsLogger(oldDs).WithError(err).Warn("failed to kill daemon set process")
 		}
-		d.daemonsets.Delete(ds.Type)
+		d.daemonsets.Delete(oldDs.Type)
 	}
 
 	serverInfo, err := d.driver.StartDaemonSet(binpath, ds)
@@ -228,6 +228,7 @@ func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.Daem
 	ds.ServerInfo = serverInfo
 
 	tasks, err = d.waitForHealthyState(ctx, ds)
+
 	if err != nil {
 		return tasks, err
 	}
