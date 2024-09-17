@@ -121,4 +121,5 @@ func (d *DelegateShell) startPoller(ctx context.Context) error {
 func (d *DelegateShell) Shutdown() {
 	d.DaemonSetReconciler.Stop()
 	d.Poller.Shutdown()
+	d.DaemonSetManager.RemoveAllDaemonSets()
 }

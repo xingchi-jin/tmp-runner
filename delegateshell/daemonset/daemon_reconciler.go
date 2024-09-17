@@ -24,7 +24,6 @@ type DaemonSetReconciler struct {
 }
 
 func NewDaemonSetReconciler(daemonSetManager *DaemonSetManager, managerClient *client.ManagerClient) *DaemonSetReconciler {
-	// TODO: Add suport for daemon sets in k8s runner
 	return &DaemonSetReconciler{daemonSetManager: daemonSetManager, managerClient: managerClient, stopChannel: make(chan struct{})}
 }
 
@@ -71,7 +70,7 @@ func (d *DaemonSetReconciler) reconcile(ctx context.Context, runnerId string) er
 	if err != nil {
 		return err
 	}
-	d.syncDaemonSetsWithHarnessServer(ctx, runnerId, daemonSetTypes, resp)
+	d.syncWithHarnessServer(ctx, runnerId, daemonSetTypes, resp)
 	return nil
 }
 
@@ -98,10 +97,10 @@ func (d *DaemonSetReconciler) getReconcileRequest(daemonSetTypes map[string]bool
 	return client.DaemonSetReconcileRequest{Data: data}
 }
 
-// syncDaemonSetsWithHarnessServer attempts to ensure the state of the daemon sets is as reported by the server
+// syncWithHarnessServer attempts to ensure the state of the daemon sets is as reported by the server
 // i.e. the daemon sets reported by the server are running; and
 // the tasks for each daemon set are assigned, as reported by the server
-func (d *DaemonSetReconciler) syncDaemonSetsWithHarnessServer(ctx context.Context, runnerId string, dsTypesFromRunner map[string]bool, resp *client.DaemonSetReconcileResponse) {
+func (d *DaemonSetReconciler) syncWithHarnessServer(ctx context.Context, runnerId string, dsTypesFromRunner map[string]bool, resp *client.DaemonSetReconcileResponse) {
 	// kill daemon sets which are not supposed to be running
 	dsTypesFromServer := getAllDaemonSetTypes(resp)
 	dsTypesToRemove, _ := compareSets(dsTypesFromServer, dsTypesFromRunner)
@@ -126,15 +125,15 @@ func (d *DaemonSetReconciler) syncDaemonSetsWithHarnessServer(ctx context.Contex
 			_ = d.daemonSetManager.RemoveDaemonTasks(ctx, dsType, &taskIdsToRemove)
 		}
 		if len(taskIdsToAssign) > 0 {
-			d.acquireAndAssignDaemonTasks(ctx, runnerId, dsId, dsType, taskIdsToAssign)
+			d.acquireAndAssignDaemonTasks(ctx, runnerId, dsId, dsType, &taskIdsToAssign)
 		}
 	}
 }
 
 // acquireAndAssignDaemonTasks fetches params of tasks from Harness manager
 // and assigns these tasks to a daemon set of the given type (`dsType`)
-func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, runnerId string, dsId string, dsType string, taskIds []string) {
-	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, dsId, &client.DaemonTaskAcquireRequest{TaskIds: taskIds})
+func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, runnerId string, dsId string, dsType string, taskIds *[]string) {
+	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, dsId, &client.DaemonTaskAcquireRequest{TaskIds: *taskIds})
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to acquire daemon task params during reconcile: id [%s]; type [%s]", dsId, dsType)
 	}
@@ -160,7 +159,7 @@ func getAllDaemonSetTypes(resp *client.DaemonSetReconcileResponse) map[string]bo
 // compareTasks compares a daemon set task data from server (Harness manager) with local data (daemon sets)
 // it returns a pair of lists. The first one contains the taskIds that are in local data but not in server.
 // the second one contains the taskIds that are in server but not in local data
-func compareTasks(serverResponse client.DaemonSetReconcileResponseEntry, runnerResponse *dsclient.DaemonTasksMetadata) ([]string, []string) {
+func compareTasks(serverResponse client.DaemonSetServerInfo, runnerResponse *dsclient.DaemonTasksMetadata) ([]string, []string) {
 	taskIdsFromRunner := make(map[string]bool)
 	for _, task := range *runnerResponse {
 		taskIdsFromRunner[task.ID] = true

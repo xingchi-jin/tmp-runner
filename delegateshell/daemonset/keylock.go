@@ -16,6 +16,14 @@ func NewKeyLock() *KeyLock {
 	return &KeyLock{locks: make(map[string]*sync.Mutex)}
 }
 
+func (k *KeyLock) LockAll() {
+	k.mapLock.Lock()
+}
+
+func (k *KeyLock) UnlockAll() {
+	k.mapLock.Unlock()
+}
+
 func (k *KeyLock) Lock(key string) {
 	k.getLockBy(key).Lock()
 }

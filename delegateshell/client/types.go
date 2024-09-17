@@ -137,10 +137,10 @@ type (
 	}
 
 	DaemonSetReconcileResponse struct {
-		Data []DaemonSetReconcileResponseEntry `json:"data"`
+		Data []DaemonSetServerInfo `json:"data"`
 	}
 
-	DaemonSetReconcileResponseEntry struct {
+	DaemonSetServerInfo struct {
 		DaemonSetId string                            `json:"daemon_set_id"`
 		Config      client.DaemonSetOperationalConfig `json:"config"`
 		SkipUpdate  bool                              `json:"skip_update"`

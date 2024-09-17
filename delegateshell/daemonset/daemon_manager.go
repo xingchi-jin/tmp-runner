@@ -29,15 +29,15 @@ type DaemonSetManager struct {
 	// when multiple goroutines read, write, and overwrite entries for disjoint sets of keys. ..."
 	daemonsets *sync.Map
 	downloader download.Downloader
-	driver     *drivers.HttpServerDriver
+	driver     drivers.DaemonSetDriver
 	// the `lock` here is a wrapper for a map of locks, indexed by daemon set's type
 	// so that we can make sure operations are atomic for each daemon set type
 	lock *KeyLock
 }
 
 func NewDaemonSetManager(d download.Downloader, isK8s bool) *DaemonSetManager {
-	// TODO: Add suport for daemon sets in k8s runner
-	return &DaemonSetManager{downloader: d, daemonsets: &sync.Map{}, lock: NewKeyLock(), driver: drivers.NewHttpServerDriver()}
+	// TODO: Add suport for daemon sets in k8s runner. For this, we need to implement the `K8sServerDriver`.
+	return &DaemonSetManager{downloader: d, daemonsets: &sync.Map{}, lock: NewKeyLock(), driver: drivers.NewLocalDriver()}
 }
 
 // Get will return a *DaemonSet struct from the d.daemonsets synchronized map
@@ -72,7 +72,7 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 	// if daemon set is running healthy with same config as requested,
 	// set the currently running daemon set's ID to the one passed in the request,
 	// and return the tasks assigned to it
-	if ok && d.isConfigIdentical(ds, dsConfig) {
+	if ok && isConfigIdentical(ds.Config, dsConfig) {
 		tasks, err := d.driver.ListDaemonTasks(ctx, ds)
 		if err == nil {
 			ds.DaemonSetId = dsId
@@ -84,32 +84,18 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 	ds = &dsclient.DaemonSet{DaemonSetId: dsId, Type: dsType, Config: dsConfig}
 
 	tasks, err := d.startDaemonSet(ctx, ds)
-	if err != nil {
-		ds.Healthy = false
-	} else {
+	if err == nil {
 		ds.Healthy = true
+	} else {
+		ds.Healthy = false
 	}
 	d.daemonsets.Store(ds.Type, ds)
 	return tasks, err
 }
 
-// RemoveDaemonSet handles removing a daemon set
-func (d *DaemonSetManager) RemoveDaemonSet(dsType string) {
-	d.lock.Lock(dsType)
-	defer d.lock.Unlock(dsType)
-
-	ds, ok := d.Get(dsType)
-	if ok {
-		err := d.driver.StopDaemonSet(ds)
-		if err != nil {
-			dsLogger(ds).WithError(err).Warn("failed to kill daemon set process")
-		}
-		d.daemonsets.Delete(dsType)
-	}
-}
-
 // SyncDaemonSet will check if the daemon set of given type is healthy and running,
 // if the daemon set is not running, it will attempt to re-spawn it
+// if the daemon set is not healthy, even after re-spawn, mark it as unhealthy
 func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 	d.lock.Lock(dsType)
 	defer d.lock.Unlock(dsType)
@@ -134,12 +120,44 @@ func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 	dsLogger(ds).Error("failed to list tasks, respawning this daemon set")
 
 	_, err = d.startDaemonSet(ctx, ds)
-	if err != nil {
-		ds.Healthy = false
-	} else {
+	if err == nil {
 		ds.Healthy = true
+	} else {
+		ds.Healthy = false
 	}
 	d.daemonsets.Store(ds.Type, ds)
+}
+
+// RemoveDaemonSet handles removing a daemon set
+func (d *DaemonSetManager) RemoveDaemonSet(dsType string) {
+	d.lock.Lock(dsType)
+	defer d.lock.Unlock(dsType)
+
+	ds, ok := d.Get(dsType)
+	if ok {
+		err := d.driver.StopDaemonSet(ds)
+		if err != nil {
+			dsLogger(ds).WithError(err).Warn("failed to kill daemon set process")
+		}
+		d.daemonsets.Delete(dsType)
+	}
+}
+
+// RemoveAllDaemonSets handles removing all daemon sets
+func (d *DaemonSetManager) RemoveAllDaemonSets() {
+	d.lock.LockAll()
+	defer d.lock.UnlockAll()
+
+	for dsType := range d.GetAllTypes() {
+		ds, ok := d.Get(dsType)
+		if ok {
+			err := d.driver.StopDaemonSet(ds)
+			if err != nil {
+				dsLogger(ds).WithError(err).Warn("failed to kill daemon set process")
+			}
+			d.daemonsets.Delete(dsType)
+		}
+	}
 }
 
 // ListDaemonTasks handles listing the tasks assigned to a daemon set
@@ -228,7 +246,6 @@ func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.Daem
 	ds.ServerInfo = serverInfo
 
 	tasks, err = d.waitForHealthyState(ctx, ds)
-
 	if err != nil {
 		return tasks, err
 	}
@@ -237,20 +254,14 @@ func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.Daem
 	return tasks, nil
 }
 
-// isConfigIdentical checks whether a given daemon set's config is identical to `dsConfig`
-func (d *DaemonSetManager) isConfigIdentical(ds *dsclient.DaemonSet, dsConfig *dsclient.DaemonSetOperationalConfig) bool {
-	if reflect.DeepEqual(ds.Config, dsConfig) {
-		return true
-	}
-	return false
-}
-
 // download the daemon set's executable file
 func (d *DaemonSetManager) download(ctx context.Context, ds *dsclient.DaemonSet) (string, error) {
 	if ds.Config.ExecutableConfig == nil {
 		return "", fmt.Errorf("no executable configuration provided for daemon set")
 	}
-	path, err := d.downloader.Download(ctx, ds.Type, ds.Config.Repository, ds.Config.ExecutableConfig)
+	// set daemon set's version in ExecutableConfig
+	ds.Config.ExecutableConfig.Version = ds.Config.Version
+	path, err := d.downloader.Download(ctx, ds.Type, nil, ds.Config.ExecutableConfig)
 	if err != nil {
 		logrus.WithError(err).Error("task code download failed")
 		return "", err
@@ -280,6 +291,38 @@ func (d *DaemonSetManager) waitForHealthyState(ctx context.Context, ds *dsclient
 			return nil, fmt.Errorf("health check timeout reached: failed to list tasks after %f minutes", timeout.Minutes())
 		}
 	}
+}
+
+// isConfigIdentical checks whether two daemon set configs are the same
+func isConfigIdentical(config1 *dsclient.DaemonSetOperationalConfig, config2 *dsclient.DaemonSetOperationalConfig) bool {
+	if config1 == config2 {
+		return true
+	}
+	if config1 == nil || config2 == nil {
+		return false
+	}
+	if config1.Cpu != config2.Cpu {
+		return false
+	}
+	if !reflect.DeepEqual(config1.Envs, config2.Envs) {
+		return false
+	}
+	if config1.ExecutableConfig == nil || config2.ExecutableConfig == nil {
+		return false
+	}
+	if !reflect.DeepEqual(config1.ExecutableConfig.Executables, config2.ExecutableConfig.Executables) {
+		return false
+	}
+	if config1.MemoryBytes != config2.MemoryBytes {
+		return false
+	}
+	if config1.Image != config2.Image {
+		return false
+	}
+	if config1.Version != config2.Version {
+		return false
+	}
+	return true
 }
 
 // returns a logrus *Entry with daemon set's data as fields

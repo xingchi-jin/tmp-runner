@@ -32,7 +32,6 @@ type (
 		ExecutableConfig *task.ExecutableConfig `json:"executable_config"`
 		MemoryBytes      int64                  `json:"memory_bytes"`
 		Image            string                 `json:"image"`
-		Repository       *task.Repository       `json:"repository"`
 		Version          string                 `json:"version"`
 	}
 
