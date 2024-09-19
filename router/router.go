@@ -6,7 +6,7 @@ package router
 
 import (
 	"github.com/drone/go-task/task"
-	"github.com/drone/go-task/task/download"
+	"github.com/drone/go-task/task/downloader"
 	"github.com/drone/go-task/task/drivers/cgi"
 	"github.com/harness/runner/delegateshell/daemonset"
 	"github.com/harness/runner/delegateshell/delegate"
@@ -18,7 +18,7 @@ import (
 	"github.com/harness/runner/tasks/secrets/vault"
 )
 
-func NewRouter(taskContext *delegate.TaskContext, downloader download.Downloader, daemonSetManager *daemonset.DaemonSetManager) *task.Router {
+func NewRouter(taskContext *delegate.TaskContext, d downloader.Downloader, dsManager *daemonset.DaemonSetManager) *task.Router {
 	r := task.NewRouter()
 	r.Use(logstream.Middleware())
 
@@ -30,10 +30,10 @@ func NewRouter(taskContext *delegate.TaskContext, downloader download.Downloader
 	r.Register("delegate_task", delegatetask.NewDelegateTaskHandler(taskContext))
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
 
-	daemonSetTaskHandler := daemontask.NewDaemonSetTaskHandler(daemonSetManager)
+	daemonSetTaskHandler := daemontask.NewDaemonSetTaskHandler(dsManager)
 	r.RegisterFunc("daemonset/upsert", daemonSetTaskHandler.HandleUpsert)
 	r.RegisterFunc("daemonset/tasks/assign", daemonSetTaskHandler.HandleTaskAssign)
 
-	r.NotFound(cgi.New(downloader))
+	r.NotFound(cgi.New(d))
 	return r
 }

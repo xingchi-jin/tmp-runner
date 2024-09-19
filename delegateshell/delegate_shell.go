@@ -12,7 +12,7 @@ import (
 	"time"
 
 	"github.com/drone/go-task/task/cloner"
-	"github.com/drone/go-task/task/download"
+	"github.com/drone/go-task/task/downloader"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/daemonset"
 	"github.com/harness/runner/delegateshell/delegate"
@@ -29,7 +29,7 @@ type DelegateShell struct {
 	ManagerClient       *client.ManagerClient
 	KeepAlive           *heartbeat.KeepAlive
 	Poller              *poller.Poller
-	Downloader          download.Downloader
+	Downloader          downloader.Downloader
 	DaemonSetManager    *daemonset.DaemonSetManager
 	DaemonSetReconciler *daemonset.DaemonSetReconciler
 }
@@ -40,7 +40,7 @@ func NewDelegateShell(config *delegate.Config, managerClient *client.ManagerClie
 	if err != nil {
 		log.Fatalln(err)
 	}
-	downloader := download.New(cloner.Default(), cache)
+	downloader := downloader.New(cloner.Default(), cache)
 
 	// The poller needs a client that interacts with the task management system and a router to route the tasks
 	keepAlive := heartbeat.New(config.Delegate.AccountID, config.Delegate.Name, config.GetTags(), managerClient)

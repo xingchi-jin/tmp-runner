@@ -11,7 +11,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/drone/go-task/task/download"
+	"github.com/drone/go-task/task/downloader"
 	dsclient "github.com/harness/runner/delegateshell/daemonset/client"
 	"github.com/harness/runner/delegateshell/daemonset/drivers"
 	"github.com/sirupsen/logrus"
@@ -28,14 +28,14 @@ type DaemonSetManager struct {
 	// From https://pkg.go.dev/sync#Map: "the (sync.Map) type is optimized for two common use cases: ...
 	// when multiple goroutines read, write, and overwrite entries for disjoint sets of keys. ..."
 	daemonsets *sync.Map
-	downloader download.Downloader
+	downloader downloader.Downloader
 	driver     drivers.DaemonSetDriver
 	// the `lock` here is a wrapper for a map of locks, indexed by daemon set's type
 	// so that we can make sure operations are atomic for each daemon set type
 	lock *KeyLock
 }
 
-func NewDaemonSetManager(d download.Downloader, isK8s bool) *DaemonSetManager {
+func NewDaemonSetManager(d downloader.Downloader, isK8s bool) *DaemonSetManager {
 	// TODO: Add suport for daemon sets in k8s runner. For this, we need to implement the `K8sServerDriver`.
 	return &DaemonSetManager{downloader: d, daemonsets: &sync.Map{}, lock: NewKeyLock(), driver: drivers.NewLocalDriver()}
 }
@@ -260,10 +260,9 @@ func (d *DaemonSetManager) download(ctx context.Context, ds *dsclient.DaemonSet)
 		return "", fmt.Errorf("no executable configuration provided for daemon set")
 	}
 	// set daemon set's version in ExecutableConfig
-	ds.Config.ExecutableConfig.Version = ds.Config.Version
-	path, err := d.downloader.Download(ctx, ds.Type, nil, ds.Config.ExecutableConfig)
+	path, err := d.downloader.DownloadExecutable(ctx, ds.Type, ds.Config.Version, ds.Config.ExecutableConfig)
 	if err != nil {
-		logrus.WithError(err).Error("task code download failed")
+		logrus.WithError(err).Error("failed to download task executable file")
 		return "", err
 	}
 	return path, nil
