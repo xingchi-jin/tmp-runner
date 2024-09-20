@@ -26,7 +26,7 @@ const (
 	taskStatusEndpoint         = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
 	runnerEventsPollEndpoint   = "/api/executions/%s/runner-events?accountId=%s"
 	executionPayloadEndpoint   = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s&delegateName=%s"
-	taskStatusEndpointV2       = "/api/executions/%s/response?delegateId=%s&accountId=%s"
+	taskStatusEndpointV2       = "/api/executions/%s/task-response?delegateId=%s&accountId=%s"
 	daemonSetReconcileEndpoint = "/api/daemons/%s/reconcile?accountId=%s"
 	acquireDaemonTasksEndpoint = "/api/daemons/%s/tasks?accountId=%s&daemonSetId=%s"
 )
