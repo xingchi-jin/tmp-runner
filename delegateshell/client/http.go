@@ -25,7 +25,7 @@ const (
 	heartbeatEndpoint        = "/api/agent/delegates/heartbeat-with-polling?accountId=%s"
 	taskStatusEndpoint       = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
 	runnerEventsPollEndpoint = "/api/executions/%s/runner-events?accountId=%s"
-	executionPayloadEndpoint = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s"
+	executionPayloadEndpoint = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s&delegateName=%s"
 	taskStatusEndpointV2     = "/api/executions/%s/response?delegateId=%s&accountId=%s"
 )
 
@@ -84,8 +84,8 @@ func (p *ManagerClient) GetRunnerEvents(ctx context.Context, id string) (*Runner
 }
 
 // Acquire tries to acquire a specific task
-func (p *ManagerClient) GetExecutionPayload(ctx context.Context, delegateID, taskID string) (*RunnerAcquiredTasks, error) {
-	path := fmt.Sprintf(executionPayloadEndpoint, taskID, delegateID, p.AccountID, delegateID)
+func (p *ManagerClient) GetExecutionPayload(ctx context.Context, delegateID, delegateName, taskID string) (*RunnerAcquiredTasks, error) {
+	path := fmt.Sprintf(executionPayloadEndpoint, taskID, delegateID, p.AccountID, delegateID, delegateName)
 	payload := &RunnerAcquiredTasks{}
 	_, err := p.doJson(ctx, path, "GET", nil, payload)
 	if err != nil {

@@ -21,7 +21,7 @@ type Client interface {
 	GetRunnerEvents(ctx context.Context, delegateID string) (*RunnerEventsResponse, error)
 
 	// Acquire tells the task server that the runner is ready to execute a task ID
-	GetExecutionPayload(ctx context.Context, delegateID, taskID string) (*RunnerAcquiredTasks, error)
+	GetExecutionPayload(ctx context.Context, delegateID, delegateName, taskID string) (*RunnerAcquiredTasks, error)
 
 	// SendStatus sends a response to the task server for a task ID
 	SendStatus(ctx context.Context, delegateID, taskID string, req *TaskResponse) error
