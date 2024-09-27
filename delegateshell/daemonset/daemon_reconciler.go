@@ -8,6 +8,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/drone/go-task/task"
 	"github.com/harness/runner/delegateshell/client"
 	dsclient "github.com/harness/runner/delegateshell/daemonset/client"
 	"github.com/sirupsen/logrus"
@@ -20,16 +21,18 @@ var (
 type DaemonSetReconciler struct {
 	daemonSetManager *DaemonSetManager
 	managerClient    *client.ManagerClient
+	router           *task.Router // used for resolving secrets used in daemon tasks
 	ctx              context.Context
 	cancelCtx        context.CancelFunc
 	doneChannel      chan bool
 }
 
-func NewDaemonSetReconciler(ctx context.Context, daemonSetManager *DaemonSetManager, managerClient *client.ManagerClient) *DaemonSetReconciler {
+func NewDaemonSetReconciler(ctx context.Context, daemonSetManager *DaemonSetManager, router *task.Router, managerClient *client.ManagerClient) *DaemonSetReconciler {
 	ctx, cancelCtx := context.WithCancel(ctx)
 	return &DaemonSetReconciler{
 		daemonSetManager: daemonSetManager,
 		managerClient:    managerClient,
+		router:           router,
 		ctx:              ctx,
 		cancelCtx:        cancelCtx,
 		doneChannel:      make(chan bool),
@@ -146,10 +149,18 @@ func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, r
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to acquire daemon task params during reconcile: id [%s]; type [%s]", dsId, dsType)
 	}
+
 	var daemonTasks []dsclient.DaemonTask
 	for _, taskAssignRequest := range resp.Tasks {
-		daemonTasks = append(daemonTasks, dsclient.DaemonTask{ID: taskAssignRequest.DaemonTaskId, Params: taskAssignRequest.Params})
+		logrus.Infof("resolving secrets for daemon task [%s]", taskAssignRequest.DaemonTaskId)
+		secrets, err := d.router.ResolveSecrets(ctx, taskAssignRequest.Secrets)
+		if err != nil {
+			logrus.WithError(err).Errorf("failed to resolve secrets for task [%s], skipping this task", taskAssignRequest.DaemonTaskId)
+			continue
+		}
+		daemonTasks = append(daemonTasks, dsclient.DaemonTask{ID: taskAssignRequest.DaemonTaskId, Params: taskAssignRequest.Params, Secrets: secrets})
 	}
+
 	_ = d.daemonSetManager.AssignDaemonTasks(ctx, dsType, &dsclient.DaemonTasks{Tasks: daemonTasks})
 }
 

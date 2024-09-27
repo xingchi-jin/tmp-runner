@@ -160,5 +160,6 @@ type (
 		DaemonTaskId string                  `json:"daemon_task_id"`
 		Params       client.DaemonTaskParams `json:"params"`
 		Type         string                  `json:"type"`
+		Secrets      []*task.Task            `json:"secrets"`
 	}
 )

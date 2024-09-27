@@ -11,6 +11,7 @@ import (
 	"os"
 	"time"
 
+	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/cloner"
 	"github.com/drone/go-task/task/downloader"
 	"github.com/harness/runner/delegateshell/client"
@@ -32,6 +33,7 @@ type DelegateShell struct {
 	Downloader          downloader.Downloader
 	DaemonSetManager    *daemonset.DaemonSetManager
 	DaemonSetReconciler *daemonset.DaemonSetReconciler
+	Router              *task.Router
 }
 
 func NewDelegateShell(config *delegate.Config, managerClient *client.ManagerClient) *DelegateShell {
@@ -60,7 +62,8 @@ func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, 
 	}
 	d.Info = runnerInfo
 	d.DaemonSetManager = daemonset.NewDaemonSetManager(d.Downloader, delegate.IsK8sRunner(delegate.GetTaskContext(d.Config, d.Info.ID).RunnerType))
-	d.DaemonSetReconciler = daemonset.NewDaemonSetReconciler(ctx, d.DaemonSetManager, d.ManagerClient)
+	d.Router = router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID), d.Downloader, d.DaemonSetManager)
+	d.DaemonSetReconciler = daemonset.NewDaemonSetReconciler(ctx, d.DaemonSetManager, d.Router, d.ManagerClient)
 	return runnerInfo, nil
 }
 
@@ -108,7 +111,7 @@ func (d *DelegateShell) startDaemonSetReconcile() error {
 
 func (d *DelegateShell) startPoller(ctx context.Context) error {
 	// Start polling for bijou events
-	d.Poller = poller.New(d.ManagerClient, router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID), d.Downloader, d.DaemonSetManager), d.Config.Delegate.TaskStatusV2)
+	d.Poller = poller.New(d.ManagerClient, d.Router, d.Config.Delegate.TaskStatusV2)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
 	if err := d.Poller.PollRunnerEvents(ctx, 3, d.Info.ID, d.Info.Name, time.Second*10); err != nil {

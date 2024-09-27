@@ -41,8 +41,9 @@ type (
 
 	// task processed by a daemon set
 	DaemonTask struct {
-		ID     string           `json:"id"`
-		Params DaemonTaskParams `json:"params,omitempty"`
+		ID      string            `json:"id"`
+		Params  DaemonTaskParams  `json:"params,omitempty"`
+		Secrets map[string]string `json:"secrets"`
 	}
 
 	// list of tasks processed by a daemon set
