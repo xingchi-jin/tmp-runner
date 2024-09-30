@@ -20,15 +20,24 @@ var (
 type DaemonSetReconciler struct {
 	daemonSetManager *DaemonSetManager
 	managerClient    *client.ManagerClient
-	stopChannel      chan struct{}
+	ctx              context.Context
+	cancelCtx        context.CancelFunc
+	doneChannel      chan bool
 }
 
-func NewDaemonSetReconciler(daemonSetManager *DaemonSetManager, managerClient *client.ManagerClient) *DaemonSetReconciler {
-	return &DaemonSetReconciler{daemonSetManager: daemonSetManager, managerClient: managerClient, stopChannel: make(chan struct{})}
+func NewDaemonSetReconciler(ctx context.Context, daemonSetManager *DaemonSetManager, managerClient *client.ManagerClient) *DaemonSetReconciler {
+	ctx, cancelCtx := context.WithCancel(ctx)
+	return &DaemonSetReconciler{
+		daemonSetManager: daemonSetManager,
+		managerClient:    managerClient,
+		ctx:              ctx,
+		cancelCtx:        cancelCtx,
+		doneChannel:      make(chan bool),
+	}
 }
 
 // Start will start the daemon set reconciling job
-func (d *DaemonSetReconciler) Start(ctx context.Context, id string, interval time.Duration) error {
+func (d *DaemonSetReconciler) Start(id string, interval time.Duration) error {
 	// Task event poller
 	go func() {
 		timer := time.NewTimer(interval)
@@ -36,14 +45,12 @@ func (d *DaemonSetReconciler) Start(ctx context.Context, id string, interval tim
 		for {
 			timer.Reset(interval)
 			select {
-			case <-ctx.Done():
-				logrus.Errorln("context canceled during reconcile flow, this should not happen")
-				return
-			case <-d.stopChannel:
-				logrus.Infoln("stopped daemon set reconciliation job")
+			case <-d.ctx.Done():
+				close(d.doneChannel)
+				logrus.Info("stopped daemon set reconciliation job")
 				return
 			case <-timer.C:
-				taskEventsCtx, cancelFn := context.WithTimeout(ctx, reconcileTimeout)
+				taskEventsCtx, cancelFn := context.WithTimeout(d.ctx, reconcileTimeout)
 				err := d.reconcile(taskEventsCtx, id)
 				if err != nil {
 					logrus.WithError(err).Errorf("daemon set reconciliation failed")
@@ -58,7 +65,9 @@ func (d *DaemonSetReconciler) Start(ctx context.Context, id string, interval tim
 
 // Stop will stop the daemon set reconciling job
 func (d *DaemonSetReconciler) Stop() {
-	close(d.stopChannel) // Notify to stop reconcile job
+	logrus.Info("cancelling daemon set reconciliation job")
+	d.cancelCtx()
+	<-d.doneChannel // block until last reconciliation returns
 }
 
 // reconcile runs the daemon set reconcile flow

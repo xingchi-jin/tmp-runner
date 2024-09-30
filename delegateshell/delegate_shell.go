@@ -60,7 +60,7 @@ func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, 
 	}
 	d.Info = runnerInfo
 	d.DaemonSetManager = daemonset.NewDaemonSetManager(d.Downloader, delegate.IsK8sRunner(delegate.GetTaskContext(d.Config, d.Info.ID).RunnerType))
-	d.DaemonSetReconciler = daemonset.NewDaemonSetReconciler(d.DaemonSetManager, d.ManagerClient)
+	d.DaemonSetReconciler = daemonset.NewDaemonSetReconciler(ctx, d.DaemonSetManager, d.ManagerClient)
 	return runnerInfo, nil
 }
 
@@ -79,7 +79,7 @@ func (d *DelegateShell) StartRunnerProcesses(ctx context.Context) error {
 	var rg errgroup.Group
 
 	rg.Go(func() error {
-		return d.startDaemonSetReconcile(ctx)
+		return d.startDaemonSetReconcile()
 	})
 
 	rg.Go(func() error {
@@ -98,8 +98,8 @@ func (d *DelegateShell) sendHeartbeat(ctx context.Context) error {
 	return nil
 }
 
-func (d *DelegateShell) startDaemonSetReconcile(ctx context.Context) error {
-	if err := d.DaemonSetReconciler.Start(ctx, d.Info.ID, time.Minute*1); err != nil {
+func (d *DelegateShell) startDaemonSetReconcile() error {
+	if err := d.DaemonSetReconciler.Start(d.Info.ID, time.Minute*1); err != nil {
 		logrus.WithError(err).Errorln("Error starting reconcile for daemon sets")
 		return err
 	}
