@@ -2,7 +2,7 @@
 // Use of this source code is governed by the PolyForm Shield 1.0.0 license
 // that can be found in the licenses directory at the root of this repository, also available at
 // https://polyformproject.org/wp-content/uploads/2020/06/PolyForm-Shield-1.0.0.txt.
-package manager
+package daemonset
 
 import "sync"
 
@@ -14,6 +14,14 @@ type KeyLock struct {
 
 func NewKeyLock() *KeyLock {
 	return &KeyLock{locks: make(map[string]*sync.Mutex)}
+}
+
+func (k *KeyLock) LockAll() {
+	k.mapLock.Lock()
+}
+
+func (k *KeyLock) UnlockAll() {
+	k.mapLock.Unlock()
 }
 
 func (k *KeyLock) Lock(key string) {

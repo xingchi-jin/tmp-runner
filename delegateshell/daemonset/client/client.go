@@ -12,7 +12,6 @@ import (
 	"net/http"
 	"net/url"
 
-	"github.com/harness/runner/daemonset"
 	"github.com/harness/runner/utils"
 )
 
@@ -30,18 +29,26 @@ func NewClient(baseUrl string) *Client {
 	}
 }
 
+// GetTasks retrieves the list of tasks running in a daemon set, specified by the `port` argument
+func (p *Client) GetTasks(ctx context.Context, path string) (*DaemonSetResponse, error) {
+	resp := &DaemonSetResponse{}
+	fullpath := fmt.Sprintf(endpoint, path)
+	_, err := p.doJson(ctx, fullpath, "GET", nil, resp)
+	return resp, err
+}
+
 // Assign sends a new daemon task to a daemon set specified by the `port` argument
-func (p *Client) Assign(ctx context.Context, path string, r *daemonset.DaemonTasks) (*daemonset.DaemonSetResponse, error) {
+func (p *Client) Assign(ctx context.Context, path string, r *DaemonTasks) (*DaemonSetResponse, error) {
 	req := r
-	resp := &daemonset.DaemonSetResponse{}
+	resp := &DaemonSetResponse{}
 	fullpath := fmt.Sprintf(endpoint, path)
 	_, err := p.doJson(ctx, fullpath, "POST", req, resp)
 	return resp, err
 }
 
 // Remove removes a daemon task from a daemon set, specified by the `port` argument
-func (p *Client) Remove(ctx context.Context, path string, r *[]string) (*daemonset.DaemonSetResponse, error) {
-	resp := &daemonset.DaemonSetResponse{}
+func (p *Client) Remove(ctx context.Context, path string, r *[]string) (*DaemonSetResponse, error) {
+	resp := &DaemonSetResponse{}
 	fullpath := fmt.Sprintf(endpoint, path)
 
 	// Build the query params

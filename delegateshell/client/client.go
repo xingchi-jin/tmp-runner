@@ -31,4 +31,9 @@ type Client interface {
 
 	// Unregister registers the runner with the task server
 	Unregister(ctx context.Context, r *UnregisterRequest) error
+
+	// ReconcileDaemonSets calls the reconcile endpoint in task server
+	ReconcileDaemonSets(ctx context.Context, runnerId string, r *DaemonSetReconcileRequest) (*DaemonSetReconcileResponse, error)
+
+	AcquireDaemonTasks(ctx context.Context, runnerId string, daemonSetId string, r *DaemonTaskAcquireRequest) (*DaemonTaskAcquireResponse, error)
 }
