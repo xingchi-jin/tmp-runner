@@ -7,7 +7,6 @@ import (
 	"github.com/drone/go-task/task"
 	"github.com/harness/runner/delegateshell/daemonset"
 	"github.com/harness/runner/delegateshell/daemonset/client"
-	"github.com/sirupsen/logrus"
 )
 
 type State string
@@ -63,7 +62,6 @@ func (d *DaemonSetTaskHandler) HandleUpsert(ctx context.Context, req *task.Reque
 		return task.Error(err)
 	}
 
-	logrus.Infof("Attempting to upsert daemo nset with following configs: %+v, config: %+v", spec, spec.Config)
 	_, err = d.daemonSetManager.UpsertDaemonSet(ctx, spec.DaemonSetId, spec.Type, &spec.Config)
 	if err != nil {
 		return task.Respond(&DaemonSetUpsertResponse{DaemonSetId: spec.DaemonSetId, State: StateFailure, Error: err.Error()})
@@ -78,8 +76,6 @@ func (d *DaemonSetTaskHandler) HandleTaskAssign(ctx context.Context, req *task.R
 	if err != nil {
 		return task.Error(err)
 	}
-
-	logrus.Infof("Received daemon task assign requests: taskId: %s, params: %s, secrets: %+v", spec.DaemonTaskId, spec.Params, req.Secrets)
 
 	daemonTask := client.DaemonTask{ID: spec.DaemonTaskId, Params: spec.Params, Secrets: req.Secrets}
 	err = d.daemonSetManager.AssignDaemonTasks(ctx, spec.Type, &client.DaemonTasks{Tasks: []client.DaemonTask{daemonTask}})
