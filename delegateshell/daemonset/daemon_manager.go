@@ -104,6 +104,7 @@ func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 	ds, ok := d.Get(dsType)
 	if !ok {
 		// daemon set does not exist
+		logrus.Errorf("daemon set of type [%s] does not exist, skipping sync for it", dsType)
 		return
 	}
 	// check if daemon set is running healthy
