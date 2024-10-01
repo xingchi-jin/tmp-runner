@@ -7,14 +7,13 @@ import (
 	"github.com/harness/lite-engine/pipeline/runtime"
 )
 
-// Returns a `logstream.Writer`, which can either be a custom logger
-// (`runtime.GetReplacer`) or a `stdoutWriter`.
+// GetLogstreamWriter returns a `logstream.Writer`, which can either
+// be a custom logger (`runtime.GetReplacer`) or a `stdoutWriter`.
 // NOTE: The caller is responsible for closing the writer (`.Close()`)
 // after usage is done.
 func GetLogstreamWriter(req *task.Request) logstream.Writer {
-	// if a logger has been provided in the task which points to a custom endpoint,
-	// we create a custom writer
-	// NOTE: the caller is responsible for closing the writer after usage is done.
+	// if a logger has been provided in the task which
+	// points to a custom endpoint, we create a custom writer
 	if req.Task != nil && req.Task.Logger != nil && req.Task.Logger.Address != "" {
 		writer := logWriter(req)
 		writer.Open()
