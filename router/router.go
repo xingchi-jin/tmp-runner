@@ -10,7 +10,6 @@ import (
 	"github.com/drone/go-task/task/drivers/cgi"
 	"github.com/harness/runner/delegateshell/daemonset"
 	"github.com/harness/runner/delegateshell/delegate"
-	"github.com/harness/runner/logger/logstream"
 	"github.com/harness/runner/tasks/daemontask"
 	"github.com/harness/runner/tasks/delegatetask"
 	"github.com/harness/runner/tasks/local"
@@ -20,7 +19,6 @@ import (
 
 func NewRouter(taskContext *delegate.TaskContext, d downloader.Downloader, dsManager *daemonset.DaemonSetManager) *task.Router {
 	r := task.NewRouter()
-	r.Use(logstream.Middleware())
 
 	r.Register("local_init", local.NewSetupHandler(taskContext))
 	r.RegisterFunc("local_execute", local.ExecHandler)
