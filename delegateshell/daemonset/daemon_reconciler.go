@@ -22,7 +22,7 @@ var (
 type DaemonSetReconciler struct {
 	daemonSetManager *DaemonSetManager
 	managerClient    *client.ManagerClient
-	router           *task.Router // used for resolving secrets used in daemon tasks
+	router           *task.Router // used for resolving secrets in daemon tasks
 	ctx              context.Context
 	cancelCtx        context.CancelFunc
 	doneChannel      chan bool
