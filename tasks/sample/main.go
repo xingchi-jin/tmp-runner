@@ -3,11 +3,10 @@ package main
 import (
 	"context"
 	"fmt"
-	"os"
 
 	"github.com/google/uuid"
 	"github.com/harness/lite-engine/logstream"
-	logger "github.com/harness/runner/logger/logstream"
+	logs "github.com/harness/runner/logger/logstream"
 	"github.com/harness/runner/tasks/local"
 )
 
@@ -15,9 +14,11 @@ var (
 	ctxBg = context.Background()
 )
 
-/**
-  Run it with:
-    go run main.go helper.go
+/*
+*
+
+	Run it with:
+	  go run main.go helper.go
 */
 func main() {
 	fmt.Println("Running a sample CI pipeline...")
@@ -43,7 +44,7 @@ func main() {
 	fmt.Println("Executing step2")
 	step2ID := uuid.New().String()
 	r := SampleExecRequest(step2ID, stageID, []string{"ls"}, "alpine", []string{"sh", "-c"}) // view files created in container
-	resp, err = local.HandleExec(ctxBg, &r, logger.NewWriterWrapper(os.Stdout))
+	resp, err = local.HandleExec(ctxBg, &r, logs.NewStdoutWriter())
 	if err != nil {
 		panic(err)
 	}
