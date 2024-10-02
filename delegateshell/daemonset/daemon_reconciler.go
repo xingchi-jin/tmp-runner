@@ -6,6 +6,7 @@ package daemonset
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
 	"github.com/drone/go-task/task"
@@ -151,9 +152,14 @@ func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, r
 	}
 
 	var daemonTasks []dsclient.DaemonTask
-	for _, taskAssignRequest := range resp.Tasks {
+	for _, req := range resp.Requests {
+		taskAssignRequest := new(client.DaemonTaskAssignRequest)
+		err := json.Unmarshal(req.Task.Data, taskAssignRequest)
+		if err != nil {
+			logrus.WithError(err).Errorf("failed parse task data for task [%s], skipping this task", req.ID)
+		}
 		logrus.Infof("resolving secrets for daemon task [%s]", taskAssignRequest.DaemonTaskId)
-		secrets, err := d.router.ResolveSecrets(ctx, taskAssignRequest.Secrets)
+		secrets, err := d.router.ResolveSecrets(ctx, req.Tasks)
 		if err != nil {
 			logrus.WithError(err).Errorf("failed to resolve secrets for task [%s], skipping this task", taskAssignRequest.DaemonTaskId)
 			continue

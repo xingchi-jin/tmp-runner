@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/drone/go-task/task"
+	"github.com/drone/go-task/task/common"
 )
 
 // Sample handler that reads a secret from vault.
@@ -93,7 +94,7 @@ func parse(s string, decode bool) task.Response {
 		s = string(decoded)
 	}
 	return task.Respond(
-		&task.Secret{
+		&common.Secret{
 			Value: s,
 		},
 	)

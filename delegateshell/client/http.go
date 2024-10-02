@@ -62,9 +62,9 @@ func (p *ManagerClient) ReconcileDaemonSets(ctx context.Context, runnerId string
 }
 
 // AcquireDaemonTasks fetches daemon task data from manager
-func (p *ManagerClient) AcquireDaemonTasks(ctx context.Context, runnerId string, daemonSetId string, r *DaemonTaskAcquireRequest) (*DaemonTaskAcquireResponse, error) {
+func (p *ManagerClient) AcquireDaemonTasks(ctx context.Context, runnerId string, daemonSetId string, r *DaemonTaskAcquireRequest) (*RunnerAcquiredTasks, error) {
 	req := r
-	resp := &DaemonTaskAcquireResponse{}
+	resp := &RunnerAcquiredTasks{}
 	path := fmt.Sprintf(acquireDaemonTasksEndpoint, runnerId, p.AccountID, daemonSetId)
 	_, err := p.retry(ctx, path, "POST", req, resp, createBackoff(ctx, registerTimeout), false) //nolint: bodyclose
 	return resp, err
