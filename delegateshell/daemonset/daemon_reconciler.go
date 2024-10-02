@@ -157,6 +157,7 @@ func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, r
 		err := json.Unmarshal(req.Task.Data, taskAssignRequest)
 		if err != nil {
 			logrus.WithError(err).Errorf("failed parse task data for task [%s], skipping this task", req.ID)
+			continue
 		}
 		logrus.Infof("resolving secrets for daemon task [%s]", taskAssignRequest.DaemonTaskId)
 		secrets, err := d.router.ResolveSecrets(ctx, req.Tasks)

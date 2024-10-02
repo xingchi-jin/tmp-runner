@@ -86,13 +86,16 @@ components:
               format: byte
               description: Base64-encoded binary data
         secrets:
-          type: object
-          additionalProperties:
-            type: string
-          description: map of secret ID to secret value
-          example:
-            secret1: Secret1Value
-            account.secret2: Secret2Value
+          type: array
+          items:
+            $ref: '#/components/schemas/Secret'
+    Secret:
+      type: object
+      properties:
+        id:
+          type: string
+        value:
+          type: string
     Tasks:
       type: object
       properties:
@@ -100,11 +103,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Task'
-    TaskMetadata:
-      type: object
-      properties:
-        id:
-          type: string
     TasksMetadata:
       type: object
       properties:
@@ -112,3 +110,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TasksMetadata'
+    TaskMetadata:
+      type: object
+      properties:
+        id:
+          type: string
