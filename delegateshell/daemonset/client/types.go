@@ -11,7 +11,8 @@ import (
 	"github.com/drone/go-task/task/common"
 )
 
-type ( // represents a daemon set for the in-memory map of daemon sets
+type (
+	// represents a daemon set for the in-memory map of daemon sets
 	DaemonSet struct {
 		DaemonSetId string
 		Type        string
