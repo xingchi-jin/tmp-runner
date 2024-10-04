@@ -146,7 +146,7 @@ func (d *DaemonSetReconciler) syncWithHarnessServer(ctx context.Context, runnerI
 // acquireAndAssignDaemonTasks fetches params of tasks from Harness manager
 // and assigns these tasks to a daemon set of the given type (`dsType`)
 func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, runnerId string, dsId string, dsType string, taskIds *[]string) {
-	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, dsId, &client.DaemonTaskAcquireRequest{TaskIds: *taskIds})
+	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, &client.DaemonTaskAcquireRequest{TaskIds: *taskIds})
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to acquire daemon task params during reconcile: id [%s]; type [%s]", dsId, dsType)
 	}

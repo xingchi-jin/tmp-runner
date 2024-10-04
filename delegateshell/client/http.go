@@ -28,7 +28,7 @@ const (
 	executionPayloadEndpoint   = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s&delegateName=%s"
 	taskStatusEndpointV2       = "/api/executions/%s/task-response?delegateId=%s&accountId=%s"
 	daemonSetReconcileEndpoint = "/api/daemons/%s/reconcile?accountId=%s"
-	acquireDaemonTasksEndpoint = "/api/daemons/%s/tasks?accountId=%s&daemonSetId=%s"
+	acquireDaemonTasksEndpoint = "/api/daemons/%s/tasks?accountId=%s"
 )
 
 var (
@@ -62,10 +62,10 @@ func (p *ManagerClient) ReconcileDaemonSets(ctx context.Context, runnerId string
 }
 
 // AcquireDaemonTasks fetches daemon task data from manager
-func (p *ManagerClient) AcquireDaemonTasks(ctx context.Context, runnerId string, daemonSetId string, r *DaemonTaskAcquireRequest) (*RunnerAcquiredTasks, error) {
+func (p *ManagerClient) AcquireDaemonTasks(ctx context.Context, runnerId string, r *DaemonTaskAcquireRequest) (*RunnerAcquiredTasks, error) {
 	req := r
 	resp := &RunnerAcquiredTasks{}
-	path := fmt.Sprintf(acquireDaemonTasksEndpoint, runnerId, p.AccountID, daemonSetId)
+	path := fmt.Sprintf(acquireDaemonTasksEndpoint, runnerId, p.AccountID)
 	_, err := p.retry(ctx, path, "POST", req, resp, createBackoff(ctx, registerTimeout), false) //nolint: bodyclose
 	return resp, err
 }
