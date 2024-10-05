@@ -124,6 +124,13 @@ type (
 		ProjectID string `json:"projectIdentifier,omitempty"`
 	}
 
+	// request for runner to assign a new daemon task to a daemon set
+	DaemonTaskAssignRequest struct {
+		DaemonTaskId string                  `json:"daemon_task_id"`
+		Params       client.DaemonTaskParams `json:"params"`
+		Type         string                  `json:"type"`
+	}
+
 	// Types for daemon set reconciliation flow
 	DaemonSetReconcileRequest struct {
 		Data []DaemonSetReconcileRequestEntry `json:"data"`
@@ -150,15 +157,5 @@ type (
 
 	DaemonTaskAcquireRequest struct {
 		TaskIds []string `json:"task_ids"`
-	}
-
-	DaemonTaskAcquireResponse struct {
-		Tasks []AcquiredDaemonTask `json:"tasks"`
-	}
-
-	AcquiredDaemonTask struct {
-		DaemonTaskId string                  `json:"daemon_task_id"`
-		Params       client.DaemonTaskParams `json:"params"`
-		Type         string                  `json:"type"`
 	}
 )

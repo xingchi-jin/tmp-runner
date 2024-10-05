@@ -35,5 +35,5 @@ type Client interface {
 	// ReconcileDaemonSets calls the reconcile endpoint in task server
 	ReconcileDaemonSets(ctx context.Context, runnerId string, r *DaemonSetReconcileRequest) (*DaemonSetReconcileResponse, error)
 
-	AcquireDaemonTasks(ctx context.Context, runnerId string, daemonSetId string, r *DaemonTaskAcquireRequest) (*DaemonTaskAcquireResponse, error)
+	AcquireDaemonTasks(ctx context.Context, runnerId string, r *DaemonTaskAcquireRequest) (*RunnerAcquiredTasks, error)
 }

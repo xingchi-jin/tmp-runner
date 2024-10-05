@@ -184,11 +184,13 @@ func (d *DaemonSetManager) AssignDaemonTasks(ctx context.Context, dsType string,
 		return fmt.Errorf("daemon set of type [%s] does not exist", dsType)
 	}
 
+	// get list of taskIDs
 	taskIds := make([]string, len(tasks.Tasks))
 	for i, s := range tasks.Tasks {
 		taskIds[i] = s.ID
 	}
 
+	// assign the tasks
 	dsLogger(ds).Infof("assigning tasks %s to daemon set", taskIds)
 	_, err := d.driver.AssignDaemonTasks(ctx, ds, tasks)
 	if err != nil {

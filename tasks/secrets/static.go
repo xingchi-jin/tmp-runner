@@ -7,6 +7,7 @@ import (
 	"fmt"
 
 	"github.com/drone/go-task/task"
+	"github.com/drone/go-task/task/common"
 	"github.com/sirupsen/logrus"
 )
 
@@ -20,7 +21,7 @@ func (h *StaticSecretHandler) Handle(ctx context.Context, req *task.Request) tas
 		logrus.Error("Error occurred during unmarshalling. %w", err)
 	}
 	// TODO: support batch secrets
-	secretResponse := &task.Secret{}
+	secretResponse := &common.Secret{}
 	if len(staticSecretSpec.Secrets) > 0 {
 		secret := staticSecretSpec.Secrets[0]
 		secretValue := secret.Value

@@ -20,7 +20,7 @@ func LogWriter(req *task.Request) logstream.Writer {
 	}
 	secrets := []string{}
 	for _, v := range req.Secrets {
-		secrets = append(secrets, v)
+		secrets = append(secrets, v.Value)
 	}
 	return runtime.GetReplacer(cfg, key, req.Task.ID, secrets)
 }

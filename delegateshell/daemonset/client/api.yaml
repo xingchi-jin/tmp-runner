@@ -85,6 +85,17 @@ components:
               type: string
               format: byte
               description: Base64-encoded binary data
+        secrets:
+          type: array
+          items:
+            $ref: '#/components/schemas/Secret'
+    Secret:
+      type: object
+      properties:
+        id:
+          type: string
+        value:
+          type: string
     Tasks:
       type: object
       properties:
@@ -92,11 +103,6 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/Task'
-    TaskMetadata:
-      type: object
-      properties:
-        id:
-          type: string
     TasksMetadata:
       type: object
       properties:
@@ -104,3 +110,8 @@ components:
           type: array
           items:
             $ref: '#/components/schemas/TasksMetadata'
+    TaskMetadata:
+      type: object
+      properties:
+        id:
+          type: string

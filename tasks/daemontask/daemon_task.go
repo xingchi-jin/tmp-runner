@@ -5,8 +5,9 @@ import (
 	"encoding/json"
 
 	"github.com/drone/go-task/task"
+	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/daemonset"
-	"github.com/harness/runner/delegateshell/daemonset/client"
+	dsclient "github.com/harness/runner/delegateshell/daemonset/client"
 )
 
 type State string
@@ -19,22 +20,15 @@ const (
 type (
 	// request for upserting (spawning) a new daemon set
 	DaemonSetUpsertRequest struct {
-		Config      client.DaemonSetOperationalConfig `json:"config"`
-		DaemonSetId string                            `json:"daemon_set_id"`
-		Type        string                            `json:"type"`
+		Config      dsclient.DaemonSetOperationalConfig `json:"config"`
+		DaemonSetId string                              `json:"daemon_set_id"`
+		Type        string                              `json:"type"`
 	}
 
 	DaemonSetUpsertResponse struct {
 		DaemonSetId string `json:"daemon_set_id"`
 		State       State  `json:"state,omitempty"`
 		Error       string `json:"error_message,omitempty"`
-	}
-
-	// request for runner to assign a new daemon task to a daemon set
-	DaemonTaskAssignRequest struct {
-		DaemonTaskId string                  `json:"daemon_task_id"`
-		Params       client.DaemonTaskParams `json:"params"`
-		Type         string                  `json:"type"`
 	}
 
 	DaemonTaskAssignResponse struct {
@@ -71,14 +65,14 @@ func (d *DaemonSetTaskHandler) HandleUpsert(ctx context.Context, req *task.Reque
 
 // HandleTaskAssign handles runner tasks for assigning a new daemon task to a daemon set
 func (d *DaemonSetTaskHandler) HandleTaskAssign(ctx context.Context, req *task.Request) task.Response {
-	spec := new(DaemonTaskAssignRequest)
+	spec := new(client.DaemonTaskAssignRequest)
 	err := json.Unmarshal(req.Task.Data, spec)
 	if err != nil {
 		return task.Error(err)
 	}
 
-	daemonTask := client.DaemonTask{ID: spec.DaemonTaskId, Params: spec.Params}
-	err = d.daemonSetManager.AssignDaemonTasks(ctx, spec.Type, &client.DaemonTasks{Tasks: []client.DaemonTask{daemonTask}})
+	daemonTask := dsclient.DaemonTask{ID: spec.DaemonTaskId, Params: spec.Params, Secrets: req.Secrets}
+	err = d.daemonSetManager.AssignDaemonTasks(ctx, spec.Type, &dsclient.DaemonTasks{Tasks: []dsclient.DaemonTask{daemonTask}})
 	if err != nil {
 		return task.Respond(&DaemonTaskAssignResponse{DaemonTaskId: spec.DaemonTaskId, State: StateFailure, Error: err.Error()})
 	}

@@ -6,8 +6,10 @@ package daemonset
 
 import (
 	"context"
+	"encoding/json"
 	"time"
 
+	"github.com/drone/go-task/task"
 	"github.com/harness/runner/delegateshell/client"
 	dsclient "github.com/harness/runner/delegateshell/daemonset/client"
 	"github.com/sirupsen/logrus"
@@ -20,16 +22,18 @@ var (
 type DaemonSetReconciler struct {
 	daemonSetManager *DaemonSetManager
 	managerClient    *client.ManagerClient
+	router           *task.Router // used for resolving secrets in daemon tasks
 	ctx              context.Context
 	cancelCtx        context.CancelFunc
 	doneChannel      chan bool
 }
 
-func NewDaemonSetReconciler(ctx context.Context, daemonSetManager *DaemonSetManager, managerClient *client.ManagerClient) *DaemonSetReconciler {
+func NewDaemonSetReconciler(ctx context.Context, daemonSetManager *DaemonSetManager, router *task.Router, managerClient *client.ManagerClient) *DaemonSetReconciler {
 	ctx, cancelCtx := context.WithCancel(ctx)
 	return &DaemonSetReconciler{
 		daemonSetManager: daemonSetManager,
 		managerClient:    managerClient,
+		router:           router,
 		ctx:              ctx,
 		cancelCtx:        cancelCtx,
 		doneChannel:      make(chan bool),
@@ -142,14 +146,28 @@ func (d *DaemonSetReconciler) syncWithHarnessServer(ctx context.Context, runnerI
 // acquireAndAssignDaemonTasks fetches params of tasks from Harness manager
 // and assigns these tasks to a daemon set of the given type (`dsType`)
 func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, runnerId string, dsId string, dsType string, taskIds *[]string) {
-	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, dsId, &client.DaemonTaskAcquireRequest{TaskIds: *taskIds})
+	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, &client.DaemonTaskAcquireRequest{TaskIds: *taskIds})
 	if err != nil {
 		logrus.WithError(err).Errorf("failed to acquire daemon task params during reconcile: id [%s]; type [%s]", dsId, dsType)
 	}
+
 	var daemonTasks []dsclient.DaemonTask
-	for _, taskAssignRequest := range resp.Tasks {
-		daemonTasks = append(daemonTasks, dsclient.DaemonTask{ID: taskAssignRequest.DaemonTaskId, Params: taskAssignRequest.Params})
+	for _, req := range resp.Requests {
+		taskAssignRequest := new(client.DaemonTaskAssignRequest)
+		err := json.Unmarshal(req.Task.Data, taskAssignRequest)
+		if err != nil {
+			logrus.WithError(err).Errorf("failed parsing data for request [%s], skipping this request", req.ID)
+			continue
+		}
+		logrus.Infof("resolving secrets for daemon task [%s]", taskAssignRequest.DaemonTaskId)
+		secrets, err := d.router.ResolveSecrets(ctx, req.Tasks)
+		if err != nil {
+			logrus.WithError(err).Errorf("failed to resolve secrets for task [%s], skipping this task", taskAssignRequest.DaemonTaskId)
+			continue
+		}
+		daemonTasks = append(daemonTasks, dsclient.DaemonTask{ID: taskAssignRequest.DaemonTaskId, Params: taskAssignRequest.Params, Secrets: secrets})
 	}
+
 	_ = d.daemonSetManager.AssignDaemonTasks(ctx, dsType, &dsclient.DaemonTasks{Tasks: daemonTasks})
 }
 

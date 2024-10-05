@@ -8,6 +8,7 @@ import (
 	"os/exec"
 
 	"github.com/drone/go-task/task"
+	"github.com/drone/go-task/task/common"
 )
 
 type (
@@ -41,8 +42,9 @@ type (
 
 	// task processed by a daemon set
 	DaemonTask struct {
-		ID     string           `json:"id"`
-		Params DaemonTaskParams `json:"params,omitempty"`
+		ID      string           `json:"id"`
+		Params  DaemonTaskParams `json:"params,omitempty"`
+		Secrets []*common.Secret `json:"secrets"`
 	}
 
 	// list of tasks processed by a daemon set
