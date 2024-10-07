@@ -34,10 +34,11 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 		logrus.Error("Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
-	logger := logstream.GetLogstreamWriter(req)
+	logWriter := logstream.NewWriterWrapper(req.Logger)
+	logWriter.Open()
 	// TODO: remove this after delegate id no longer needed from setup request
-	resp, err := HandleSetup(ctx, setupRequest, h.taskContext.DelegateId, logger)
-	logger.Close()
+	resp, err := HandleSetup(ctx, setupRequest, h.taskContext.DelegateId, logWriter)
+	logWriter.Close()
 	if err != nil {
 		logrus.Error("could not handle setup request: %w", err)
 		return task.Error(err)

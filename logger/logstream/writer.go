@@ -11,31 +11,19 @@ import (
 	"github.com/harness/lite-engine/pipeline/runtime"
 )
 
-// GetLogstreamWriter returns a `logstream.Writer`, which can either
-// be a custom logger (`runtime.GetReplacer`) or a `stdoutWriter`.
-// NOTE: The caller is responsible for closing the writer (`.Close()`)
-// after usage is done.
-func GetLogstreamWriter(req *task.Request) logstream.Writer {
-	// if a logger has been provided in the task which
-	// points to a custom endpoint, we create a custom writer
-	if req.Task != nil && req.Task.Logger != nil && req.Task.Logger.Address != "" {
-		writer := logWriter(req)
-		writer.Open()
-		return writer
-	} else {
-		// write logs to stdout if custom logger is not provided.
-		return NewStdoutWriter()
-	}
-}
-
-// logWriter creates a log client (`logstream.Writer`) that can be used to write logs.
-func logWriter(req *task.Request) logstream.Writer {
+// LogWriter creates a log client (`logstream.Writer`) that can be used to write logs.
+// NOTE: The caller is responsible for opening (`.Open()`) and
+// closing (`.Close()`) the writer after usage is done.
+func LogWriter(req *task.Request) logstream.Writer {
 	cfg := api.LogConfig{}
-	cfg.AccountID = req.Task.Logger.Account
-	cfg.Token = req.Task.Logger.Token
-	cfg.URL = req.Task.Logger.Address
-	cfg.IndirectUpload = true
-	key := req.Task.Logger.Key
+	var key string
+	if req.Task != nil && req.Task.Logger != nil {
+		cfg.AccountID = req.Task.Logger.Account
+		cfg.Token = req.Task.Logger.Token
+		cfg.URL = req.Task.Logger.Address
+		cfg.IndirectUpload = true
+		key = req.Task.Logger.Key
+	}
 	secrets := []string{}
 	for _, v := range req.Secrets {
 		secrets = append(secrets, v)
