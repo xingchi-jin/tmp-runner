@@ -107,6 +107,10 @@ func HandleExec(ctx context.Context, s *ExecRequest, writer logger.Writer) (api.
 	}
 	//s.Labels["internal_stage_label"] = s.GroupID
 	// Map ExecRequest into what lite engine can understand
+
+	// Mount docker sock volume
+	s.VolumesActual = append(s.VolumesActual, getDockerSockVolumeActualMount())
+
 	pipelineConfig := &spec.PipelineConfig{
 		Envs: s.Envs,
 		Network: spec.Network{
