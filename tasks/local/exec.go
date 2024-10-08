@@ -25,7 +25,11 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 		return task.Error(err)
 	}
 	// Wrap the io.Writer to convert it into a logstream.Writer which is used by the lite-engine.
-	resp, err := HandleExec(ctx, executeRequest, logstream.NewWriterWrapper(req.Logger))
+	logWriter := logstream.NewWriterWrapper(req.Logger)
+	logWriter.Open()
+	// no need to close logWriter here, because
+	// lite-engine's stepExecutor takes care of calling `logWriter.Close()`
+	resp, err := HandleExec(ctx, executeRequest, logWriter)
 	if err != nil {
 		logrus.Error("could not handle exec request: %w", err)
 		panic(err)

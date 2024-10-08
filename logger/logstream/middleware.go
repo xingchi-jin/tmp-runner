@@ -16,8 +16,6 @@ func Middleware() func(next task.Handler) task.Handler {
 			// we create a custom writer and feed it into the logger.
 			if req.Task != nil && req.Task.Logger != nil && req.Task.Logger.Address != "" {
 				writer := LogWriter(req)
-				writer.Open()
-				defer writer.Close()
 				req.Logger = writer
 			} else {
 				req.Logger = os.Stdout // write logs to stdout if custom logger is not provided.

@@ -1,3 +1,7 @@
+// Copyright 2024 Harness Inc. All rights reserved.
+// Use of this source code is governed by the PolyForm Shield 1.0.0 license
+// that can be found in the licenses directory at the root of this repository, also available at
+// https://polyformproject.org/wp-content/uploads/2020/06/PolyForm-Shield-1.0.0.txt.
 package logstream
 
 import (
@@ -7,7 +11,9 @@ import (
 	"github.com/harness/lite-engine/pipeline/runtime"
 )
 
-// LogWriter creates a log client that can be used to write logs.
+// LogWriter creates a log client (`logstream.Writer`) that can be used to write logs.
+// NOTE: The caller is responsible for opening (`.Open()`) and
+// closing (`.Close()`) the writer after usage is done.
 func LogWriter(req *task.Request) logstream.Writer {
 	cfg := api.LogConfig{}
 	var key string
