@@ -35,7 +35,7 @@ type Config struct {
 		Tags                   string     `envconfig:"DELEGATE_TAGS"`
 		ManagerEndpoint        string     `envconfig:"MANAGER_HOST_AND_PORT"`
 		Name                   string     `envconfig:"DELEGATE_NAME"`
-		TaskStatusV2           bool       `envconfig:"DELEGATE_TASK_STATUS_V2"`
+		TaskStatusV2           bool       `envconfig:"DELEGATE_TASK_STATUS_V2" default:"true"`
 		DelegateTaskServiceURL string     `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
 		DelegateType           RunnerType `envconfig:"DELEGATE_TYPE"`
 		RunnerType             RunnerType `envconfig:"RUNNER_TYPE"`
