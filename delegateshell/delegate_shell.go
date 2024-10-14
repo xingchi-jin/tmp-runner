@@ -61,7 +61,12 @@ func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, 
 		return nil, err
 	}
 	d.Info = runnerInfo
-	d.DaemonSetManager = daemonset.NewDaemonSetManager(d.Downloader, delegate.IsK8sRunner(delegate.GetTaskContext(d.Config, d.Info.ID).RunnerType))
+	d.DaemonSetManager = daemonset.NewDaemonSetManager(
+		d.Downloader,
+		delegate.IsK8sRunner(delegate.GetTaskContext(d.Config, d.Info.ID).RunnerType),
+		d.Config.Delegate.ManagerEndpoint,
+		d.Config.Delegate.DelegateToken,
+	)
 	d.Router = router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID), d.Downloader, d.DaemonSetManager)
 	d.DaemonSetReconciler = daemonset.NewDaemonSetReconciler(ctx, d.DaemonSetManager, d.Router, d.ManagerClient)
 	return runnerInfo, nil

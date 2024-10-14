@@ -32,12 +32,21 @@ type DaemonSetManager struct {
 	driver     drivers.DaemonSetDriver
 	// the `lock` here is a wrapper for a map of locks, indexed by daemon set's type
 	// so that we can make sure operations are atomic for each daemon set type
-	lock *KeyLock
+	lock        *KeyLock
+	managerUrl  string
+	runnerToken string
 }
 
-func NewDaemonSetManager(d downloader.Downloader, isK8s bool) *DaemonSetManager {
+func NewDaemonSetManager(d downloader.Downloader, isK8s bool, managerUrl, runnerToken string) *DaemonSetManager {
 	// TODO: Add suport for daemon sets in k8s runner. For this, we need to implement the `K8sServerDriver`.
-	return &DaemonSetManager{downloader: d, daemonsets: &sync.Map{}, lock: NewKeyLock(), driver: drivers.NewLocalDriver()}
+	return &DaemonSetManager{
+		downloader:  d,
+		daemonsets:  &sync.Map{},
+		lock:        NewKeyLock(),
+		driver:      drivers.NewLocalDriver(),
+		managerUrl:  managerUrl,
+		runnerToken: runnerToken,
+	}
 }
 
 // Get will return a *DaemonSet struct from the d.daemonsets synchronized map
@@ -66,6 +75,13 @@ func (d *DaemonSetManager) GetAllTypes() map[string]bool {
 func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsType string, dsConfig *dsclient.DaemonSetOperationalConfig) (*dsclient.DaemonTasksMetadata, error) {
 	d.lock.Lock(dsType)
 	defer d.lock.Unlock(dsType)
+
+	// Add env variables for dial-home support, so that
+	// the daemon server can make requests to Harness manager
+	dsConfig.Envs = append(dsConfig.Envs,
+		fmt.Sprintf("MANAGER_HOST_AND_PORT=%s", d.managerUrl),
+		fmt.Sprintf("RUNNER_TOKEN=%s", d.runnerToken),
+	)
 
 	// check if daemon set already exists in daemon set map
 	ds, ok := d.Get(dsType)
@@ -194,7 +210,7 @@ func (d *DaemonSetManager) AssignDaemonTasks(ctx context.Context, dsType string,
 	dsLogger(ds).Infof("assigning tasks %s to daemon set", taskIds)
 	_, err := d.driver.AssignDaemonTasks(ctx, ds, tasks)
 	if err != nil {
-		dsLogger(ds).Errorf("failed to assign tasks %s to daemon set", taskIds)
+		dsLogger(ds).WithError(err).Errorf("failed to assign tasks %s to daemon set", taskIds)
 		return err
 	}
 	dsLogger(ds).Infof("assigned tasks %s to daemon set", taskIds)
