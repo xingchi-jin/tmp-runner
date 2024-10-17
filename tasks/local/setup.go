@@ -147,3 +147,17 @@ func getDockerSockVolumeMount() *spec.VolumeMount {
 		Path: path,
 	}
 }
+
+func getDockerSockVolumeActualMount() *spec.Volume {
+	path := engine.DockerSockUnixPath
+	if runtime.GOOS == "windows" {
+		path = engine.DockerSockWinPath
+	}
+	return &spec.Volume{
+		HostPath: &spec.VolumeHostPath{
+			Name: engine.DockerSockVolName,
+			Path: path,
+			ID:   "docker",
+		},
+	}
+}
