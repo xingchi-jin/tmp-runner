@@ -79,8 +79,8 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 	// Add env variables for dial-home support, so that
 	// the daemon server can make requests to Harness manager
 	dsConfig.Envs = append(dsConfig.Envs,
-		fmt.Sprintf("MANAGER_HOST_AND_PORT=%s", d.managerUrl),
-		fmt.Sprintf("RUNNER_TOKEN=%s", d.runnerToken),
+		fmt.Sprintf("DIAL_HOME_URL=%s", d.managerUrl),
+		fmt.Sprintf("DIAL_HOME_TOKEN=%s", d.runnerToken),
 	)
 
 	// check if daemon set already exists in daemon set map
