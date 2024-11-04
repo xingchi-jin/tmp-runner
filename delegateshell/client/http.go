@@ -202,6 +202,7 @@ func (p *ManagerClient) doJson(ctx context.Context, path, method string, in, out
 	headers := make(map[string]string)
 	headers["Authorization"] = "Delegate " + token
 	headers["Content-Type"] = "application/json"
+	headers["delegateTokenHash"] = p.TokenCache.GetTokenHash()
 	res, body, err := p.Do(ctx, path, method, headers, buf)
 	if err != nil {
 		return res, err

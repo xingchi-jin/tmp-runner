@@ -30,11 +30,20 @@ type Config struct {
 	Trace bool `envconfig:"TRACE"`
 
 	Delegate struct {
-		AccountID              string     `envconfig:"ACCOUNT_ID"`
-		DelegateToken          string     `envconfig:"DELEGATE_TOKEN"`
-		Tags                   string     `envconfig:"DELEGATE_TAGS"`
-		ManagerEndpoint        string     `envconfig:"MANAGER_HOST_AND_PORT"`
-		Name                   string     `envconfig:"DELEGATE_NAME"`
+		AccountID string `envconfig:"ACCOUNT_ID"`
+
+		delegateToken string `envconfig:"DELEGATE_TOKEN"`
+		harnessToken  string `envconfig:"TOKEN"`
+
+		tags      string `envconfig:"DELEGATE_TAGS"`
+		selectors string `envconfig:"TAGS"`
+
+		managerEndpoint string `envconfig:"MANAGER_HOST_AND_PORT"`
+		harnessUrl      string `envconfig:"URL"`
+
+		name       string `envconfig:"DELEGATE_NAME"`
+		runnerName string `envconfig:"NAME"`
+
 		TaskStatusV2           bool       `envconfig:"DELEGATE_TASK_STATUS_V2" default:"true"`
 		DelegateTaskServiceURL string     `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
 		DelegateType           RunnerType `envconfig:"DELEGATE_TYPE"`
@@ -63,10 +72,29 @@ func FromEnviron() (Config, error) {
 
 func (c *Config) GetTags() []string {
 	tags := make([]string, 0)
-	for _, s := range strings.Split(c.Delegate.Tags, ",") {
+	for _, s := range strings.Split(pickNonEmpty(c.Delegate.harnessToken, c.Delegate.tags), ",") {
 		tags = append(tags, strings.TrimSpace(s))
 	}
 	return tags
+}
+
+func (c *Config) GetName() string {
+	return pickNonEmpty(c.Delegate.runnerName, c.Delegate.name)
+}
+
+func (c *Config) GetHarnessUrl() string {
+	return pickNonEmpty(c.Delegate.harnessUrl, c.Delegate.managerEndpoint)
+}
+
+func (c *Config) GetToken() string {
+	return pickNonEmpty(c.Delegate.harnessToken, c.Delegate.delegateToken)
+}
+
+func pickNonEmpty(str1, str2 string) string {
+	if str1 != "" {
+		return str1
+	}
+	return str2
 }
 
 // Configurations that will pass to task handlers at runtime

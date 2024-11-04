@@ -46,7 +46,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
+	managerClient := client.NewManagerClient(loadedConfig.GetHarnessUrl(), loadedConfig.Delegate.AccountID, loadedConfig.GetToken(), loadedConfig.Server.Insecure, "")
 	delegateShell := delegateshell.NewDelegateShell(&loadedConfig, managerClient)
 
 	// trap the os signal to gracefully shut down the http server.
