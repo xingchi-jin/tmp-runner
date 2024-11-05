@@ -8,6 +8,7 @@ package delegate
 import (
 	"time"
 
+	"github.com/harness/runner/utils"
 	"github.com/patrickmn/go-cache"
 	"github.com/sirupsen/logrus"
 )
@@ -19,10 +20,11 @@ var (
 )
 
 type TokenCache struct {
-	id     string
-	secret string
-	expiry time.Duration
-	c      *cache.Cache
+	id         string
+	secret     string
+	secretHash string
+	expiry     time.Duration
+	c          *cache.Cache
 }
 
 // NewTokenCache creates a token cache which creates a new token
@@ -30,11 +32,13 @@ type TokenCache struct {
 func NewTokenCache(id, secret string) *TokenCache {
 	// purge expired tokens from the cache at expirationTime/3 intervals
 	c := cache.New(cache.DefaultExpiration, expirationTime/3)
+	decodedSecret := GetBase64DecodedTokenString(secret)
 	return &TokenCache{
-		id:     id,
-		secret: secret,
-		expiry: expirationTime,
-		c:      c,
+		id:         id,
+		secret:     decodedSecret,
+		secretHash: utils.HashSHA256(decodedSecret),
+		expiry:     expirationTime,
+		c:          c,
 	}
 }
 
@@ -55,3 +59,7 @@ func (t *TokenCache) Get() (string, error) {
 	t.c.Set(t.id, token, t.expiry/2)
 	return token, nil
 }
+
+func (t *TokenCache) GetTokenHash() string {
+	return t.secretHash
+} 

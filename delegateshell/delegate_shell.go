@@ -45,7 +45,7 @@ func NewDelegateShell(config *delegate.Config, managerClient *client.ManagerClie
 	downloader := downloader.New(cloner.Default(), cache)
 
 	// The poller needs a client that interacts with the task management system and a router to route the tasks
-	keepAlive := heartbeat.New(config.Delegate.AccountID, config.Delegate.Name, config.GetTags(), managerClient)
+	keepAlive := heartbeat.New(config.Delegate.AccountID, config.GetName(), config.GetTags(), managerClient)
 	return &DelegateShell{Config: config,
 		KeepAlive:     keepAlive,
 		ManagerClient: managerClient,
@@ -64,8 +64,8 @@ func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, 
 	d.DaemonSetManager = daemonset.NewDaemonSetManager(
 		d.Downloader,
 		delegate.IsK8sRunner(delegate.GetTaskContext(d.Config, d.Info.ID).RunnerType),
-		d.Config.Delegate.ManagerEndpoint,
-		d.Config.Delegate.DelegateToken,
+		d.Config.GetHarnessUrl(),
+		d.Config.GetToken(),
 	)
 	d.Router = router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID), d.Downloader, d.DaemonSetManager)
 	d.DaemonSetReconciler = daemonset.NewDaemonSetReconciler(ctx, d.DaemonSetManager, d.Router, d.ManagerClient)

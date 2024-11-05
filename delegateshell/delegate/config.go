@@ -30,11 +30,12 @@ type Config struct {
 	Trace bool `envconfig:"TRACE"`
 
 	Delegate struct {
-		AccountID              string     `envconfig:"ACCOUNT_ID"`
-		DelegateToken          string     `envconfig:"DELEGATE_TOKEN"`
-		Tags                   string     `envconfig:"DELEGATE_TAGS"`
-		ManagerEndpoint        string     `envconfig:"MANAGER_HOST_AND_PORT"`
-		Name                   string     `envconfig:"DELEGATE_NAME"`
+		AccountID       string `envconfig:"ACCOUNT_ID"`
+		DelegateToken   string `envconfig:"DELEGATE_TOKEN"`
+		Tags            string `envconfig:"DELEGATE_TAGS" split_words:"true"`
+		ManagerEndpoint string `envconfig:"MANAGER_HOST_AND_PORT"`
+		Name            string `envconfig:"DELEGATE_NAME"`
+
 		TaskStatusV2           bool       `envconfig:"DELEGATE_TASK_STATUS_V2" default:"true"`
 		DelegateTaskServiceURL string     `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
 		DelegateType           RunnerType `envconfig:"DELEGATE_TYPE"`
@@ -49,6 +50,20 @@ type Config struct {
 		SkipPrepareServer bool   `envconfig:"SKIP_PREPARE_SERVER" default:"false"`                   // skip prepare server, install docker / git
 		Insecure          bool   `envconfig:"SERVER_INSECURE" default:"true"`                        // run in insecure mode
 	}
+
+	// Runner's installation configs
+	// Certain congigs will deprecate the old ones in order to provide better environment variable names.
+	// eg. TOKEN replaces DELEGATE_TOKEN, TAGS replaces DELEGATE_TAGS, URL replaces MANAGER_HOST_AND_PORT, NAME replaces DELEGATE_NAME
+	// Note: If both new and old name are configured, the new name takes precedence.
+	//
+	// Note: Putting configs inside a nested struct will cause envconfig failing to load the value, because envconfig
+	// will prefix the intended env name with the name of the struct. For example, if we define "Token" inside "Delegate" struct with flag
+	// 'envconfig:"TOKEN"', it will be loaded by environment variable "DELEGATE_TOKEN"
+
+	Token      string `envconfig:"TOKEN"`
+	Selectors  string `envconfig:"TAGS"`
+	RunnerName string `envconfig:"NAME"`
+	HarnessUrl string `envconfig:"URL"`
 }
 
 func FromEnviron() (Config, error) {
@@ -63,10 +78,29 @@ func FromEnviron() (Config, error) {
 
 func (c *Config) GetTags() []string {
 	tags := make([]string, 0)
-	for _, s := range strings.Split(c.Delegate.Tags, ",") {
+	for _, s := range strings.Split(pickNonEmpty(c.Selectors, c.Delegate.Tags), ",") {
 		tags = append(tags, strings.TrimSpace(s))
 	}
 	return tags
+}
+
+func (c *Config) GetName() string {
+	return pickNonEmpty(c.RunnerName, c.Delegate.Name)
+}
+
+func (c *Config) GetHarnessUrl() string {
+	return pickNonEmpty(c.HarnessUrl, c.Delegate.ManagerEndpoint)
+}
+
+func (c *Config) GetToken() string {
+	return pickNonEmpty(c.Token, c.Delegate.DelegateToken)
+}
+
+func pickNonEmpty(str1, str2 string) string {
+	if str1 != "" {
+		return str1
+	}
+	return str2
 }
 
 // Configurations that will pass to task handlers at runtime
