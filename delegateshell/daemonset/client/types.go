@@ -33,7 +33,6 @@ type (
 		ExecutableConfig *task.ExecutableConfig `json:"executable_config"`
 		MemoryBytes      int64                  `json:"memory_bytes"`
 		Image            string                 `json:"image"`
-		Version          string                 `json:"version"`
 	}
 
 	DaemonTaskParams struct {
