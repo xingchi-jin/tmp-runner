@@ -6,8 +6,6 @@
 package delegate
 
 import (
-	"fmt"
-	"os"
 	"strings"
 	"sync"
 
@@ -70,9 +68,6 @@ type Config struct {
 
 func FromEnviron() (Config, error) {
 	var config Config
-	for _, e := range os.Environ() {
-		fmt.Println(e)
-	}
 	err := envconfig.Process("", &config)
 	if err != nil {
 		return config, err
