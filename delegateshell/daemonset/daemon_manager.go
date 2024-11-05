@@ -279,7 +279,7 @@ func (d *DaemonSetManager) download(ctx context.Context, ds *dsclient.DaemonSet)
 		return "", fmt.Errorf("no executable configuration provided for daemon set")
 	}
 	// set daemon set's version in ExecutableConfig
-	path, err := d.downloader.DownloadExecutable(ctx, ds.Type, ds.Config.Version, ds.Config.ExecutableConfig)
+	path, err := d.downloader.DownloadExecutable(ctx, ds.Type, ds.Config.ExecutableConfig)
 	if err != nil {
 		logrus.WithError(err).Error("failed to download task executable file")
 		return "", err
@@ -335,9 +335,6 @@ func isConfigIdentical(config1 *dsclient.DaemonSetOperationalConfig, config2 *ds
 		return false
 	}
 	if config1.Image != config2.Image {
-		return false
-	}
-	if config1.Version != config2.Version {
 		return false
 	}
 	return true
