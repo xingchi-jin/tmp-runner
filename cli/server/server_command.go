@@ -51,7 +51,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	remotelogger.Start(ctx, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.DelegateToken, serviceName, loadedConfig.Delegate.Name, loadedConfig.EnableRemoteLogging, loadedConfig.Server.Insecure)
+	remotelogger.Start(ctx, loadedConfig.Delegate.AccountID, loadedConfig.GetHarnessUrl(), loadedConfig.GetToken(), serviceName, loadedConfig.GetName(), loadedConfig.EnableRemoteLogging, loadedConfig.Server.Insecure)
 	defer func() {
 		err := logger.CloseHooks()
 		if err != nil {
@@ -59,7 +59,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		}
 	}()
 
-	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
+	managerClient := client.NewManagerClient(loadedConfig.GetHarnessUrl(), loadedConfig.Delegate.AccountID, loadedConfig.GetToken(), loadedConfig.Server.Insecure, "")
 
 	delegateShell := delegateshell.NewDelegateShell(&loadedConfig, managerClient)
 
