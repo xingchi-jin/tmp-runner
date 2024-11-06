@@ -11,6 +11,8 @@ import (
 	"os"
 	"time"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/cloner"
 	"github.com/drone/go-task/task/downloader"
@@ -20,7 +22,6 @@ import (
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
 	"github.com/harness/runner/router"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -54,18 +55,21 @@ func NewDelegateShell(config *delegate.Config, managerClient *client.ManagerClie
 }
 
 func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, error) {
-	logrus.Infoln("Registering runner")
+	logger.Infoln("Registering runner")
 	// Register the poller with manager
 	runnerInfo, err := d.KeepAlive.Register(ctx)
 	if err != nil {
 		return nil, err
 	}
 	d.Info = runnerInfo
+
 	d.DaemonSetManager = daemonset.NewDaemonSetManager(
 		d.Downloader,
 		delegate.IsK8sRunner(delegate.GetTaskContext(d.Config, d.Info.ID).RunnerType),
+		d.Config.Delegate.AccountID,
 		d.Config.GetHarnessUrl(),
-		d.Config.GetToken(),
+		d.Config.GetToken(), d.Config.EnableRemoteLogging,
+		d.Config.Server.Insecure,
 	)
 	d.Router = router.NewRouter(delegate.GetTaskContext(d.Config, d.Info.ID), d.Downloader, d.DaemonSetManager)
 	d.DaemonSetReconciler = daemonset.NewDaemonSetReconciler(ctx, d.DaemonSetManager, d.Router, d.ManagerClient)
@@ -101,14 +105,14 @@ func (d *DelegateShell) StartRunnerProcesses(ctx context.Context) error {
 }
 
 func (d *DelegateShell) sendHeartbeat(ctx context.Context) error {
-	logrus.Infoln("Started sending heartbeat to manager...")
+	logger.Infoln("Started sending heartbeat to manager...")
 	d.KeepAlive.Heartbeat(ctx, d.Info.ID, d.Info.IP, d.Info.Host)
 	return nil
 }
 
 func (d *DelegateShell) startDaemonSetReconcile() error {
 	if err := d.DaemonSetReconciler.Start(d.Info.ID, time.Minute*1); err != nil {
-		logrus.WithError(err).Errorln("Error starting reconcile for daemon sets")
+		logger.WithError(err).Errorln("Error starting reconcile for daemon sets")
 		return err
 	}
 	return nil
@@ -116,11 +120,11 @@ func (d *DelegateShell) startDaemonSetReconcile() error {
 
 func (d *DelegateShell) startPoller(ctx context.Context) error {
 	// Start polling for bijou events
-	d.Poller = poller.New(d.ManagerClient, d.Router, d.Config.Delegate.TaskStatusV2)
+	d.Poller = poller.New(d.ManagerClient, d.Router, d.Config.Delegate.TaskStatusV2, d.Config.EnableRemoteLogging)
 	// TODO: we don't need hb if we poll for task.
 	// TODO: instead of hardcode 3, figure out better thread management
 	if err := d.Poller.PollRunnerEvents(ctx, 3, d.Info.ID, d.Info.Name, time.Second*10); err != nil {
-		logrus.WithError(err).Errorln("Error when polling task events")
+		logger.WithError(err).Errorln("Error when polling task events")
 		return err
 	}
 	return nil

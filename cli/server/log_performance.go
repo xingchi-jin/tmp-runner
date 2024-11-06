@@ -1,53 +1,55 @@
 package server
 
 import (
+	"os"
+
+	"github.com/harness/runner/logger"
+
 	"github.com/shirou/gopsutil/v3/cpu"
 	"github.com/shirou/gopsutil/v3/mem"
 	"github.com/shirou/gopsutil/v3/process"
-	"github.com/sirupsen/logrus"
-	"os"
 )
 
 func logRunnerResourceStats() {
 	processId := os.Getpid()
-	logrus.Infoln("Logging resource stats")
-	logrus.Infof("Runner process ID: %d", processId)
+	logger.Infoln("Logging resource stats")
+	logger.Infof("Runner process ID: %d", processId)
 
 	currentProcess, err := process.NewProcess(int32(processId))
 	if err != nil {
-		logrus.WithError(err).Errorln("Cannot get runner process")
+		logger.WithError(err).Errorln("Cannot get runner process")
 		return
 	}
 
 	// total CPU
 	counts, err := cpu.Counts(true)
 	if err != nil {
-		logrus.WithError(err).Errorln("Error getting total CPU")
+		logger.WithError(err).Errorln("Error getting total CPU")
 	} else {
-		logrus.Infof("Total CPU :%d", counts)
+		logger.Infof("Total CPU :%d", counts)
 	}
 
 	// CPU usage of the current process
 	cpuPercent, err := currentProcess.CPUPercent()
 	if err != nil {
-		logrus.WithError(err).Errorln("Error getting CPU usage")
+		logger.WithError(err).Errorln("Error getting CPU usage")
 	} else {
-		logrus.Infof("CPU usage: %f%%", cpuPercent)
+		logger.Infof("CPU usage: %f%%", cpuPercent)
 	}
 
 	// total memory
 	virtualMemory, err := mem.VirtualMemory()
 	if err != nil {
-		logrus.WithError(err).Errorln("Error getting total memory")
+		logger.WithError(err).Errorln("Error getting total memory")
 	} else {
-		logrus.Infof("Total memory: %vMB", virtualMemory.Total/1024/1024)
+		logger.Infof("Total memory: %vMB", virtualMemory.Total/1024/1024)
 	}
 
 	// memory usage of the current process
 	memPercent, err := currentProcess.MemoryPercent()
 	if err != nil {
-		logrus.WithError(err).Errorln("Error getting memory usage")
+		logger.WithError(err).Errorln("Error getting memory usage")
 	} else {
-		logrus.Infof("Memory usage: %f%%", memPercent)
+		logger.Infof("Memory usage: %f%%", memPercent)
 	}
 }

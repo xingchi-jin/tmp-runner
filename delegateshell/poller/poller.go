@@ -11,11 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -25,12 +26,13 @@ var (
 type FilterFn func(*client.RunnerEvent) bool
 
 type Poller struct {
-	UseV2Status bool
-	Client      client.Client
-	router      *task.Router
-	Filter      FilterFn
-	stopChannel chan struct{}
-	doneChannel chan struct{}
+	UseV2Status   bool
+	RemoteLogging bool
+	Client        client.Client
+	router        *task.Router
+	Filter        FilterFn
+	stopChannel   chan struct{}
+	doneChannel   chan struct{}
 	// The Harness manager allows two task acquire calls with the same delegate ID to go through (by design).
 	// We need to make sure two different threads do not acquire the same task.
 	// This map makes sure Acquire() is called only once per task ID. The mapping is removed once the status
@@ -38,12 +40,13 @@ type Poller struct {
 	m sync.Map
 }
 
-func New(c client.Client, router *task.Router, useV2 bool) *Poller {
+func New(c client.Client, router *task.Router, useV2, remoteLogging bool) *Poller {
 	p := &Poller{
-		Client:      c,
-		router:      router,
-		m:           sync.Map{},
-		UseV2Status: useV2,
+		Client:        c,
+		router:        router,
+		m:             sync.Map{},
+		UseV2Status:   useV2,
+		RemoteLogging: remoteLogging,
 	}
 	p.stopChannel = make(chan struct{})
 	p.doneChannel = make(chan struct{})
@@ -70,10 +73,10 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, i
 			pollTimer.Reset(interval)
 			select {
 			case <-ctx.Done():
-				logrus.Errorln("context canceled during task polling, this should not happen")
+				logger.Errorln("context canceled during task polling, this should not happen")
 				return
 			case <-p.stopChannel:
-				logrus.Infoln("Request received to stop the poller")
+				logger.Infoln("Request received to stop the poller")
 				// Note: The goal here is to stop the poller from acquiring new tasks,
 				// but we want to allow any ongoing tasks that were already in progress to complete.
 				if !pollTimer.Stop() {
@@ -83,16 +86,16 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, i
 					// To ensure that no timer events are left unprocessed before stopping the poller,
 					// we need to drain the channel by waiting to receive the event from `pollTimer.C`
 
-					logrus.Infoln("Waiting for any ongoing events to complete")
+					logger.Infoln("Waiting for any ongoing events to complete")
 					<-pollTimer.C
 				}
-				logrus.Infoln("Task polling has been stopped")
+				logger.Infoln("Task polling has been stopped")
 				return
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
 				tasks, err := p.Client.GetRunnerEvents(taskEventsCtx, id)
 				if err != nil {
-					logrus.WithError(err).Errorf("could not query for task events")
+					logger.WithError(err).Errorf("could not query for task events")
 				}
 				cancelFn()
 
@@ -101,7 +104,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, i
 					case events <- e:
 						// Event successfully sent to the channel
 					case <-ctx.Done():
-						logrus.Errorln("context canceled during event processing, this should not happen")
+						logger.Errorln("context canceled during event processing, this should not happen")
 						return
 					}
 				}
@@ -116,12 +119,12 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, i
 			for acquiredTask := range events { // Read from events channel until it's closed
 				err := p.process(ctx, id, name, *acquiredTask)
 				if err != nil {
-					logrus.WithError(err).WithField("task_id", acquiredTask.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
+					logger.WithError(err).WithField("task_id", acquiredTask.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
 				}
 			}
 		}(i)
 	}
-	logrus.Infof("Initialized %d threads successfully and starting polling for tasks", n)
+	logger.Infof("Initialized %d threads successfully and starting polling for tasks", n)
 	wg.Wait()
 	// After all tasks are processed, notify completion
 	close(p.doneChannel)
@@ -135,10 +138,12 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 		return nil
 	}
 	defer p.m.Delete(taskID)
+
 	payloads, err := p.Client.GetExecutionPayload(ctx, delegateID, delegateName, taskID)
 	if err != nil {
 		return errors.Wrap(err, "failed to get payload")
 	}
+
 	// Since task id is unique, it's just one request
 	for _, request := range payloads.Requests {
 		resp := p.router.Handle(ctx, request)
@@ -148,7 +153,7 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 		taskResponse := &client.TaskResponse{ID: rv.TaskID, Type: "CI_EXECUTE_STEP"}
 		if resp.Error() != nil {
 			taskResponse.Code = "FAILED"
-			logrus.WithError(resp.Error()).Error("Process task failed")
+			logger.WithError(resp.Error()).Error("Process task failed")
 			// TODO: a bug here. If the Data is nil, exception happen in cg manager.
 			// This will be taken care after integrating with new response workflow
 			if respBytes, err := json.Marshal(&api.VMTaskExecutionResponse{ErrorMessage: resp.Error().Error()}); err != nil {
@@ -181,9 +186,9 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 
 func (p *Poller) Shutdown() {
 	p.stopPollingForTasks()
-	logrus.Infoln("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
+	logger.Infoln("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
 	p.waitForTasks()
-	logrus.Infoln("All tasks are completed, stopping task processor...")
+	logger.Infoln("All tasks are completed, stopping task processor...")
 }
 
 func (p *Poller) stopPollingForTasks() {

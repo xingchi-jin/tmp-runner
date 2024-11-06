@@ -13,11 +13,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/icrowley/fake"
 
 	"github.com/pkg/errors"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -74,7 +75,7 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 	ip := getOutboundIP()
 	id, err := p.register(ctx, ip, host)
 	if err != nil {
-		logrus.WithField("ip", ip).WithField("host", host).WithError(err).Error("could not register runner")
+		logger.WithField("ip", ip).WithField("host", host).WithError(err).Error("could not register runner")
 		return nil, err
 	}
 	return &DelegateInfo{
@@ -94,7 +95,7 @@ func (p *KeepAlive) register(ctx context.Context, ip, host string) (string, erro
 		return "", errors.Wrap(err, "could not register the runner")
 	}
 	req.ID = resp.Resource.DelegateID
-	logrus.WithField("id", req.ID).WithField("host", req.HostName).
+	logger.WithField("id", req.ID).WithField("host", req.HostName).
 		WithField("ip", req.IP).Info("registered delegate successfully")
 	return resp.Resource.DelegateID, nil
 }
@@ -109,14 +110,14 @@ func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
 			msgDelayTimer.Reset(hearbeatInterval)
 			select {
 			case <-ctx.Done():
-				logrus.Infoln("context canceled, stopping heartbeat")
+				logger.Infoln("context canceled, stopping heartbeat")
 				return
 			case <-msgDelayTimer.C:
 				req.LastHeartbeat = time.Now().UnixMilli()
 				heartbeatCtx, cancelFn := context.WithTimeout(ctx, heartbeatTimeout)
 				err := p.Client.Heartbeat(heartbeatCtx, req)
 				if err != nil && !errors.Is(err, context.Canceled) {
-					logrus.WithError(err).Errorf("could not send heartbeat")
+					logger.WithError(err).Errorf("could not send heartbeat")
 				}
 				cancelFn()
 			}
@@ -151,7 +152,7 @@ func (p *KeepAlive) getRegisterRequest(id, ip, host string) *client.RegisterRequ
 func getOutboundIP() string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
-		logrus.WithError(err).Error("could not figure out an IP, using a randomly generated IP")
+		logger.WithError(err).Error("could not figure out an IP, using a randomly generated IP")
 		return "fake-" + fake.IPv4()
 	}
 	defer conn.Close()

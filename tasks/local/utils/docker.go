@@ -6,10 +6,11 @@ import (
 	"strings"
 	"unicode"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/filters"
 	"github.com/docker/docker/client"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -51,7 +52,7 @@ func (d *Docker) KillContainersByLabel(
 		Filters: args,
 		All:     true,
 	})
-	logrus.Info(ctrs)
+	logger.Info(ctrs)
 	if err != nil {
 		return err
 	}
@@ -66,7 +67,7 @@ func (d *Docker) KillContainers(ctx context.Context, containerIds []string) erro
 	// stop all containers. Soft stop feature should be in a different function
 	for _, id := range containerIds {
 		if err := d.client.ContainerKill(ctx, id, "9"); err != nil {
-			logrus.WithField("container", id).WithField("error", err).Warnln("failed to kill container")
+			logger.WithField("container", id).WithField("error", err).Warnln("failed to kill container")
 		}
 	}
 
@@ -78,7 +79,7 @@ func (d *Docker) KillContainers(ctx context.Context, containerIds []string) erro
 	// cleanup all containers
 	for _, id := range containerIds {
 		if err := d.client.ContainerRemove(ctx, id, removeOpts); err != nil {
-			logrus.WithField("container", id).WithField("error", err).Warnln("failed to remove container")
+			logger.WithField("container", id).WithField("error", err).Warnln("failed to remove container")
 			return err
 		}
 	}
@@ -89,7 +90,7 @@ func (d *Docker) RemoveNetworks(ctx context.Context, ids []string) error {
 	for _, id := range ids {
 		// cleanup the network
 		if err := d.client.NetworkRemove(ctx, id); err != nil {
-			logrus.WithField("network", id).WithField("error", err).Warnln("failed to remove network")
+			logger.WithField("network", id).WithField("error", err).Warnln("failed to remove network")
 			return err
 		}
 	}

@@ -13,22 +13,24 @@ import (
 	"net/http"
 	"time"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/cenkalti/backoff/v4"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/utils"
-	"github.com/sirupsen/logrus"
 )
 
 const (
-	registerEndpoint           = "/api/agent/delegates/register?accountId=%s"
-	unregisterEndpoint         = "/api/agent/delegates/unregister?accountId=%s"
-	heartbeatEndpoint          = "/api/agent/delegates/heartbeat-with-polling?accountId=%s"
-	taskStatusEndpoint         = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
-	runnerEventsPollEndpoint   = "/api/executions/%s/runner-events?accountId=%s"
-	executionPayloadEndpoint   = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s&delegateName=%s"
-	taskStatusEndpointV2       = "/api/executions/%s/task-response?runnerId=%s&accountId=%s"
-	daemonSetReconcileEndpoint = "/api/daemons/%s/reconcile?accountId=%s"
-	acquireDaemonTasksEndpoint = "/api/daemons/%s/tasks?accountId=%s"
+	registerEndpoint                = "/api/agent/delegates/register?accountId=%s"
+	unregisterEndpoint              = "/api/agent/delegates/unregister?accountId=%s"
+	heartbeatEndpoint               = "/api/agent/delegates/heartbeat-with-polling?accountId=%s"
+	taskStatusEndpoint              = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
+	runnerEventsPollEndpoint        = "/api/executions/%s/runner-events?accountId=%s"
+	executionPayloadEndpoint        = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s&delegateName=%s"
+	taskStatusEndpointV2            = "/api/executions/%s/task-response?runnerId=%s&accountId=%s"
+	daemonSetReconcileEndpoint      = "/api/daemons/%s/reconcile?accountId=%s"
+	acquireDaemonTasksEndpoint      = "/api/daemons/%s/tasks?accountId=%s"
+	stackDriverLoggingTokenEndpoint = "/api/agent/infra-download/delegate-auth/delegate/logging-token?accountId=%s"
 )
 
 var (
@@ -109,7 +111,7 @@ func (p *ManagerClient) GetExecutionPayload(ctx context.Context, delegateID, del
 	payload := &RunnerAcquiredTasks{}
 	_, err := p.doJson(ctx, path, "GET", nil, payload)
 	if err != nil {
-		logrus.WithError(err).Error("Error making http call")
+		logger.WithError(err).Error("Error making http call")
 	}
 	return payload, err
 }
@@ -144,7 +146,7 @@ func (p *ManagerClient) retry(ctx context.Context, path, method string, in, out 
 		res, err := p.doJson(ctx, path, method, in, out)
 		// do not retry on Canceled or DeadlineExceeded
 		if ctxErr := ctx.Err(); ctxErr != nil {
-			p.Logger.Errorf("http: context canceled")
+			logger.Errorf("http: context canceled")
 			return res, ctxErr
 		}
 
@@ -156,18 +158,18 @@ func (p *ManagerClient) retry(ctx context.Context, path, method string, in, out 
 			// 500's are typically not permanent errors and may
 			// relate to outages on the server side.
 			if (ignoreStatusCode && err != nil) || res.StatusCode > 501 {
-				p.Logger.Errorf("url: %s server error: re-connect and re-try: %s", path, err)
+				logger.Errorf("url: %s server error: re-connect and re-try: %s", path, err)
 				if duration == backoff.Stop {
-					p.Logger.Errorf("max retry limit reached, task status won't be updated")
+					logger.Errorf("max retry limit reached, task status won't be updated")
 					return nil, err
 				}
 				time.Sleep(duration)
 				continue
 			}
 		} else if err != nil {
-			p.Logger.Errorf("http: request error: %s", err)
+			logger.Errorf("http: request error: %s", err)
 			if duration == backoff.Stop {
-				p.Logger.Errorf("max retry limit reached, task status won't be updated")
+				logger.Errorf("max retry limit reached, task status won't be updated")
 				return nil, err
 			}
 			time.Sleep(duration)
@@ -183,7 +185,7 @@ func (p *ManagerClient) doJson(ctx context.Context, path, method string, in, out
 	// to an io.ReadCloser.
 	if in != nil {
 		if err := json.NewEncoder(buf).Encode(in); err != nil {
-			p.Logger.Errorf("could not encode input payload: %s", err)
+			logger.Errorf("could not encode input payload: %s", err)
 		}
 	}
 	// the request should include the secret shared between
@@ -195,7 +197,7 @@ func (p *ManagerClient) doJson(ctx context.Context, path, method string, in, out
 	} else {
 		token, err = p.TokenCache.Get()
 		if err != nil {
-			p.Logger.Errorf("could not generate account token: %s", err)
+			logger.Errorf("could not generate account token: %s", err)
 			return nil, err
 		}
 	}
@@ -215,6 +217,16 @@ func (p *ManagerClient) doJson(ctx context.Context, path, method string, in, out
 	}
 
 	return res, nil
+}
+
+func (p *ManagerClient) GetLoggingToken(ctx context.Context) (*AccessTokenBean, error) {
+	path := fmt.Sprintf(stackDriverLoggingTokenEndpoint, p.AccountID)
+	credentials := &AccessTokenBeanResource{}
+	_, err := p.doJson(ctx, path, "GET", nil, credentials)
+	if err != nil {
+		logger.WithError(err).Error("Error getting stack driver logging token")
+	}
+	return credentials.AccessTokenBean, err
 }
 
 func createBackoff(ctx context.Context, maxElapsedTime time.Duration) backoff.BackOffContext {

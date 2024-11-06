@@ -158,4 +158,14 @@ type (
 	DaemonTaskAcquireRequest struct {
 		TaskIds []string `json:"task_ids"`
 	}
+
+	AccessTokenBean struct {
+		ProjectId            string `json:"projectId"`
+		TokenValue           string `json:"tokenValue"`
+		ExpirationTimeMillis int64  `json:"expirationTimeMillis"`
+	}
+
+	AccessTokenBeanResource struct {
+		AccessTokenBean *AccessTokenBean `json:"resource"`
+	}
 )

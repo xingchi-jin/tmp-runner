@@ -1,4 +1,4 @@
-package runnerlogs
+package logger
 
 import (
 	"path"
@@ -9,9 +9,13 @@ import (
 	"github.com/sirupsen/logrus"
 )
 
-func SetLogrus() {
-	logrus.SetReportCaller(true)
-	logrus.SetFormatter(&logrus.JSONFormatter{
+const (
+	LogFileName = "runner.log"
+)
+
+func ConfigureLogging() {
+	SetReportCaller(true)
+	SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: time.RFC3339,
 		CallerPrettyfier: func(frame *runtime.Frame) (function string, file string) {
 			fileName := path.Base(frame.File) + ":" + strconv.Itoa(frame.Line)
@@ -19,8 +23,3 @@ func SetLogrus() {
 		},
 	})
 }
-
-// TODO: implement the support to send logs to google stackdriver.
-// func getOutput() io.Writer {
-
-// }

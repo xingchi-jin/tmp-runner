@@ -8,59 +8,73 @@ package server
 import (
 	"context"
 	"errors"
+	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
+
+	"github.com/harness/runner/logger/remotelogger"
+
+	"github.com/harness/runner/logger"
+
 	"github.com/harness/godotenv/v3"
 	"github.com/harness/runner/delegateshell"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
-	"github.com/harness/runner/logger/runnerlogs"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
-	"net/http"
-	"os"
-	"os/signal"
 )
+
+const serviceName = "runner"
 
 type serverCommand struct {
 	envFile string
 }
 
 func (c *serverCommand) run(*kingpin.ParseContext) error {
+	logger.ConfigureLogging()
 	// Load env file if exists
 	if c.envFile != "" {
 		loadEnvErr := godotenv.Load(c.envFile)
 		if loadEnvErr != nil {
-			logrus.WithError(loadEnvErr).Errorln("cannot load env file")
+			logger.WithError(loadEnvErr).Errorln("cannot load env file")
 		}
 	}
 
 	// Read configs into memory
 	loadedConfig, err := delegate.FromEnviron()
 	if err != nil {
-		logrus.WithError(err).Errorln("Load Runner config failed")
+		logger.WithError(err).Errorln("Load Runner config failed")
 	}
-
-	runnerlogs.SetLogrus()
 
 	ctx := context.Background()
 	ctx, cancel := context.WithCancel(ctx)
 	defer cancel()
 
-	managerClient := client.NewManagerClient(loadedConfig.GetHarnessUrl(), loadedConfig.Delegate.AccountID, loadedConfig.GetToken(), loadedConfig.Server.Insecure, "")
+	remotelogger.Start(ctx, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.DelegateToken, serviceName, loadedConfig.Delegate.Name, loadedConfig.EnableRemoteLogging, loadedConfig.Server.Insecure)
+	defer func() {
+		err := logger.CloseHooks()
+		if err != nil {
+			logger.WithError(err).Warnln("Error while stopping remote logger")
+		}
+	}()
+
+	managerClient := client.NewManagerClient(loadedConfig.Delegate.ManagerEndpoint, loadedConfig.Delegate.AccountID, loadedConfig.Delegate.DelegateToken, loadedConfig.Server.Insecure, "")
+
 	delegateShell := delegateshell.NewDelegateShell(&loadedConfig, managerClient)
 
 	// trap the os signal to gracefully shut down the http server.
 	s := make(chan os.Signal, 1)
-	signal.Notify(s, os.Interrupt)
+	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
 	go func() {
 		select {
 		case val := <-s:
-			logrus.Infof("Received OS Signal to exit server: %s", val)
+			logger.Infof("Received OS Signal to exit server: %s", val)
 			logRunnerResourceStats()
 			delegateShell.Shutdown()
 			cancel()
 		case <-ctx.Done():
-			logrus.Errorln("Received a done signal to exit server, this should not happen")
+			logger.Errorln("Received a done signal to exit server, this should not happen")
 			logRunnerResourceStats()
 		}
 	}()
@@ -68,16 +82,18 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	runnerInfo, err := delegateShell.Register(ctx)
 	if err != nil {
-		logrus.Errorf("Registering Runner with Harness manager failed. Error: %v", err)
+		logger.Errorf("Registering Runner with Harness manager failed. Error: %v", err)
 		return err
 	}
-	logrus.Infoln("Runner registered", runnerInfo)
+	logger.Infoln("Runner registered", runnerInfo)
+
+	logger.UpdateContextInHooks(map[string]string{"runnerId": runnerInfo.ID})
 
 	defer func() {
-		logrus.Infoln("Unregistering runner...")
+		logger.Infoln("Unregistering runner...")
 		err = delegateShell.Unregister(context.Background())
 		if err != nil {
-			logrus.Errorf("Error while unregistering runner: %v", err)
+			logger.Errorf("Error while unregistering runner: %v", err)
 		}
 	}()
 
@@ -90,26 +106,26 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	g.Go(func() error {
 		if err := startHTTPServer(ctx, &loadedConfig); err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
-				logrus.Infoln("Program gracefully terminated")
+				logger.Infoln("Program gracefully terminated")
 				return nil
 			}
-			logrus.Errorf("Program terminated with error: %s", err)
+			logger.Errorf("Program terminated with error: %s", err)
 			return err
 		}
 		return nil
 	})
 
 	if err := g.Wait(); err != nil {
-		logrus.WithError(err).Errorln("One or more runner processes failed")
+		logger.WithError(err).Errorln("One or more runner processes failed")
 		return err
 	}
 
-	logrus.Infoln("All runner processes terminated")
+	logger.Infoln("All runner processes terminated")
 	return err
 }
 
 func startHTTPServer(ctx context.Context, config *delegate.Config) error {
-	logrus.Infoln("Starting HTTP server")
+	logger.Infoln("Starting HTTP server")
 
 	serverInstance := Server{
 		Addr:     config.Server.Bind,
@@ -122,7 +138,7 @@ func startHTTPServer(ctx context.Context, config *delegate.Config) error {
 	// TODO: INIT_SCRIPT feature, how to and where to
 	// run the setup checks / installation
 	// if loadedConfig.Server.SkipPrepareServer {
-	// 	logrus.Infoln("skipping prepare server eg install docker / git")
+	// 	logger.Infoln("skipping prepare server eg install docker / git")
 	// } else {
 	// 	setup.PrepareSystem()
 	// }

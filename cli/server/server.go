@@ -10,10 +10,11 @@ import (
 	"crypto/tls"
 	"net/http"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/harness/runner/version"
 
 	"github.com/docker/go-connections/tlsconfig"
-	"github.com/sirupsen/logrus"
 	"golang.org/x/sync/errgroup"
 )
 
@@ -32,12 +33,12 @@ type Server struct {
 func (s *Server) Start(ctx context.Context) error {
 	// The default run mode is insecure, as most clients will run the delegate and
 	// the docker runner on a same host.
-	logrus.Infof("Runner version: %s", version.Version)
+	logger.Infof("Runner version: %s", version.Version)
 
 	var tlsConfig *tls.Config
 	if s.Insecure {
 		tlsConfig = nil
-		logrus.Warnln("RUNNING IN INSECURE MODE")
+		logger.Warnln("RUNNING IN INSECURE MODE")
 	} else {
 		tlsOptions := tlsconfig.Options{
 			CAFile:             s.CAFile,

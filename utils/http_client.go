@@ -12,15 +12,14 @@ import (
 	"path/filepath"
 	"time"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/cenkalti/backoff"
-	"github.com/harness/runner/delegateshell/logger"
-	"github.com/sirupsen/logrus"
 )
 
 // An HTTPClient manages communication with the runner API.
 type HTTPClient struct {
 	Client     *http.Client
-	Logger     logger.Logger
 	Endpoint   string
 	SkipVerify bool
 }
@@ -38,9 +37,7 @@ func New(endpoint string, skipverify bool, additionalCertsDir string) *HTTPClien
 }
 
 func getClient(endpoint string, skipverify bool, additionalCertsDir string) *HTTPClient {
-	log := logrus.New()
 	c := &HTTPClient{
-		Logger:     log,
 		Endpoint:   endpoint,
 		SkipVerify: skipverify,
 		Client:     defaultClient,
@@ -66,11 +63,11 @@ func getClient(endpoint string, skipverify bool, additionalCertsDir string) *HTT
 			rootCAs = x509.NewCertPool()
 		}
 
-		log.Infof("additional certs dir to allow: %s\n", additionalCertsDir)
+		logger.Infof("additional certs dir to allow: %s\n", additionalCertsDir)
 
 		files, err := os.ReadDir(additionalCertsDir)
 		if err != nil {
-			log.Errorf("could not read directory %s, error: %s", additionalCertsDir, err)
+			logger.Errorf("could not read directory %s, error: %s", additionalCertsDir, err)
 			c.Client = clientWithRootCAs(skipverify, rootCAs)
 			return c
 		}
@@ -78,20 +75,20 @@ func getClient(endpoint string, skipverify bool, additionalCertsDir string) *HTT
 		// Go through all certs in this directory and add them to the global certs
 		for _, f := range files {
 			path := filepath.Join(additionalCertsDir, f.Name())
-			log.Infof("trying to add certs at: %s to root certs\n", path)
+			logger.Infof("trying to add certs at: %s to root certs\n", path)
 			// Create TLS config using cert PEM
 			rootPem, err := os.ReadFile(path)
 			if err != nil {
-				log.Errorf("could not read certificate file (%s), error: %s", path, err.Error())
+				logger.Errorf("could not read certificate file (%s), error: %s", path, err.Error())
 				continue
 			}
 			// Append certs to the global certs
 			ok := rootCAs.AppendCertsFromPEM(rootPem)
 			if !ok {
-				log.Errorf("error adding cert (%s) to pool, please check format of the certs provided.", path)
+				logger.Errorf("error adding cert (%s) to pool, please check format of the certs provided.", path)
 				continue
 			}
-			log.Infof("successfully added cert at: %s to root certs", path)
+			logger.Infof("successfully added cert at: %s to root certs", path)
 		}
 		c.Client = clientWithRootCAs(skipverify, rootCAs)
 	}
@@ -137,7 +134,7 @@ func (p *HTTPClient) Do(ctx context.Context, path, method string, headers map[st
 			// drain the response body so we can reuse
 			// this connection.
 			if _, err = io.Copy(io.Discard, io.LimitReader(res.Body, 4096)); err != nil {
-				p.Logger.Errorf("could not drain response body: %s", err)
+				logger.Errorf("could not drain response body: %s", err)
 			}
 			res.Body.Close()
 		}()

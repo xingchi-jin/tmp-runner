@@ -11,9 +11,9 @@ import (
 	"github.com/harness/lite-engine/engine/spec"
 	logger "github.com/harness/lite-engine/logstream"
 	run "github.com/harness/lite-engine/pipeline/runtime"
+	runnerLogger "github.com/harness/runner/logger"
 	"github.com/harness/runner/logger/logstream"
 	"github.com/harness/runner/tasks/local/utils"
-	"github.com/sirupsen/logrus"
 )
 
 func ExecHandler(ctx context.Context, req *task.Request) task.Response {
@@ -21,7 +21,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	executeRequest := new(ExecRequest)
 	err := json.Unmarshal(req.Task.Data, executeRequest)
 	if err != nil {
-		logrus.Error("Error occurred during unmarshalling. %w", err)
+		runnerLogger.Error("Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	// Wrap the io.Writer to convert it into a logstream.Writer which is used by the lite-engine.
@@ -31,7 +31,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	// lite-engine's stepExecutor takes care of calling `logWriter.Close()`
 	resp, err := HandleExec(ctx, executeRequest, logWriter)
 	if err != nil {
-		logrus.Error("could not handle exec request: %w", err)
+		runnerLogger.Error("could not handle exec request: %w", err)
 		panic(err)
 	}
 	// convert resp to bytes
@@ -39,7 +39,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Printf("exec response: %+v", resp)
+	runnerLogger.Printf("exec response: %+v", resp)
 	return task.Respond(respBytes)
 }
 
@@ -126,6 +126,7 @@ func HandleExec(ctx context.Context, s *ExecRequest, writer logger.Writer) (api.
 			Arch: runtime.GOARCH,
 		},
 	}
+	// TODO sanitize this to not print the script in logs, because it can contain secrets
 	fmt.Printf("exec request: %+v\n", s)
 	resp, err := stepExecutor.Run(ctx, &s.StartStepRequest, pipelineConfig, writer)
 	if err != nil {

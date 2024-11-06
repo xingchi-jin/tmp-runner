@@ -15,9 +15,11 @@ var (
 	ctxBg = context.Background()
 )
 
-/**
-  Run it with:
-    go run main.go helper.go
+/*
+*
+
+	Run it with:
+	  go run main.go helper.go
 */
 func main() {
 	fmt.Println("Running a sample CI pipeline...")

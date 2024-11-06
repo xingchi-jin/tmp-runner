@@ -24,10 +24,11 @@ const (
 
 type RunnerType string
 
-// Sample config
+// Config Sample config
 type Config struct {
-	Debug bool `envconfig:"DEBUG"`
-	Trace bool `envconfig:"TRACE"`
+	Debug               bool `envconfig:"DEBUG"`
+	Trace               bool `envconfig:"TRACE"`
+	EnableRemoteLogging bool `envconfig:"ENABLE_REMOTE_LOGGING" default:"false"`
 
 	Delegate struct {
 		AccountID       string `envconfig:"ACCOUNT_ID"`

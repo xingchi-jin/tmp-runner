@@ -5,9 +5,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/drone/go-task/task"
 	vault "github.com/hashicorp/vault/api"
-	"github.com/sirupsen/logrus"
 )
 
 type VaultSecretTaskRequest struct {
@@ -43,7 +44,7 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 		return handleDelete(in, client)
 	default:
 		err = fmt.Errorf("unsupported secret task action: %s", action)
-		logrus.Error(err)
+		logger.Error(err)
 		return task.Error(err)
 	}
 }
@@ -51,7 +52,7 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
 	err := upsert(in.EngineVersion, in.EngineName, in.Path, in.Key, in.Value, client)
 	if err != nil {
-		logrus.WithError(err).Errorf("failed upserting secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
+		logger.WithError(err).Errorf("failed upserting secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 		return task.Error(err)
 	}
 	return task.Respond(VaultSecretTaskResponse{})
@@ -60,16 +61,16 @@ func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
 	path, err := getFullPathForDelete(in.EngineVersion, in.EngineName, in.Path)
 	if err != nil {
-		logrus.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]; EngineName: [%s]; EngineVersion: [%d]", client.Address(), in.Path, in.EngineName, in.EngineVersion)
+		logger.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]; EngineName: [%s]; EngineVersion: [%d]", client.Address(), in.Path, in.EngineName, in.EngineVersion)
 		return task.Error(err)
 	}
-	logrus.Infof("deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
+	logger.Infof("deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 	_, err = client.Logical().Delete(path)
 	if err != nil {
-		logrus.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
+		logger.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 		return task.Error(err)
 	}
-	logrus.Infof("done deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
+	logger.Infof("done deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 	return task.Respond(VaultSecretTaskResponse{})
 }
 
@@ -83,17 +84,17 @@ func upsert(engineVersion uint8, engineName string, path string, key string, val
 	if err != nil {
 		return err
 	}
-	logrus.Infof("writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
+	logger.Infof("writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
 	_, err = client.Logical().Write(fullPath, data)
 	if err != nil {
 		return err
 	}
-	logrus.Infof("done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
+	logger.Infof("done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
 	return nil
 }
 
 func fetch(engineVersion uint8, engineName string, path string, key string, client *vault.Client) (string, error) {
-	logrus.Infof("fetching secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
+	logger.Infof("fetching secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 	fullPath, err := getFullPath(engineVersion, engineName, path)
 	if err != nil {
 		return "", err
@@ -118,7 +119,7 @@ func fetch(engineVersion uint8, engineName string, path string, key string, clie
 			continue
 		}
 		if k == key {
-			logrus.Infof("done fetching secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
+			logger.Infof("done fetching secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
 			return s, nil
 		}
 	}

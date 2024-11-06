@@ -8,8 +8,8 @@ package cli
 import (
 	"os"
 
-	"github.com/harness/runner/version"
 	"github.com/harness/runner/cli/server"
+	"github.com/harness/runner/version"
 
 	"gopkg.in/alecthomas/kingpin.v2"
 )

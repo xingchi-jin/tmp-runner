@@ -5,9 +5,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/drone/go-task/task"
 	"github.com/harness/runner/delegateshell/delegate"
-	"github.com/sirupsen/logrus"
 )
 
 type DelegateTaskHandler struct {
@@ -24,20 +25,20 @@ func (h *DelegateTaskHandler) Handle(ctx context.Context, req *task.Request) tas
 	var delegateTask DelegateTaskRequest
 	err := json.Unmarshal(req.Task.Data, &delegateTask)
 	if err != nil {
-		logrus.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error("Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	// invoke API call to pass the data to delegate-task-service
 	dst := make([]byte, base64.StdEncoding.DecodedLen(len(delegateTask.Base64Data)))
 	n, err := base64.StdEncoding.Decode(dst, delegateTask.Base64Data)
 	if err != nil {
-		logrus.WithError(err).Error("Decode delegate task package error with base64")
+		logger.WithError(err).Error("Decode delegate task package error with base64")
 		return nil
 	}
 	dst = dst[:n]
 
 	if err = SendTask(ctx, dst, h.taskContext.DelegateTaskServiceURL, h.taskContext.SkipVerify); err != nil {
-		logrus.WithError(err).Error("Send request to delegate task service failed")
+		logger.WithError(err).Error("Send request to delegate task service failed")
 		return task.Error(err)
 	}
 	// The response of delegate task is sent by the delegate task service

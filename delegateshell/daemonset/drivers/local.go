@@ -10,8 +10,11 @@ import (
 	"os"
 	"os/exec"
 
+	"github.com/harness/runner/logger"
+
+	"github.com/harness/runner/delegateshell/delegate"
+
 	"github.com/harness/runner/delegateshell/daemonset/client"
-	"github.com/sirupsen/logrus"
 )
 
 // LocalDriver implements the `DaemonSetDriver` interface
@@ -19,6 +22,7 @@ import (
 type LocalDriver struct {
 	client   *client.Client
 	nextPort int
+	config   delegate.Config
 }
 
 // New returns the daemon set task execution driver
@@ -98,7 +102,7 @@ func startProcess(envs []string, binpath string, port int) (*exec.Cmd, error) {
 
 	// start the command
 	if err := cmd.Start(); err != nil {
-		logrus.WithError(err).Error("error starting the command")
+		logger.WithError(err).Error("error starting the command")
 		return nil, err
 	}
 	return cmd, nil

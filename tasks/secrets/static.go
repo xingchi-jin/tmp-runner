@@ -6,9 +6,10 @@ import (
 	"encoding/json"
 	"fmt"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/common"
-	"github.com/sirupsen/logrus"
 )
 
 type StaticSecretHandler struct{}
@@ -16,9 +17,9 @@ type StaticSecretHandler struct{}
 func (h *StaticSecretHandler) Handle(ctx context.Context, req *task.Request) task.Response {
 	var staticSecretSpec StaticSecretSpec
 	err := json.Unmarshal(req.Task.Data, &staticSecretSpec)
-	logrus.Info("Processing static secrets", *req)
+	logger.Info("Processing static secrets", *req)
 	if err != nil {
-		logrus.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error("Error occurred during unmarshalling. %w", err)
 	}
 	// TODO: support batch secrets
 	secretResponse := &common.Secret{}

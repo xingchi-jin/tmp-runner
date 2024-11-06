@@ -4,24 +4,25 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/drone/go-task/task"
 
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/runner/tasks/local/spec"
 	"github.com/harness/runner/tasks/local/utils"
-	"github.com/sirupsen/logrus"
 )
 
 func DestroyHandler(ctx context.Context, req *task.Request) task.Response {
 	var destroyRequest DestroyRequest
 	err := json.Unmarshal(req.Task.Data, &destroyRequest)
 	if err != nil {
-		logrus.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error("Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	resp, err := HandleDestroy(ctx, destroyRequest)
 	if err != nil {
-		logrus.Error("could not handle destroy request: %w", err)
+		logger.Error("could not handle destroy request: %w", err)
 		panic(err)
 	}
 	respBytes, err := json.Marshal(resp)

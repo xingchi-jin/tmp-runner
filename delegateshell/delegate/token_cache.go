@@ -8,9 +8,9 @@ package delegate
 import (
 	"time"
 
+	"github.com/harness/runner/logger"
 	"github.com/harness/runner/utils"
 	"github.com/patrickmn/go-cache"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -50,7 +50,7 @@ func (t *TokenCache) Get() (string, error) {
 	if found {
 		return tv.(string), nil
 	}
-	logrus.WithField("id", t.id).Infoln("refreshing token")
+	logger.WithField("id", t.id).Infoln("refreshing token")
 	token, err := Token(audience, issuer, t.id, t.secret, t.expiry)
 	if err != nil {
 		return "", err
@@ -62,4 +62,4 @@ func (t *TokenCache) Get() (string, error) {
 
 func (t *TokenCache) GetTokenHash() string {
 	return t.secretHash
-} 
+}

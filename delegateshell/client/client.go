@@ -36,4 +36,6 @@ type Client interface {
 	ReconcileDaemonSets(ctx context.Context, runnerId string, r *DaemonSetReconcileRequest) (*DaemonSetReconcileResponse, error)
 
 	AcquireDaemonTasks(ctx context.Context, runnerId string, r *DaemonTaskAcquireRequest) (*RunnerAcquiredTasks, error)
+
+	GetLoggingToken(ctx context.Context) (*AccessTokenBean, error)
 }

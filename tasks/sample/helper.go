@@ -46,13 +46,13 @@ func SampleExecRequest(stepID, stageID string, command []string, image string, e
 			WorkingDir: generatePath(stageID),
 			Kind:       api.Run,
 			Files: []*spec.File{&spec.File{
-				Path: "/tmp/abcd",
-				Data: "helloworld",
-				Mode: 0400,
+				Path:  "/tmp/abcd",
+				Data:  "helloworld",
+				Mode:  0400,
 				IsDir: false,
 			}},
-			Network:    sanitize(stageID),
-			Image:      image,
+			Network: sanitize(stageID),
+			Image:   image,
 			Run: api.RunConfig{
 				Command:    command,
 				Entrypoint: entrypoint,
@@ -95,9 +95,9 @@ func SampleDestroyRequest(stageID string) local.DestroyRequest {
 		Volumes: []*runnerspec.Volume{
 			{
 				HostPath: &runnerspec.VolumeHostPath{
-					Path:   generatePath(stageID),
-					ID:     sanitize(stageID),
-					Name:   sanitize(stageID),
+					Path: generatePath(stageID),
+					ID:   sanitize(stageID),
+					Name: sanitize(stageID),
 				},
 			},
 		},

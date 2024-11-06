@@ -12,6 +12,8 @@ import (
 	"net/http"
 	"net/url"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/harness/runner/utils"
 )
 
@@ -69,7 +71,7 @@ func (p *Client) doJson(ctx context.Context, path, method string, in, out interf
 	// to an io.ReadCloser.
 	if in != nil {
 		if err := json.NewEncoder(buf).Encode(in); err != nil {
-			p.Logger.Errorf("could not encode input payload: %s", err)
+			logger.Errorf("could not encode input payload: %s", err)
 		}
 	}
 	headers := make(map[string]string)

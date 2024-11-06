@@ -9,10 +9,11 @@ import (
 	"encoding/json"
 	"time"
 
+	"github.com/harness/runner/logger"
+
 	"github.com/drone/go-task/task"
 	"github.com/harness/runner/delegateshell/client"
 	dsclient "github.com/harness/runner/delegateshell/daemonset/client"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -51,25 +52,25 @@ func (d *DaemonSetReconciler) Start(id string, interval time.Duration) error {
 			select {
 			case <-d.ctx.Done():
 				close(d.doneChannel)
-				logrus.Info("stopped daemon set reconciliation job")
+				logger.Info("stopped daemon set reconciliation job")
 				return
 			case <-timer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(d.ctx, reconcileTimeout)
 				err := d.reconcile(taskEventsCtx, id)
 				if err != nil {
-					logrus.WithError(err).Errorf("daemon set reconciliation failed")
+					logger.WithError(err).Errorf("daemon set reconciliation failed")
 				}
 				cancelFn()
 			}
 		}
 	}()
-	logrus.Infof("initialized reconcile flow for daemon sets!")
+	logger.Infof("initialized reconcile flow for daemon sets!")
 	return nil
 }
 
 // Stop will stop the daemon set reconciling job
 func (d *DaemonSetReconciler) Stop() {
-	logrus.Info("cancelling daemon set reconciliation job")
+	logger.Info("cancelling daemon set reconciliation job")
 	d.cancelCtx()
 	<-d.doneChannel // block until last reconciliation returns
 }
@@ -130,7 +131,7 @@ func (d *DaemonSetReconciler) syncWithHarnessServer(ctx context.Context, runnerI
 		dsType := e.Type
 		tasksFromRunner, err := d.daemonSetManager.UpsertDaemonSet(ctx, dsId, dsType, &e.Config)
 		if err != nil {
-			logrus.WithError(err).Errorf("failed sync daemon set with server: id [%s]; type [%s]", dsId, dsType)
+			logger.WithError(err).Errorf("failed sync daemon set with server: id [%s]; type [%s]", dsId, dsType)
 			continue
 		}
 		taskIdsToRemove, taskIdsToAssign := compareTasks(e, tasksFromRunner)
@@ -148,7 +149,7 @@ func (d *DaemonSetReconciler) syncWithHarnessServer(ctx context.Context, runnerI
 func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, runnerId string, dsId string, dsType string, taskIds *[]string) {
 	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, &client.DaemonTaskAcquireRequest{TaskIds: *taskIds})
 	if err != nil {
-		logrus.WithError(err).Errorf("failed to acquire daemon task params during reconcile: id [%s]; type [%s]", dsId, dsType)
+		logger.WithError(err).Errorf("failed to acquire daemon task params during reconcile: id [%s]; type [%s]", dsId, dsType)
 	}
 
 	var daemonTasks []dsclient.DaemonTask
@@ -156,13 +157,13 @@ func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, r
 		taskAssignRequest := new(client.DaemonTaskAssignRequest)
 		err := json.Unmarshal(req.Task.Data, taskAssignRequest)
 		if err != nil {
-			logrus.WithError(err).Errorf("failed parsing data for request [%s], skipping this request", req.ID)
+			logger.WithError(err).Errorf("failed parsing data for request [%s], skipping this request", req.ID)
 			continue
 		}
-		logrus.Infof("resolving secrets for daemon task [%s]", taskAssignRequest.DaemonTaskId)
+		logger.Infof("resolving secrets for daemon task [%s]", taskAssignRequest.DaemonTaskId)
 		secrets, err := d.router.ResolveSecrets(ctx, req.Tasks)
 		if err != nil {
-			logrus.WithError(err).Errorf("failed to resolve secrets for task [%s], skipping this task", taskAssignRequest.DaemonTaskId)
+			logger.WithError(err).Errorf("failed to resolve secrets for task [%s], skipping this task", taskAssignRequest.DaemonTaskId)
 			continue
 		}
 		daemonTasks = append(daemonTasks, dsclient.DaemonTask{ID: taskAssignRequest.DaemonTaskId, Params: taskAssignRequest.Params, Secrets: secrets})

@@ -11,10 +11,12 @@ import (
 	"sync"
 	"time"
 
+	"github.com/harness/runner/logger"
+	"github.com/sirupsen/logrus"
+
 	"github.com/drone/go-task/task/downloader"
 	dsclient "github.com/harness/runner/delegateshell/daemonset/client"
 	"github.com/harness/runner/delegateshell/daemonset/drivers"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -32,21 +34,18 @@ type DaemonSetManager struct {
 	driver     drivers.DaemonSetDriver
 	// the `lock` here is a wrapper for a map of locks, indexed by daemon set's type
 	// so that we can make sure operations are atomic for each daemon set type
-	lock        *KeyLock
-	managerUrl  string
-	runnerToken string
+	lock                *KeyLock
+	accountId           string
+	managerUrl          string
+	runnerToken         string
+	enableRemoteLogging bool
+	dialHomeInsecure    bool
 }
 
-func NewDaemonSetManager(d downloader.Downloader, isK8s bool, managerUrl, runnerToken string) *DaemonSetManager {
+func NewDaemonSetManager(d downloader.Downloader, isK8s bool, accountId, managerUrl, runnerToken string, enableRemoteLogging, dialHomeInsecure bool) *DaemonSetManager {
 	// TODO: Add suport for daemon sets in k8s runner. For this, we need to implement the `K8sServerDriver`.
-	return &DaemonSetManager{
-		downloader:  d,
-		daemonsets:  &sync.Map{},
-		lock:        NewKeyLock(),
-		driver:      drivers.NewLocalDriver(),
-		managerUrl:  managerUrl,
-		runnerToken: runnerToken,
-	}
+	return &DaemonSetManager{downloader: d, daemonsets: &sync.Map{}, lock: NewKeyLock(), driver: drivers.NewLocalDriver(), accountId: accountId, managerUrl: managerUrl,
+		runnerToken: runnerToken, enableRemoteLogging: enableRemoteLogging, dialHomeInsecure: dialHomeInsecure}
 }
 
 // Get will return a *DaemonSet struct from the d.daemonsets synchronized map
@@ -83,6 +82,7 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 		fmt.Sprintf("DIAL_HOME_TOKEN=%s", d.runnerToken),
 	)
 
+	d.setRemoteLoggingEnv(dsConfig)
 	// check if daemon set already exists in daemon set map
 	ds, ok := d.Get(dsType)
 	// if daemon set is running healthy with same config as requested,
@@ -120,7 +120,7 @@ func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 	ds, ok := d.Get(dsType)
 	if !ok {
 		// daemon set does not exist
-		logrus.Errorf("daemon set of type [%s] does not exist, skipping sync for it", dsType)
+		logger.Errorf("daemon set of type [%s] does not exist, skipping sync for it", dsType)
 		return
 	}
 	// check if daemon set is running healthy
@@ -273,6 +273,31 @@ func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.Daem
 	return tasks, nil
 }
 
+func (d *DaemonSetManager) setRemoteLoggingEnv(dsConfig *dsclient.DaemonSetOperationalConfig) {
+	dsConfig.Envs = append(dsConfig.Envs, fmt.Sprintf("ENABLE_REMOTE_LOGGING=%t", d.enableRemoteLogging))
+
+	// this is used to initialize the manager client in daemon set to receive the refreshed logging token
+	if d.enableRemoteLogging {
+		if d.accountId == "" {
+			logger.Warnln("AccountID is not set. Cannot publish logs to remote")
+			return
+		}
+		if d.managerUrl == "" {
+			logger.Println("ManagerURL is not set. Cannot publish logs to remote")
+			return
+		}
+		if d.runnerToken == "" {
+			logger.Println("Runner token is not set. Cannot publish logs to remote")
+			return
+		}
+
+		dsConfig.Envs = append(dsConfig.Envs,
+			fmt.Sprintf("ACCOUNT_ID=%s", d.accountId),
+			fmt.Sprintf("DIAL_HOME_INSECURE=%t", d.dialHomeInsecure),
+		)
+	}
+}
+
 // download the daemon set's executable file
 func (d *DaemonSetManager) download(ctx context.Context, ds *dsclient.DaemonSet) (string, error) {
 	if ds.Config.ExecutableConfig == nil {
@@ -281,7 +306,7 @@ func (d *DaemonSetManager) download(ctx context.Context, ds *dsclient.DaemonSet)
 	// set daemon set's version in ExecutableConfig
 	path, err := d.downloader.DownloadExecutable(ctx, ds.Type, ds.Config.ExecutableConfig)
 	if err != nil {
-		logrus.WithError(err).Error("failed to download task executable file")
+		logger.WithError(err).Error("failed to download task executable file")
 		return "", err
 	}
 	return path, nil
@@ -342,7 +367,7 @@ func isConfigIdentical(config1 *dsclient.DaemonSetOperationalConfig, config2 *ds
 
 // returns a logrus *Entry with daemon set's data as fields
 func dsLogger(ds *dsclient.DaemonSet) *logrus.Entry {
-	logger := logrus.WithField("id", ds.DaemonSetId).
+	logger := logger.WithField("id", ds.DaemonSetId).
 		WithField("type", ds.Type)
 	if ds.ServerInfo != nil {
 		logger = logger.WithField("port", ds.ServerInfo.Port).
