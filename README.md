@@ -16,3 +16,9 @@ cd tasks/sample
 go build
 ./sample
 ```
+
+To generate wire dependencies, run wire in cli/ folder:
+```
+cd cli
+wire
+```

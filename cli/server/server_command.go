@@ -8,6 +8,7 @@ package server
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net/http"
 	"os"
 	"os/signal"
@@ -18,8 +19,6 @@ import (
 	"github.com/harness/runner/logger"
 
 	"github.com/harness/godotenv/v3"
-	"github.com/harness/runner/delegateshell"
-	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
 	"golang.org/x/sync/errgroup"
 	"gopkg.in/alecthomas/kingpin.v2"
@@ -28,11 +27,15 @@ import (
 const serviceName = "runner"
 
 type serverCommand struct {
-	envFile string
+	envFile     string
+	initializer func(context.Context, *delegate.Config) (*System, error)
 }
 
 func (c *serverCommand) run(*kingpin.ParseContext) error {
-	logger.ConfigureLogging()
+	// Create context that listens for the interrupt signal from the OS.
+	ctx, cancel := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer cancel()
+
 	// Load env file if exists
 	if c.envFile != "" {
 		loadEnvErr := godotenv.Load(c.envFile)
@@ -44,12 +47,16 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	// Read configs into memory
 	loadedConfig, err := delegate.FromEnviron()
 	if err != nil {
-		logger.WithError(err).Errorln("Load Runner config failed")
+		logger.WithError(err).Errorln("load runner config failed")
 	}
 
-	ctx := context.Background()
-	ctx, cancel := context.WithCancel(ctx)
-	defer cancel()
+	logger.ConfigureLogging(loadedConfig.Debug, loadedConfig.Trace)
+
+	// initialize system
+	system, err := c.initializer(ctx, loadedConfig)
+	if err != nil {
+		return fmt.Errorf("encountered an error while wiring the system: %w", err)
+	}
 
 	remotelogger.Start(ctx, loadedConfig.Delegate.AccountID, loadedConfig.GetHarnessUrl(), loadedConfig.GetToken(), serviceName, loadedConfig.GetName(), loadedConfig.EnableRemoteLogging, loadedConfig.Server.Insecure)
 	defer func() {
@@ -59,10 +66,6 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		}
 	}()
 
-	managerClient := client.NewManagerClient(loadedConfig.GetHarnessUrl(), loadedConfig.Delegate.AccountID, loadedConfig.GetToken(), loadedConfig.Server.Insecure, "")
-
-	delegateShell := delegateshell.NewDelegateShell(&loadedConfig, managerClient)
-
 	// trap the os signal to gracefully shut down the http server.
 	s := make(chan os.Signal, 1)
 	signal.Notify(s, os.Interrupt, syscall.SIGTERM)
@@ -71,7 +74,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 		case val := <-s:
 			logger.Infof("Received OS Signal to exit server: %s", val)
 			logRunnerResourceStats()
-			delegateShell.Shutdown()
+			system.delegate.Shutdown()
 			cancel()
 		case <-ctx.Done():
 			logger.Errorln("Received a done signal to exit server, this should not happen")
@@ -80,18 +83,19 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	}()
 	defer signal.Stop(s)
 
-	runnerInfo, err := delegateShell.Register(ctx)
+	runnerInfo, err := system.delegate.Register(ctx)
 	if err != nil {
 		logger.Errorf("Registering Runner with Harness manager failed. Error: %v", err)
 		return err
 	}
+	loadedConfig.UpsertDelegateID(runnerInfo.ID)
 	logger.Infoln("Runner registered", runnerInfo)
 
 	logger.UpdateContextInHooks(map[string]string{"runnerId": runnerInfo.ID})
 
 	defer func() {
 		logger.Infoln("Unregistering runner...")
-		err = delegateShell.Unregister(context.Background())
+		err = system.delegate.Unregister(context.Background())
 		if err != nil {
 			logger.Errorf("Error while unregistering runner: %v", err)
 		}
@@ -100,11 +104,11 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	var g errgroup.Group
 
 	g.Go(func() error {
-		return delegateShell.StartRunnerProcesses(ctx)
+		return system.delegate.StartRunnerProcesses(ctx)
 	})
 
 	g.Go(func() error {
-		if err := startHTTPServer(ctx, &loadedConfig); err != nil {
+		if err := startHTTPServer(ctx, loadedConfig); err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
 				logger.Infoln("Program gracefully terminated")
 				return nil
@@ -146,8 +150,9 @@ func startHTTPServer(ctx context.Context, config *delegate.Config) error {
 	return serverInstance.Start(ctx)
 }
 
-func Register(app *kingpin.Application) {
+func Register(app *kingpin.Application, initializer func(context.Context, *delegate.Config) (*System, error)) {
 	c := new(serverCommand)
+	c.initializer = initializer
 
 	cmd := app.Command("server", "start the server").
 		Action(c.run)

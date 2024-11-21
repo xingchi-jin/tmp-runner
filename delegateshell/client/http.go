@@ -46,11 +46,11 @@ type ManagerClient struct {
 	TokenCache *delegate.TokenCache
 }
 
-func NewManagerClient(endpoint, id, secret string, skipverify bool, additionalCertsDir string) *ManagerClient {
+func NewManagerClient(endpoint, accountID, secret string, skipverify bool, additionalCertsDir string) *ManagerClient {
 	return &ManagerClient{
 		HTTPClient: *utils.New(endpoint, skipverify, additionalCertsDir),
-		AccountID:  id,
-		TokenCache: delegate.NewTokenCache(id, secret),
+		AccountID:  accountID,
+		TokenCache: delegate.NewTokenCache(accountID, secret),
 	}
 }
 

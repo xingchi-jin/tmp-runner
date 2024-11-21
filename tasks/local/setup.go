@@ -7,13 +7,13 @@ import (
 	"io"
 	"runtime"
 
+	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger"
 
 	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine"
 	"github.com/harness/lite-engine/engine/spec"
-	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger/logstream"
 	"github.com/harness/runner/tasks/local/utils"
 )

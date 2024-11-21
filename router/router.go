@@ -18,7 +18,23 @@ import (
 	"github.com/harness/runner/tasks/secrets/vault"
 )
 
-func NewRouter(taskContext *delegate.TaskContext, d downloader.Downloader, dsManager *daemonset.DaemonSetManager) *task.Router {
+func convert(config *delegate.Config) *delegate.TaskContext {
+	return &delegate.TaskContext{
+		AccountID:              config.Delegate.AccountID,
+		Token:                  config.GetToken(),
+		DelegateId:             config.Delegate.ID,
+		DelegateTaskServiceURL: config.Delegate.TaskServiceURL,
+		RunnerType:             config.GetRunnerType(),
+		SkipVerify:             config.Server.Insecure,
+		ManagerEndpoint:        config.GetHarnessUrl(),
+	}
+}
+
+func NewRouter(
+	taskContext *delegate.TaskContext,
+	d downloader.Downloader,
+	dsManager *daemonset.DaemonSetManager,
+) *task.Router {
 	r := task.NewRouter()
 	r.Use(logstream.Middleware())
 

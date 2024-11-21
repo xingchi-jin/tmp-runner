@@ -6,9 +6,11 @@
 package delegate
 
 import (
+	"encoding/json"
+	"fmt"
 	"strings"
-	"sync"
 
+	"github.com/drone-runners/drone-runner-aws/command/config"
 	"github.com/kelseyhightower/envconfig"
 )
 
@@ -31,16 +33,20 @@ type Config struct {
 	EnableRemoteLogging bool `envconfig:"ENABLE_REMOTE_LOGGING" default:"false"`
 
 	Delegate struct {
+		ID              string // This is populated after a successful registration call to the manager
 		AccountID       string `envconfig:"ACCOUNT_ID"`
-		DelegateToken   string `envconfig:"DELEGATE_TOKEN"`
+		Token           string `envconfig:"DELEGATE_TOKEN"`
 		Tags            string `envconfig:"DELEGATE_TAGS" split_words:"true"`
 		ManagerEndpoint string `envconfig:"MANAGER_HOST_AND_PORT"`
 		Name            string `envconfig:"DELEGATE_NAME"`
 
-		TaskStatusV2           bool       `envconfig:"DELEGATE_TASK_STATUS_V2" default:"true"`
-		DelegateTaskServiceURL string     `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
-		DelegateType           RunnerType `envconfig:"DELEGATE_TYPE"`
-		RunnerType             RunnerType `envconfig:"RUNNER_TYPE"`
+		ParallelWorkers       int `envconfig:"PARALLEL_WORKERS" default:"100"`
+		PollIntervalMilliSecs int `envconfig:"POLL_INTERVAL_MILLISECS" default:"3000"`
+
+		TaskStatusV2   bool       `envconfig:"DELEGATE_TASK_STATUS_V2" default:"true"`
+		TaskServiceURL string     `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
+		Type           RunnerType `envconfig:"DELEGATE_TYPE"`
+		RunnerType     RunnerType `envconfig:"RUNNER_TYPE"`
 	}
 
 	Server struct {
@@ -50,6 +56,29 @@ type Config struct {
 		CACertFile        string `envconfig:"CLIENT_CERT_FILE" default:"/tmp/certs/ca-cert.pem"`     // CA certificate file
 		SkipPrepareServer bool   `envconfig:"SKIP_PREPARE_SERVER" default:"false"`                   // skip prepare server, install docker / git
 		Insecure          bool   `envconfig:"SERVER_INSECURE" default:"true"`                        // run in insecure mode
+	}
+
+	// Config needed to be able to run VM builds on the runners
+	VM struct {
+		Database struct {
+			Driver     string `envconfig:"VM_DATABASE_DRIVER" default:"postgres"`
+			Datasource string `envconfig:"VM_DATABASE_DATASOURCE" default:"port=5431 user=admin password=password dbname=dlite sslmode=disable"`
+		}
+
+		BinaryURI struct {
+			LiteEngine    string `envconfig:"VM_BINARY_URI_LITE_ENGINE" default:"https://github.com/harness/lite-engine/releases/download/v0.5.85/"`
+			Plugin        string `envconfig:"VM_BINARY_URI_PLUGIN" default:"https://github.com/drone/plugin/releases/download/v0.3.8-beta"`
+			AutoInjection string `envconfig:"VM_BINARY_AUTO_INJECTION" default:"https://app.harness.io/storage/harness-download/harness-ti/auto-injection/1.0.3"`
+			SplitTests    string `envconfig:"VM_BINARY_URI_SPLIT_TESTS" default:"https://app.harness.io/storage/harness-download/harness-ti/split_tests"`
+		}
+
+		Pool struct {
+			File              string              `envconfig:"VM_POOL_FILE"`
+			MapByAccountID    PoolMapperByAccount `envconfig:"VM_POOL_MAP_BY_ACCOUNT_ID"`
+			BusyMaxAge        int64               `envconfig:"VM_POOL_BUSY_MAX_AGE" default:"24"`
+			FreeMaxAge        int64               `envconfig:"VM_POOL_FREE_MAX_AGE" default:"720"`
+			PurgerTimeMinutes int64               `envconfig:"VM_POOL_PURGER_TIME_MINUTES" default:"30"`
+		}
 	}
 
 	// Runner's installation configs
@@ -67,20 +96,87 @@ type Config struct {
 	HarnessUrl string `envconfig:"URL"`
 }
 
-func FromEnviron() (Config, error) {
+type TaskContext struct {
+	DelegateTaskServiceURL string     // URL of Delegate Task Service
+	DelegateId             string     // Delegate id abtained after a successful runner registration call.
+	SkipVerify             bool       // Skip SSL verification if the task is conducting https connection.
+	RunnerType             RunnerType // The type of the runner
+	ManagerEndpoint        string
+	AccountID              string // Account ID associated with the runner
+	Token                  string
+}
+
+// Iterates over all the entries and converts it to a simple type
+func (pma *PoolMapperByAccount) Convert() map[string]map[string]string {
+	m := map[string]map[string]string{}
+	for k, v := range *pma {
+		m[k] = map[string]string(v)
+	}
+	return m
+}
+
+type PoolMap map[string]string
+type PoolMapperByAccount map[string]PoolMap
+
+func (pma *PoolMapperByAccount) Decode(value string) error {
+	m := map[string]PoolMap{}
+	pairs := strings.Split(value, ";")
+	for _, pair := range pairs {
+		p := PoolMap{}
+		kvpair := strings.Split(pair, "=")
+		if len(kvpair) != 2 { //nolint:gomnd
+			return fmt.Errorf("invalid map item: %q", pair)
+		}
+		err := json.Unmarshal([]byte(kvpair[1]), &p)
+		if err != nil {
+			return fmt.Errorf("invalid map json: %w", err)
+		}
+		m[kvpair[0]] = p
+	}
+	*pma = PoolMapperByAccount(m)
+	return nil
+}
+
+func FromEnviron() (*Config, error) {
 	var config Config
 	err := envconfig.Process("", &config)
 	if err != nil {
-		return config, err
+		return &config, err
 	}
 
-	return config, nil
+	return &config, nil
 }
 
+// Upsert updates any fields in the config which are set after reading from
+// the environment.
+func (c *Config) UpsertDelegateID(delegateID string) {
+	if c.Delegate.ID == "" {
+		c.Delegate.ID = delegateID
+	}
+}
+
+// GetTags returns the list of tags for the runner.
+// If a pool file is specified, it parses the tags from the pool file and appends them to the tags.
 func (c *Config) GetTags() []string {
 	tags := make([]string, 0)
 	for _, s := range strings.Split(pickNonEmpty(c.Selectors, c.Delegate.Tags), ",") {
 		tags = append(tags, strings.TrimSpace(s))
+	}
+
+	// append tags present in the pool file
+	if c.VM.Pool.File != "" {
+		configPool, err := config.ParseFile(c.VM.Pool.File)
+		if err == nil {
+			tags = append(tags, parseTags(configPool)...)
+		}
+	}
+	return tags
+}
+
+func parseTags(pf *config.PoolFile) []string {
+	tags := []string{}
+	for i := range pf.Instances {
+		tags = append(tags, pf.Instances[i].Name)
 	}
 	return tags
 }
@@ -94,7 +190,7 @@ func (c *Config) GetHarnessUrl() string {
 }
 
 func (c *Config) GetToken() string {
-	return pickNonEmpty(c.Token, c.Delegate.DelegateToken)
+	return pickNonEmpty(c.Token, c.Delegate.Token)
 }
 
 func pickNonEmpty(str1, str2 string) string {
@@ -102,29 +198,6 @@ func pickNonEmpty(str1, str2 string) string {
 		return str1
 	}
 	return str2
-}
-
-// Configurations that will pass to task handlers at runtime
-type TaskContext struct {
-	DelegateTaskServiceURL string     // URL of Delegate Task Service
-	DelegateId             string     // Delegate id abtained after a successful runner registration call.
-	SkipVerify             bool       // Skip SSL verification if the task is conducting https connection.
-	RunnerType             RunnerType // The type of the runner
-}
-
-var once sync.Once
-var taskContext *TaskContext
-
-func GetTaskContext(config *Config, delegateId string) *TaskContext {
-	once.Do(func() {
-		taskContext = &TaskContext{
-			DelegateId:             delegateId,
-			DelegateTaskServiceURL: config.Delegate.DelegateTaskServiceURL,
-			SkipVerify:             config.Server.Insecure,
-			RunnerType:             getRunnerType(config),
-		}
-	})
-	return taskContext
 }
 
 func IsK8sRunner(runnerType RunnerType) bool {
@@ -140,9 +213,9 @@ func IsK8sRunner(runnerType RunnerType) bool {
 	}
 }
 
-func getRunnerType(config *Config) RunnerType {
-	if config.Delegate.RunnerType != "" {
-		return config.Delegate.RunnerType
+func (c *Config) GetRunnerType() RunnerType {
+	if c.Delegate.RunnerType != "" {
+		return c.Delegate.RunnerType
 	}
-	return config.Delegate.DelegateType
+	return c.Delegate.Type
 }

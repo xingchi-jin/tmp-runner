@@ -6,6 +6,7 @@ import (
 	"strconv"
 	"time"
 
+	gologger "github.com/drone/runner-go/logger"
 	"github.com/sirupsen/logrus"
 )
 
@@ -13,7 +14,18 @@ const (
 	LogFileName = "runner.log"
 )
 
-func ConfigureLogging() {
+func ConfigureLogging(debug, trace bool) {
+	gologger.Default = gologger.Logrus(
+		logrus.NewEntry(
+			logrus.StandardLogger(),
+		),
+	)
+	if debug {
+		logrus.SetLevel(logrus.DebugLevel)
+	}
+	if trace {
+		logrus.SetLevel(logrus.TraceLevel)
+	}
 	SetReportCaller(true)
 	SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: time.RFC3339,

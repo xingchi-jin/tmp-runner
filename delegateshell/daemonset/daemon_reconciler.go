@@ -22,14 +22,19 @@ var (
 
 type DaemonSetReconciler struct {
 	daemonSetManager *DaemonSetManager
-	managerClient    *client.ManagerClient
+	managerClient    client.Client
 	router           *task.Router // used for resolving secrets in daemon tasks
 	ctx              context.Context
 	cancelCtx        context.CancelFunc
 	doneChannel      chan bool
 }
 
-func NewDaemonSetReconciler(ctx context.Context, daemonSetManager *DaemonSetManager, router *task.Router, managerClient *client.ManagerClient) *DaemonSetReconciler {
+func NewDaemonSetReconciler(
+	ctx context.Context,
+	daemonSetManager *DaemonSetManager,
+	router *task.Router,
+	managerClient client.Client,
+) *DaemonSetReconciler {
 	ctx, cancelCtx := context.WithCancel(ctx)
 	return &DaemonSetReconciler{
 		daemonSetManager: daemonSetManager,

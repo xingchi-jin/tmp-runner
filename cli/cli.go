@@ -21,7 +21,7 @@ func Command() {
 	app.HelpFlag.Short('h')
 	app.Version(version.Version)
 	app.VersionFlag.Short('v')
-	server.Register(app)
+	server.Register(app, initSystem)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 }
