@@ -14,6 +14,8 @@ import (
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
+	"github.com/harness/runner/delegateshell/vm/pool"
+	"github.com/harness/runner/delegateshell/vm/store"
 	"github.com/harness/runner/router"
 )
 
@@ -26,6 +28,10 @@ func initSystem(ctx context.Context, config *delegate.Config) (*server.System, e
 		client.WireSet,
 		poller.WireSet,
 		heartbeat.WireSet,
+
+		// Dependencies required for managing VMs.
+		pool.WireSet,
+		store.WireSet,
 	)
 	return &server.System{}, nil
 }

@@ -14,6 +14,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/drone-runners/drone-runner-aws/command/harness"
+	"github.com/drone-runners/drone-runner-aws/types"
 	"github.com/harness/runner/logger/remotelogger"
 
 	"github.com/harness/runner/logger"
@@ -28,6 +30,7 @@ const serviceName = "runner"
 
 type serverCommand struct {
 	envFile     string
+	poolFile    string
 	initializer func(context.Context, *delegate.Config) (*System, error)
 }
 
@@ -52,6 +55,11 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	logger.ConfigureLogging(loadedConfig.Debug, loadedConfig.Trace)
 
+	// Override pool file if provided as input
+	if c.poolFile != "" {
+		loadedConfig.VM.Pool.File = c.poolFile
+	}
+
 	// initialize system
 	system, err := c.initializer(ctx, loadedConfig)
 	if err != nil {
@@ -65,6 +73,17 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 			logger.WithError(err).Warnln("Error while stopping remote logger")
 		}
 	}()
+
+	// Setup the pool if it exists
+	if loadedConfig.VM.Pool.File != "" {
+		_, err = harness.SetupPoolWithFile(ctx, c.poolFile, system.poolManager, types.Passwords{}, loadedConfig.Delegate.Name,
+			loadedConfig.VM.Pool.BusyMaxAge, loadedConfig.VM.Pool.FreeMaxAge, loadedConfig.VM.Pool.PurgerTimeMinutes, false)
+		defer harness.Cleanup(false, system.poolManager, false, true)
+		if err != nil {
+			logger.WithError(err).Errorln("error while setting up pool")
+			return fmt.Errorf("encountered an error while setting up pool: %w", err)
+		}
+	}
 
 	// trap the os signal to gracefully shut down the http server.
 	s := make(chan os.Signal, 1)
@@ -102,6 +121,14 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	}()
 
 	var g errgroup.Group
+
+	if loadedConfig.VM.Pool.File != "" {
+		g.Go(func() error {
+			<-ctx.Done()
+			// delete unused instances for distributed pool
+			return harness.Cleanup(false, system.poolManager, false, true)
+		})
+	}
 
 	g.Go(func() error {
 		return system.delegate.StartRunnerProcesses(ctx)
@@ -160,4 +187,7 @@ func Register(app *kingpin.Application, initializer func(context.Context, *deleg
 	cmd.Flag("env-file", "environment file").
 		Default(".env").
 		StringVar(&c.envFile)
+
+	cmd.Flag("pool", "file to seed the pool").
+		StringVar(&c.poolFile)
 }

@@ -15,6 +15,8 @@ import (
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
+	"github.com/harness/runner/delegateshell/vm/pool"
+	"github.com/harness/runner/delegateshell/vm/store"
 	"github.com/harness/runner/router"
 )
 
@@ -27,11 +29,18 @@ func initSystem(ctx context.Context, config *delegate.Config) (*server.System, e
 		return nil, err
 	}
 	daemonSetManager := daemonset.ProvideDaemonSetManager(config, downloader)
-	taskRouter := router.ProvideRouter(config, downloader, daemonSetManager)
+	db, err := store.ProvideSQLDatabase(config)
+	if err != nil {
+		return nil, err
+	}
+	instanceStore := store.ProvideInstanceStore(db)
+	stageOwnerStore := store.ProvideStageOwnerStore(db)
+	iManager := pool.ProvideManager(ctx, instanceStore, stageOwnerStore, config)
+	taskRouter := router.ProvideRouter(config, downloader, daemonSetManager, iManager, stageOwnerStore)
 	daemonSetReconciler := daemonset.ProvideDaemonSetReconciler(daemonSetManager, taskRouter, clientClient)
 	pollerPoller := poller.ProvidePoller(clientClient, taskRouter, config)
 	keepAlive := heartbeat.ProvideKeepAlive(config, clientClient)
 	delegateShell := delegateshell.ProvideDelegateShell(config, clientClient, taskRouter, daemonSetManager, daemonSetReconciler, downloader, pollerPoller, keepAlive)
-	system := server.NewSystem(delegateShell)
+	system := server.NewSystem(delegateShell, iManager)
 	return system, nil
 }

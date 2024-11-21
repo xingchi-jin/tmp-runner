@@ -1,5 +1,11 @@
 package vm
 
+import (
+	"context"
+
+	"github.com/drone/go-task/task"
+)
+
 type CleanupType string
 
 const (
@@ -15,4 +21,15 @@ type CleanupRequest struct {
 type Instance struct {
 	ID                 string      `json:"id"`
 	StorageCleanupType CleanupType `json:"storage_cleanup_type"`
+}
+
+type CleanupHandler struct {
+}
+
+func NewCleanupHandler() *CleanupHandler {
+	return &CleanupHandler{}
+}
+
+func (h *CleanupHandler) Handle(ctx context.Context, req *task.Request) task.Response {
+	return nil
 }

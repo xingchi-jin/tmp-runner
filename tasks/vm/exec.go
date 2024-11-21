@@ -1,6 +1,14 @@
 package vm
 
-import "github.com/harness/runner/tasks/local"
+import (
+	"context"
+
+	"github.com/drone-runners/drone-runner-aws/app/drivers"
+	"github.com/drone-runners/drone-runner-aws/store"
+	"github.com/drone/go-task/task"
+	"github.com/harness/runner/delegateshell/delegate"
+	"github.com/harness/runner/tasks/local"
+)
 
 type ExecRequest struct {
 	Request  local.ExecRequest `json:"request"` // reuse local exec request
@@ -20,4 +28,26 @@ type Certs struct {
 	Public  []byte `json:"public"`
 	Private []byte `json:"private"`
 	CA      []byte `json:"ca"`
+}
+
+type ExecHandler struct {
+	taskContext     *delegate.TaskContext
+	stageOwnerStore store.StageOwnerStore
+	poolManager     drivers.IManager
+}
+
+func NewExecHandler(
+	taskContext *delegate.TaskContext,
+	poolManager drivers.IManager,
+	stageOwnerStore store.StageOwnerStore,
+) *ExecHandler {
+	return &ExecHandler{
+		taskContext:     taskContext,
+		poolManager:     poolManager,
+		stageOwnerStore: stageOwnerStore,
+	}
+}
+
+func (h *ExecHandler) Handle(ctx context.Context, req *task.Request) task.Response {
+	return nil
 }

@@ -5,9 +5,12 @@
 package router
 
 import (
+	"github.com/drone-runners/drone-runner-aws/app/drivers"
+	"github.com/drone-runners/drone-runner-aws/store"
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/downloader"
 	"github.com/drone/go-task/task/drivers/cgi"
+
 	"github.com/harness/runner/delegateshell/daemonset"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger/logstream"
@@ -16,6 +19,7 @@ import (
 	"github.com/harness/runner/tasks/local"
 	"github.com/harness/runner/tasks/secrets"
 	"github.com/harness/runner/tasks/secrets/vault"
+	"github.com/harness/runner/tasks/vm"
 )
 
 func convert(config *delegate.Config) *delegate.TaskContext {
@@ -34,6 +38,8 @@ func NewRouter(
 	taskContext *delegate.TaskContext,
 	d downloader.Downloader,
 	dsManager *daemonset.DaemonSetManager,
+	poolManager drivers.IManager,
+	stageOwnerStore store.StageOwnerStore,
 ) *task.Router {
 	r := task.NewRouter()
 	r.Use(logstream.Middleware())
@@ -45,6 +51,11 @@ func NewRouter(
 	r.RegisterFunc("secret/vault/edit", vault.Handler)
 	r.Register("delegate_task", delegatetask.NewDelegateTaskHandler(taskContext))
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
+
+	// VM tasks
+	r.Register("vm_init", vm.NewSetupHandler(taskContext, poolManager, stageOwnerStore))
+	r.Register("vm_execute", vm.NewExecHandler(taskContext, poolManager, stageOwnerStore))
+	r.Register("vm_cleanup", vm.NewCleanupHandler())
 
 	daemonSetTaskHandler := daemontask.NewDaemonSetTaskHandler(dsManager)
 	r.RegisterFunc("daemonset/upsert", daemonSetTaskHandler.HandleUpsert)

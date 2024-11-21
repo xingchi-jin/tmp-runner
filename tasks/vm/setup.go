@@ -1,6 +1,14 @@
 package vm
 
-import "github.com/harness/lite-engine/engine/spec"
+import (
+	"context"
+
+	"github.com/drone-runners/drone-runner-aws/app/drivers"
+	"github.com/drone-runners/drone-runner-aws/store"
+	"github.com/drone/go-task/task"
+	"github.com/harness/lite-engine/engine/spec"
+	"github.com/harness/runner/delegateshell/delegate"
+)
 
 type SetupRequest struct {
 	Network  spec.Network      `json:"network"`
@@ -30,4 +38,26 @@ type VMConfig struct {
 	GitspaceAgentConfig GitspaceAgentConfig `json:"gitspace_agent_config"`
 	StorageConfig       StorageConfig       `json:"storage_config"`
 	ResourceClass       string              `json:"resource_class"`
+}
+
+type SetupHandler struct {
+	taskContext     *delegate.TaskContext
+	poolManager     drivers.IManager
+	stageOwnerStore store.StageOwnerStore
+}
+
+func NewSetupHandler(
+	taskContext *delegate.TaskContext,
+	poolManager drivers.IManager,
+	stageOwnerStore store.StageOwnerStore,
+) *SetupHandler {
+	return &SetupHandler{
+		taskContext:     taskContext,
+		poolManager:     poolManager,
+		stageOwnerStore: stageOwnerStore,
+	}
+}
+
+func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Response {
+	return nil
 }
