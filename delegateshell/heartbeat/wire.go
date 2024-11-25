@@ -19,6 +19,7 @@ func ProvideKeepAlive(
 		config.Delegate.AccountID,
 		config.GetName(),
 		config.GetTags(),
+		config.GetCapacityConfig(),
 		managerClient,
 	)
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/harness/runner/logger"
 
 	"github.com/harness/runner/delegateshell/client"
+	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/icrowley/fake"
 
 	"github.com/pkg/errors"
@@ -36,6 +37,7 @@ type KeepAlive struct {
 	Tags      []string // list of tags that the runner accepts
 	Client    client.Client
 	Filter    FilterFn
+	Capacity  delegate.CapacityConfig
 	// The Harness manager allows two task acquire calls with the same delegate ID to go through (by design).
 	// We need to make sure two different threads do not acquire the same task.
 	// This map makes sure Acquire() is called only once per task ID. The mapping is removed once the status
@@ -50,13 +52,14 @@ type DelegateInfo struct {
 	Name string
 }
 
-func New(accountID, name string, tags []string, c client.Client) *KeepAlive {
+func New(accountID, name string, tags []string, capacity delegate.CapacityConfig, c client.Client) *KeepAlive {
 	return &KeepAlive{
 		AccountID: accountID,
 		Tags:      tags,
 		Name:      name,
 		Client:    c,
 		m:         sync.Map{},
+		Capacity:  capacity,
 	}
 }
 
@@ -73,7 +76,7 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 	}
 	host = "runner-" + strings.ReplaceAll(host, " ", "-")
 	ip := getOutboundIP()
-	id, err := p.register(ctx, ip, host)
+	id, err := p.register(ctx, ip, host, p.Capacity)
 	if err != nil {
 		logger.WithField("ip", ip).WithField("host", host).WithError(err).Error("could not register runner")
 		return nil, err
@@ -88,8 +91,8 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 
 // Register registers the runner and runs a background thread which keeps pinging the server
 // at a period of interval. It returns the delegate ID.
-func (p *KeepAlive) register(ctx context.Context, ip, host string) (string, error) {
-	req := p.getRegisterRequest("", ip, host)
+func (p *KeepAlive) register(ctx context.Context, ip, host string, capacity delegate.CapacityConfig) (string, error) {
+	req := p.getRegisterRequest("", ip, host, &capacity)
 	resp, err := p.Client.Register(ctx, req)
 	if err != nil {
 		return "", errors.Wrap(err, "could not register the runner")
@@ -102,7 +105,7 @@ func (p *KeepAlive) register(ctx context.Context, ip, host string) (string, erro
 
 // Heartbeat starts a periodic thread in the background which continually pings the server
 func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
-	req := p.getRegisterRequest(id, ip, host)
+	req := p.getRegisterRequest(id, ip, host, nil)
 	go func() {
 		msgDelayTimer := time.NewTimer(hearbeatInterval)
 		defer msgDelayTimer.Stop()
@@ -125,7 +128,7 @@ func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
 	}()
 }
 
-func (p *KeepAlive) getRegisterRequest(id, ip, host string) *client.RegisterRequest {
+func (p *KeepAlive) getRegisterRequest(id, ip, host string, capacity *delegate.CapacityConfig) *client.RegisterRequest {
 	req := &client.RegisterRequest{
 		AccountID:     p.AccountID,
 		RunnerName:    p.Name,
@@ -141,7 +144,9 @@ func (p *KeepAlive) getRegisterRequest(id, ip, host string) *client.RegisterRequ
 		Version:           "v0.1",
 		HeartbeatAsObject: true,
 	}
-
+	if capacity != nil {
+		req.CapacityConfig = client.RunnerCapacityConfig{MaxStages: capacity.MaxStages}
+	}
 	if id != "" {
 		req.ID = id
 	}

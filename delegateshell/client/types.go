@@ -20,20 +20,21 @@ const (
 type (
 	// Taken from existing manager API
 	RegisterRequest struct {
-		AccountID         string   `json:"accountId,omitempty"`
-		RunnerName        string   `json:"delegateName,omitempty"`
-		LastHeartbeat     int64    `json:"lastHeartBeat,omitempty"`
-		ID                string   `json:"delegateId,omitempty"`
-		Type              string   `json:"delegateType,omitempty"`
-		NG                bool     `json:"ng,omitempty"`
-		Polling           bool     `json:"pollingModeEnabled,omitempty"` // why Runner needs type ?? maybe should remove
-		HostName          string   `json:"hostName,omitempty"`
-		Connected         bool     `json:"connected,omitempty"`
-		KeepAlivePacket   bool     `json:"keepAlivePacket,omitempty"`
-		IP                string   `json:"ip,omitempty"`
-		Tags              []string `json:"tags,omitempty"`
-		HeartbeatAsObject bool     `json:"heartbeatAsObject,omitempty"` // TODO: legacy to remove
-		Version           string   `json:"version,omitempty"`
+		AccountID         string               `json:"accountId,omitempty"`
+		RunnerName        string               `json:"delegateName,omitempty"`
+		LastHeartbeat     int64                `json:"lastHeartBeat,omitempty"`
+		ID                string               `json:"delegateId,omitempty"`
+		Type              string               `json:"delegateType,omitempty"`
+		NG                bool                 `json:"ng,omitempty"`
+		Polling           bool                 `json:"pollingModeEnabled,omitempty"` // why Runner needs type ?? maybe should remove
+		HostName          string               `json:"hostName,omitempty"`
+		Connected         bool                 `json:"connected,omitempty"`
+		KeepAlivePacket   bool                 `json:"keepAlivePacket,omitempty"`
+		IP                string               `json:"ip,omitempty"`
+		Tags              []string             `json:"tags,omitempty"`
+		HeartbeatAsObject bool                 `json:"heartbeatAsObject,omitempty"` // TODO: legacy to remove
+		Version           string               `json:"version,omitempty"`
+		CapacityConfig    RunnerCapacityConfig `json:"capacityConfig,omitempty"`
 	}
 
 	// Used in the java codebase :'(
@@ -104,8 +105,8 @@ type (
 		Code  StatusCode `json:"code"` // OK, FAILED
 	}
 
-	DelegateCapacity struct {
-		MaxBuilds int `json:"maximumNumberOfBuilds"`
+	RunnerCapacityConfig struct {
+		MaxStages *int `json:"maxStages"`
 	}
 
 	// TODO: use the definition in go-task repo

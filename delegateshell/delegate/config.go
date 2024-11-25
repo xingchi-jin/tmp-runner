@@ -47,6 +47,7 @@ type Config struct {
 		TaskServiceURL string     `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
 		Type           RunnerType `envconfig:"DELEGATE_TYPE"`
 		RunnerType     RunnerType `envconfig:"RUNNER_TYPE"`
+		MaxStages      *int       `envconfig:"MAX_STAGES"`
 	}
 
 	Server struct {
@@ -104,6 +105,10 @@ type TaskContext struct {
 	ManagerEndpoint        string
 	AccountID              string // Account ID associated with the runner
 	Token                  string
+}
+
+type CapacityConfig struct {
+	MaxStages *int
 }
 
 // Iterates over all the entries and converts it to a simple type
@@ -218,4 +223,8 @@ func (c *Config) GetRunnerType() RunnerType {
 		return c.Delegate.RunnerType
 	}
 	return c.Delegate.Type
+}
+
+func (c *Config) GetCapacityConfig() CapacityConfig {
+	return CapacityConfig{MaxStages: c.Delegate.MaxStages}
 }
