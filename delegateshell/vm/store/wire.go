@@ -17,6 +17,10 @@ var WireSet = wire.NewSet(
 
 // ProvideSQLDatabase provides a database connection.
 func ProvideSQLDatabase(config *delegate.Config) (*sqlx.DB, error) {
+	// if a pool file is not set, don't connect to the database
+	if config.VM.Pool.File == "" {
+		return nil, nil
+	}
 	return database.ConnectSQL(
 		config.VM.Database.Driver,
 		config.VM.Database.Datasource,
@@ -24,9 +28,15 @@ func ProvideSQLDatabase(config *delegate.Config) (*sqlx.DB, error) {
 }
 
 func ProvideInstanceStore(db *sqlx.DB) store.InstanceStore {
+	if db == nil {
+		return nil
+	}
 	return sql.NewInstanceStore(db)
 }
 
 func ProvideStageOwnerStore(db *sqlx.DB) store.StageOwnerStore {
+	if db == nil {
+		return nil
+	}
 	return sql.NewStageOwnerStore(db)
 }

@@ -6,6 +6,7 @@ package router
 
 import (
 	"github.com/drone-runners/drone-runner-aws/app/drivers"
+	"github.com/drone-runners/drone-runner-aws/metric"
 	"github.com/drone-runners/drone-runner-aws/store"
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/downloader"
@@ -25,12 +26,14 @@ import (
 func convert(config *delegate.Config) *delegate.TaskContext {
 	return &delegate.TaskContext{
 		AccountID:              config.Delegate.AccountID,
+		DelegateName:           config.GetName(),
 		Token:                  config.GetToken(),
-		DelegateId:             config.Delegate.ID,
+		DelegateId:             &config.Delegate.ID,
 		DelegateTaskServiceURL: config.Delegate.TaskServiceURL,
 		RunnerType:             config.GetRunnerType(),
 		SkipVerify:             config.Server.Insecure,
 		ManagerEndpoint:        config.GetHarnessUrl(),
+		PoolMapperByAccount:    config.VM.Pool.MapByAccountID.Convert(),
 	}
 }
 
@@ -44,6 +47,8 @@ func NewRouter(
 	r := task.NewRouter()
 	r.Use(logstream.Middleware())
 
+	metrics := metric.RegisterMetrics() // TODO: Use runner metrics once they are available and remove this
+
 	r.Register("local_init", local.NewSetupHandler(taskContext))
 	r.RegisterFunc("local_execute", local.ExecHandler)
 	r.RegisterFunc("local_cleanup", local.DestroyHandler)
@@ -53,9 +58,9 @@ func NewRouter(
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
 
 	// VM tasks
-	r.Register("vm_init", vm.NewSetupHandler(taskContext, poolManager, stageOwnerStore))
-	r.Register("vm_execute", vm.NewExecHandler(taskContext, poolManager, stageOwnerStore))
-	r.Register("vm_cleanup", vm.NewCleanupHandler())
+	r.Register("vm_init", vm.NewSetupHandler(taskContext, poolManager, stageOwnerStore, metrics))
+	r.Register("vm_execute", vm.NewExecHandler(taskContext, poolManager, stageOwnerStore, metrics))
+	r.Register("vm_cleanup", vm.NewCleanupHandler(poolManager, stageOwnerStore, metrics))
 
 	daemonSetTaskHandler := daemontask.NewDaemonSetTaskHandler(dsManager)
 	r.RegisterFunc("daemonset/upsert", daemonSetTaskHandler.HandleUpsert)

@@ -59,3 +59,7 @@ const (
 	Running Status = "RUNNING"
 	Error   Status = "ERROR"
 )
+
+func failedResponse(msg string) VMTaskExecutionResponse {
+	return VMTaskExecutionResponse{CommandExecutionStatus: Failure, ErrorMessage: msg}
+}

@@ -6,8 +6,10 @@
 package delegate
 
 import (
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/drone-runners/drone-runner-aws/command/config"
@@ -98,13 +100,16 @@ type Config struct {
 }
 
 type TaskContext struct {
-	DelegateTaskServiceURL string     // URL of Delegate Task Service
-	DelegateId             string     // Delegate id abtained after a successful runner registration call.
+	DelegateTaskServiceURL string  // URL of Delegate Task Service
+	DelegateId             *string // Delegate id gets set after a successful runner registration call.
+	DelegateName           string
 	SkipVerify             bool       // Skip SSL verification if the task is conducting https connection.
 	RunnerType             RunnerType // The type of the runner
 	ManagerEndpoint        string
 	AccountID              string // Account ID associated with the runner
 	Token                  string
+
+	PoolMapperByAccount map[string]map[string]string
 }
 
 type CapacityConfig struct {
@@ -190,12 +195,38 @@ func (c *Config) GetName() string {
 	return pickNonEmpty(c.RunnerName, c.Delegate.Name)
 }
 
+// Token copied from Harness Saas UI is base64 encoded. However, since kubernetes secret is used to create the token
+// with token value put in 'data' field of secret yaml as plain text, the token passed to delegate agent is already
+// decoded. For Docker delegates, token passes to delegate agent is still not decoded. This function is to provide
+// compatibility to both use cases.
+func getBase64DecodedTokenString(token string) string {
+	// Step 1: Check if the token is base64 encoded
+	decoded, err := base64.StdEncoding.DecodeString(token)
+	if err != nil {
+		return token // Not base64, return original token
+	}
+
+	// Step 2: Decode the token, check if the decoded result is a hexadecimal string
+	decodedStr := strings.TrimSpace(string(decoded))
+	if isHexadecimalString(decodedStr) {
+		return decodedStr
+	}
+	return token
+}
+
+// A helper function to check if a string is a 32-character hexadecimal string
+func isHexadecimalString(decodedToken string) bool {
+	match, _ := regexp.MatchString("^[0-9A-Fa-f]{32}$", decodedToken)
+	return match
+}
+
 func (c *Config) GetHarnessUrl() string {
 	return pickNonEmpty(c.HarnessUrl, c.Delegate.ManagerEndpoint)
 }
 
 func (c *Config) GetToken() string {
-	return pickNonEmpty(c.Token, c.Delegate.Token)
+	secret := pickNonEmpty(c.Token, c.Delegate.Token)
+	return getBase64DecodedTokenString(secret)
 }
 
 func pickNonEmpty(str1, str2 string) string {

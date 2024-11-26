@@ -21,6 +21,9 @@ func ProvideManager(
 	stageOwnerStore store.StageOwnerStore,
 	config *delegate.Config,
 ) drivers.IManager {
+	if config.VM.Pool.File == "" {
+		return nil
+	}
 	manager := drivers.NewManager(
 		ctx,
 		instanceStore,

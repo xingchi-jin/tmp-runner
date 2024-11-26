@@ -32,11 +32,10 @@ type TokenCache struct {
 func NewTokenCache(id, secret string) *TokenCache {
 	// purge expired tokens from the cache at expirationTime/3 intervals
 	c := cache.New(cache.DefaultExpiration, expirationTime/3)
-	decodedSecret := GetBase64DecodedTokenString(secret)
 	return &TokenCache{
 		id:         id,
-		secret:     decodedSecret,
-		secretHash: utils.HashSHA256(decodedSecret),
+		secret:     secret,
+		secretHash: utils.HashSHA256(secret),
 		expiry:     expirationTime,
 		c:          c,
 	}

@@ -37,8 +37,12 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 	}
 	logWriter := logstream.NewWriterWrapper(req.Logger)
 	logWriter.Open()
+	var delegateID string
+	if h.taskContext.DelegateId != nil {
+		delegateID = *h.taskContext.DelegateId
+	}
 	// TODO: remove this after delegate id no longer needed from setup request
-	resp, err := HandleSetup(ctx, setupRequest, h.taskContext.DelegateId, logWriter)
+	resp, err := HandleSetup(ctx, setupRequest, delegateID, logWriter)
 	logWriter.Close()
 	if err != nil {
 		logger.Error("could not handle setup request: %w", err)

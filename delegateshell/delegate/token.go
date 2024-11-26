@@ -6,10 +6,7 @@
 package delegate
 
 import (
-	"encoding/base64"
 	"encoding/hex"
-	"regexp"
-	"strings"
 	"time"
 
 	"github.com/google/uuid"
@@ -47,29 +44,4 @@ func Token(audience, issuer, subject, secret string, expiry time.Duration) (stri
 	}
 
 	return raw, nil
-}
-
-// Token copied from Harness Saas UI is base64 encoded. However, since kubernetes secret is used to create the token
-// with token value put in 'data' field of secret yaml as plain text, the token passed to delegate agent is already
-// decoded. For Docker delegates, token passes to delegate agent is still not decoded. This function is to provide
-// compatibility to both use cases.
-func GetBase64DecodedTokenString(token string) string {
-	// Step 1: Check if the token is base64 encoded
-	decoded, err := base64.StdEncoding.DecodeString(token)
-	if err != nil {
-		return token // Not base64, return original token
-	}
-
-	// Step 2: Decode the token, check if the decoded result is a hexadecimal string
-	decodedStr := strings.TrimSpace(string(decoded))
-	if isHexadecimalString(decodedStr) {
-		return decodedStr
-	}
-	return token
-}
-
-// A helper function to check if a string is a 32-character hexadecimal string
-func isHexadecimalString(decodedToken string) bool {
-	match, _ := regexp.MatchString("^[0-9A-Fa-f]{32}$", decodedToken)
-	return match
 }
