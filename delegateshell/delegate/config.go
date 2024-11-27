@@ -84,6 +84,11 @@ type Config struct {
 		}
 	}
 
+	Metrics struct {
+		Provider string `envconfig:"METRICS_PROVIDER" default:"prometheus"`
+		Endpoint string `envconfig:"METRICS_ENDPOINT" default:"/metrics"`
+	}
+
 	// Runner's installation configs
 	// Certain congigs will deprecate the old ones in order to provide better environment variable names.
 	// eg. TOKEN replaces DELEGATE_TOKEN, TAGS replaces DELEGATE_TAGS, URL replaces MANAGER_HOST_AND_PORT, NAME replaces DELEGATE_NAME

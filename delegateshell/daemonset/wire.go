@@ -8,6 +8,7 @@ import (
 	"github.com/google/wire"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
+	"github.com/harness/runner/metrics"
 )
 
 var WireSet = wire.NewSet(
@@ -32,11 +33,13 @@ func ProvideDaemonSetReconciler(
 	daemonSetManager *DaemonSetManager,
 	router *task.Router,
 	managerClient client.Client,
+	metrics metrics.Metrics,
 ) *DaemonSetReconciler {
 	return NewDaemonSetReconciler(
 		context.Background(), // TODO: This should probably come from global context, need to verify
 		daemonSetManager,
 		router,
 		managerClient,
+		metrics,
 	)
 }

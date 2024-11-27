@@ -102,6 +102,9 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	}()
 	defer signal.Stop(s)
 
+	// Start Metrics endpoint handler
+	system.metricsHandler.Handle()
+
 	runnerInfo, err := system.delegate.Register(ctx)
 	if err != nil {
 		logger.Errorf("Registering Runner with Harness manager failed. Error: %v", err)

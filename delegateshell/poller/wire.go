@@ -5,6 +5,7 @@ import (
 	"github.com/google/wire"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
+	"github.com/harness/runner/metrics"
 )
 
 // WireSet is a Wire provider set that provides a Poller.
@@ -17,6 +18,7 @@ func ProvidePoller(
 	client client.Client,
 	router *task.Router,
 	config *delegate.Config,
+	metrics metrics.Metrics,
 ) *Poller {
-	return New(client, router, config.Delegate.TaskStatusV2, config.EnableRemoteLogging)
+	return New(client, router, metrics, config.Delegate.TaskStatusV2, config.EnableRemoteLogging)
 }

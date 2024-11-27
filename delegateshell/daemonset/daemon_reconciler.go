@@ -14,6 +14,7 @@ import (
 	"github.com/drone/go-task/task"
 	"github.com/harness/runner/delegateshell/client"
 	dsclient "github.com/harness/runner/delegateshell/daemonset/client"
+	"github.com/harness/runner/metrics"
 )
 
 var (
@@ -24,6 +25,7 @@ type DaemonSetReconciler struct {
 	daemonSetManager *DaemonSetManager
 	managerClient    client.Client
 	router           *task.Router // used for resolving secrets in daemon tasks
+	metrics          metrics.Metrics
 	ctx              context.Context
 	cancelCtx        context.CancelFunc
 	doneChannel      chan bool
@@ -34,12 +36,14 @@ func NewDaemonSetReconciler(
 	daemonSetManager *DaemonSetManager,
 	router *task.Router,
 	managerClient client.Client,
+	metrics metrics.Metrics,
 ) *DaemonSetReconciler {
 	ctx, cancelCtx := context.WithCancel(ctx)
 	return &DaemonSetReconciler{
 		daemonSetManager: daemonSetManager,
 		managerClient:    managerClient,
 		router:           router,
+		metrics:          metrics,
 		ctx:              ctx,
 		cancelCtx:        cancelCtx,
 		doneChannel:      make(chan bool),

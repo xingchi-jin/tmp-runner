@@ -32,12 +32,12 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	resp, err := HandleExec(ctx, executeRequest, logWriter)
 	if err != nil {
 		runnerLogger.Error("could not handle exec request: %w", err)
-		panic(err)
+		return task.Error(err)
 	}
 	// convert resp to bytes
 	respBytes, err := json.Marshal(resp)
 	if err != nil {
-		panic(err)
+		return task.Error(err)
 	}
 	runnerLogger.Printf("exec response: %+v", resp)
 	return task.Respond(respBytes)

@@ -14,6 +14,7 @@ import (
 	"time"
 
 	"github.com/harness/runner/logger"
+	"github.com/harness/runner/metrics"
 
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/delegate"
@@ -36,6 +37,7 @@ type KeepAlive struct {
 	Name      string   // name of the runner
 	Tags      []string // list of tags that the runner accepts
 	Client    client.Client
+	Metrics   metrics.Metrics
 	Filter    FilterFn
 	Capacity  delegate.CapacityConfig
 	// The Harness manager allows two task acquire calls with the same delegate ID to go through (by design).
@@ -52,12 +54,13 @@ type DelegateInfo struct {
 	Name string
 }
 
-func New(accountID, name string, tags []string, capacity delegate.CapacityConfig, c client.Client) *KeepAlive {
+func New(accountID, name string, tags []string, capacity delegate.CapacityConfig, c client.Client, metrics metrics.Metrics) *KeepAlive {
 	return &KeepAlive{
 		AccountID: accountID,
 		Tags:      tags,
 		Name:      name,
 		Client:    c,
+		Metrics:   metrics,
 		m:         sync.Map{},
 		Capacity:  capacity,
 	}
@@ -121,6 +124,7 @@ func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
 				err := p.Client.Heartbeat(heartbeatCtx, req)
 				if err != nil && !errors.Is(err, context.Canceled) {
 					logger.WithError(err).Errorf("could not send heartbeat")
+					p.Metrics.IncrementHeartbeatFailureCount(req.AccountID, req.RunnerName)
 				}
 				cancelFn()
 			}

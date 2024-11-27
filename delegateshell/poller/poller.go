@@ -12,6 +12,8 @@ import (
 	"time"
 
 	"github.com/harness/runner/logger"
+	"github.com/harness/runner/metrics"
+	metricsutils "github.com/harness/runner/metrics/utils"
 
 	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
@@ -30,6 +32,7 @@ type Poller struct {
 	RemoteLogging bool
 	Client        client.Client
 	router        *task.Router
+	Metrics       metrics.Metrics
 	Filter        FilterFn
 	stopChannel   chan struct{}
 	doneChannel   chan struct{}
@@ -40,10 +43,11 @@ type Poller struct {
 	m sync.Map
 }
 
-func New(c client.Client, router *task.Router, useV2, remoteLogging bool) *Poller {
+func New(c client.Client, router *task.Router, metrics metrics.Metrics, useV2, remoteLogging bool) *Poller {
 	p := &Poller{
 		Client:        c,
 		router:        router,
+		Metrics:       metrics,
 		m:             sync.Map{},
 		UseV2Status:   useV2,
 		RemoteLogging: remoteLogging,
@@ -143,17 +147,24 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 	if err != nil {
 		return errors.Wrap(err, "failed to get payload")
 	}
-
 	// Since task id is unique, it's just one request
 	for _, request := range payloads.Requests {
+		p.Metrics.IncrementTaskRunningCount(rv.AccountID, rv.TaskType, delegateName)
+		defer p.Metrics.DecrementTaskRunningCount(rv.AccountID, rv.TaskType, delegateName)
+
+		start_time := time.Now()
 		resp := p.router.Handle(ctx, request)
+		p.Metrics.SetTaskExecutionTime(rv.AccountID, rv.TaskType, rv.TaskID, delegateName, metricsutils.CalculateDuration(start_time))
 		if resp == nil {
 			continue
 		}
 		taskResponse := &client.TaskResponse{ID: rv.TaskID, Type: "CI_EXECUTE_STEP"}
+		p.Metrics.IncrementTaskCompletedCount(rv.AccountID, rv.TaskType, delegateName)
+
 		if resp.Error() != nil {
 			taskResponse.Code = "FAILED"
 			logger.WithError(resp.Error()).Error("Process task failed")
+			p.Metrics.IncrementTaskFailedCount(rv.AccountID, rv.TaskType, delegateName)
 			// TODO: a bug here. If the Data is nil, exception happen in cg manager.
 			// This will be taken care after integrating with new response workflow
 			if respBytes, err := json.Marshal(&api.VMTaskExecutionResponse{ErrorMessage: resp.Error().Error()}); err != nil {
