@@ -2,6 +2,7 @@ package router
 
 import (
 	"github.com/drone-runners/drone-runner-aws/app/drivers"
+	"github.com/drone-runners/drone-runner-aws/metric"
 	"github.com/drone-runners/drone-runner-aws/store"
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/downloader"
@@ -20,6 +21,7 @@ func ProvideRouter(
 	dsManager *daemonset.DaemonSetManager,
 	poolManager drivers.IManager,
 	stageOwnerStore store.StageOwnerStore,
+	vmmetrics *metric.Metrics,
 ) *task.Router {
-	return NewRouter(convert(config), d, dsManager, poolManager, stageOwnerStore)
+	return NewRouter(convert(config), d, dsManager, poolManager, stageOwnerStore, vmmetrics)
 }

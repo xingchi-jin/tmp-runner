@@ -17,11 +17,6 @@ type Metrics interface {
 	IncrementErrorCount(accountID, runnerName string)                      // Not implemented
 	SetResourceConsumptionIsAboveThreshold(accountID, runnerName string)   // Not implemented
 	UnsetResourceConsumptionIsAboveThreshold(accountID, runnerName string) // Not implemented
-	// VM Task based Metrics
-	SetCPUPercentile(accountID, runnerName string, cpuPercentage float64)                 // Not implemented
-	SetMemoryPercentile(accountID, runnerName string, cpuPercentage float64)              // Not implemented
-	IncrementPoolFallbackCount(accountID, runnerName, success string)                     // Not implemented
-	ObserveWaitDurationCount(accountID, runnerName, isFallback string, setupTime float64) // Not implemented
 }
 
 const MetricNamePrefix = "io_harness"

@@ -36,24 +36,6 @@ func (p *PrometheusMetrics) IncrementErrorCount(accountID, runnerName string) {
 	p.TaskTimeoutCount.WithLabelValues(accountID, runnerName).Inc()
 }
 
-// TODO: Implement logic for CPU
-func (p *PrometheusMetrics) SetCPUPercentile(accountID, runnerName string, cpuPercentage float64) {
-	p.CPUPercentile.WithLabelValues(accountID, runnerName).Observe(cpuPercentage)
-}
-
-// TODO: Implement logic for Memory
-func (p *PrometheusMetrics) SetMemoryPercentile(accountID, runnerName string, memoryPercentage float64) {
-	p.CPUPercentile.WithLabelValues(accountID, runnerName).Observe(memoryPercentage)
-}
-
-func (p *PrometheusMetrics) IncrementPoolFallbackCount(accountID, runnerName, success string) {
-	p.PoolFallbackCount.WithLabelValues(accountID, runnerName, success).Inc()
-}
-
-func (p *PrometheusMetrics) ObserveWaitDurationCount(accountID, runnerName, isFallback string, setupTime float64) {
-	p.WaitDurationCount.WithLabelValues(accountID, runnerName, isFallback).Observe(setupTime)
-}
-
 func (p *PrometheusMetrics) SetResourceConsumptionIsAboveThreshold(accountID, runnerName string) {
 	p.ResourceConsumptionAboveThreshold.WithLabelValues(accountID, runnerName).Set(1)
 }

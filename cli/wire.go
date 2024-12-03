@@ -14,6 +14,7 @@ import (
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/delegateshell/heartbeat"
 	"github.com/harness/runner/delegateshell/poller"
+	vmmetrics "github.com/harness/runner/delegateshell/vm/metrics"
 	"github.com/harness/runner/delegateshell/vm/pool"
 	"github.com/harness/runner/delegateshell/vm/store"
 	metricsinjection "github.com/harness/runner/metrics/injection"
@@ -34,6 +35,7 @@ func initSystem(ctx context.Context, config *delegate.Config) (*server.System, e
 		// Dependencies required for managing VMs.
 		pool.WireSet,
 		store.WireSet,
+		vmmetrics.WireSet,
 	)
 	return &server.System{}, nil
 }

@@ -5,6 +5,7 @@
 package prometheus
 
 import (
+	"github.com/drone-runners/drone-runner-aws/metric"
 	"github.com/harness/runner/metrics"
 	"github.com/prometheus/client_golang/prometheus"
 )
@@ -17,12 +18,19 @@ type PrometheusMetrics struct {
 	TaskExecutionTime                 *prometheus.GaugeVec
 	HeartbeatFailureCount             *prometheus.CounterVec
 	ErrorCount                        *prometheus.CounterVec
-	CPUPercentile                     *prometheus.HistogramVec
-	MemoryPercentile                  *prometheus.HistogramVec
-	PoolFallbackCount                 *prometheus.CounterVec
-	WaitDurationCount                 *prometheus.HistogramVec
 	TaskRejectedCount                 *prometheus.CounterVec
 	ResourceConsumptionAboveThreshold *prometheus.GaugeVec
+
+	// CI based metrics
+	PipelineExecutionTotalCount         *prometheus.CounterVec
+	PipelineSystemErrorsTotalCount      *prometheus.CounterVec
+	PipelineExecutionErrorsTotalCount   *prometheus.CounterVec
+	PipelineExecutionsRunning           *prometheus.GaugeVec
+	PipelineExecutionsRunningPerAccount *prometheus.GaugeVec
+	PipelinePoolFallbackCount           *prometheus.CounterVec
+	PipelineWaitDurationTime            *prometheus.HistogramVec
+	PipelineMaxCPUPercentile            *prometheus.HistogramVec
+	PipelineMaxMemoryPercentile         *prometheus.HistogramVec
 }
 
 // TaskCompletedCount provides metrics for total number of pipeline executions (failed + successful)
@@ -101,53 +109,6 @@ func ErrorCount() *prometheus.CounterVec {
 	)
 }
 
-// CPUPercentile provides information about the max CPU usage in the pipeline run
-func CPUPercentile() *prometheus.HistogramVec {
-	return prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    metrics.MetricNamePrefix + "task_max_cpu_usage_percent",
-			Help:    "Max CPU usage in the pipeline",
-			Buckets: []float64{30, 50, 70, 90},
-		},
-		[]string{"account_id", "runner_name"},
-	)
-}
-
-// MemoryPercentile provides information about the max RAM usage in the pipeline run
-func MemoryPercentile() *prometheus.HistogramVec {
-	return prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    metrics.MetricNamePrefix + "task_max_mem_usage_percent",
-			Help:    "Max memory usage in the pipeline",
-			Buckets: []float64{30, 50, 70, 90},
-		},
-		[]string{"account_id", "runner_name"},
-	)
-}
-
-// PoolFallbackCount provides metrics for number of fallbacks while finding a valid pool
-func PoolFallbackCount() *prometheus.CounterVec {
-	return prometheus.NewCounterVec(
-		prometheus.CounterOpts{
-			Name: metrics.MetricNamePrefix + "_ci_pipeline_pool_fallbacks",
-			Help: "Total number of fallbacks triggered on the pool",
-		},
-		[]string{"account_id", "runner_name", "success"}, // success is true/false depending on whether fallback happened successfully
-	)
-}
-
-// WaitDurationCount provides metrics for amount of time needed to wait to setup a machine
-func WaitDurationCount() *prometheus.HistogramVec {
-	return prometheus.NewHistogramVec(
-		prometheus.HistogramOpts{
-			Name:    metrics.MetricNamePrefix + "_ci_runner_wait_duration_seconds",
-			Help:    "Waiting time needed to successfully allocate a machine",
-			Buckets: []float64{5, 15, 30, 60, 300, 600},
-		},
-		[]string{"account_id", "runner_name", "is_fallback"},
-	)
-}
-
 // ResourceConsumptionAboveThreshold provides metrics for runner whose resource consumption is above the threshold provided
 func ResourceConsumptionAboveThreshold() *prometheus.GaugeVec {
 	return prometheus.NewGaugeVec(
@@ -159,6 +120,58 @@ func ResourceConsumptionAboveThreshold() *prometheus.GaugeVec {
 	)
 }
 
+// --------------------------------------------------------------------------------------------------------------------------------------
+// CI based metrics
+// Metric names need to be same until dlite is completely replaced by the runner to avoid
+// partial reporting under different names.
+// We use the VM runner metrics to initialize directly.
+// --------------------------------------------------------------------------------------------------------------------------------------
+
+// PipelineExecutionTotalCount provides metrics for total number of pipeline executions (failed + successful)
+func PipelineExecutionTotalCount() *prometheus.CounterVec {
+	return metric.BuildCount()
+}
+
+// PipelineSystemErrorsTotalCount provides metrics for total number of system errors
+func PipelineSystemErrorsTotalCount() *prometheus.CounterVec {
+	return metric.ErrorCount()
+}
+
+// PipelineExecutionErrorsTotalCount provides metrics for total number of failed pipeline executions
+func PipelineExecutionErrorsTotalCount() *prometheus.CounterVec {
+	return metric.FailedBuildCount()
+}
+
+// PipelineExecutionsRunning provides metrics for number of executing pipelines
+func PipelineExecutionsRunning() *prometheus.GaugeVec {
+	return metric.RunningCount()
+}
+
+// PipelineExecutionsRunningPerAccount provides metrics for number of executing pipelines per account
+func PipelineExecutionsRunningPerAccount() *prometheus.GaugeVec {
+	return metric.RunningPerAccountCount()
+}
+
+// PipelinePoolFallbackCount provides metrics for number of fallbacks while finding a valid pool
+func PipelinePoolFallbackCount() *prometheus.CounterVec {
+	return metric.PoolFallbackCount()
+}
+
+// PipelineMaxCPUPercentile provides information about the max CPU usage in the pipeline run
+func PipelineMaxCPUPercentile() *prometheus.HistogramVec {
+	return metric.CPUPercentile()
+}
+
+// PipelineMaxMemoryPercentile provides information about the max RAM usage in the pipeline run
+func PipelineMaxMemoryPercentile() *prometheus.HistogramVec {
+	return metric.MemoryPercentile()
+}
+
+// PipelineWaitDuration provides metrics for amount of time needed to wait to setup a machine
+func PipelineWaitDurationTime() *prometheus.HistogramVec {
+	return metric.WaitDurationCount()
+}
+
 // registerMetrics sets up the metrics client and returns the Metrics object.
 func registerMetrics() metrics.Metrics {
 	taskCompletedCount := TaskCompletedCount()
@@ -167,27 +180,41 @@ func registerMetrics() metrics.Metrics {
 	taskTimeoutCount := TaskTimeoutCount()
 	taskExecutionTime := TaskExecutionTime()
 	heartbeatFailureCount := HeartbeatFailureCount()
-	errorCount := ErrorCount()
-	cpuPercentile := CPUPercentile()
-	memoryPercentile := MemoryPercentile()
-	poolFallbackCount := PoolFallbackCount()
-	waitDurationCount := WaitDurationCount()
 	resourceConsumptionAboveThreshold := ResourceConsumptionAboveThreshold()
+	errorCount := ErrorCount()
 
-	prometheus.MustRegister(taskCompletedCount, taskFailedCount, taskRunningCount, taskTimeoutCount, taskExecutionTime, heartbeatFailureCount, errorCount, cpuPercentile, memoryPercentile, poolFallbackCount, waitDurationCount, resourceConsumptionAboveThreshold)
+	// CI based metrics
+	pipelineExecutionCount := PipelineExecutionTotalCount()
+	pipelineSystemErrorsTotalCount := PipelineSystemErrorsTotalCount()
+	pipelineExecutionErrorsCount := PipelineExecutionErrorsTotalCount()
+	pipelineExecutionsRunning := PipelineExecutionsRunning()
+	pipelineExecutionsRunningPerAccount := PipelineExecutionsRunningPerAccount()
+	pipelinePoolFallbackCount := PipelinePoolFallbackCount()
+	pipelineWaitDurationTime := PipelineWaitDurationTime()
+	pipelineMaxCPUPercentile := PipelineMaxCPUPercentile()
+	pipelineMaxMemoryPercentile := PipelineMaxMemoryPercentile()
+
+	prometheus.MustRegister(taskCompletedCount, taskFailedCount, taskRunningCount, taskTimeoutCount, taskExecutionTime, heartbeatFailureCount, resourceConsumptionAboveThreshold, errorCount,
+		pipelineExecutionCount, pipelineExecutionErrorsCount, pipelineExecutionsRunning, pipelineExecutionsRunningPerAccount, pipelinePoolFallbackCount, pipelineWaitDurationTime,
+		pipelineMaxCPUPercentile, pipelineMaxMemoryPercentile, pipelineSystemErrorsTotalCount)
 	return &PrometheusMetrics{
-		TaskCompletedCount:                taskCompletedCount,
-		TaskFailedCount:                   taskFailedCount,
-		TaskRunningCount:                  taskRunningCount,
-		TaskTimeoutCount:                  taskTimeoutCount,
-		TaskExecutionTime:                 taskExecutionTime,
-		HeartbeatFailureCount:             heartbeatFailureCount,
-		ErrorCount:                        errorCount,
-		MemoryPercentile:                  memoryPercentile,
-		CPUPercentile:                     cpuPercentile,
-		PoolFallbackCount:                 poolFallbackCount,
-		WaitDurationCount:                 waitDurationCount,
-		ResourceConsumptionAboveThreshold: resourceConsumptionAboveThreshold,
+		TaskCompletedCount:                  taskCompletedCount,
+		TaskFailedCount:                     taskFailedCount,
+		TaskRunningCount:                    taskRunningCount,
+		TaskTimeoutCount:                    taskTimeoutCount,
+		TaskExecutionTime:                   taskExecutionTime,
+		HeartbeatFailureCount:               heartbeatFailureCount,
+		ErrorCount:                          errorCount,
+		ResourceConsumptionAboveThreshold:   resourceConsumptionAboveThreshold,
+		PipelineSystemErrorsTotalCount:      pipelineSystemErrorsTotalCount,
+		PipelineExecutionTotalCount:         pipelineExecutionCount,
+		PipelineExecutionErrorsTotalCount:   pipelineExecutionErrorsCount,
+		PipelineExecutionsRunning:           pipelineExecutionsRunning,
+		PipelineExecutionsRunningPerAccount: pipelineExecutionsRunningPerAccount,
+		PipelinePoolFallbackCount:           pipelinePoolFallbackCount,
+		PipelineWaitDurationTime:            pipelineWaitDurationTime,
+		PipelineMaxCPUPercentile:            pipelineMaxCPUPercentile,
+		PipelineMaxMemoryPercentile:         pipelineMaxMemoryPercentile,
 	}
 }
 

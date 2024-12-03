@@ -43,11 +43,10 @@ func NewRouter(
 	dsManager *daemonset.DaemonSetManager,
 	poolManager drivers.IManager,
 	stageOwnerStore store.StageOwnerStore,
+	vmmetrics *metric.Metrics,
 ) *task.Router {
 	r := task.NewRouter()
 	r.Use(logstream.Middleware())
-
-	metrics := metric.RegisterMetrics() // TODO: Use runner metrics once they are available and remove this
 
 	r.Register("local_init", local.NewSetupHandler(taskContext))
 	r.RegisterFunc("local_execute", local.ExecHandler)
@@ -58,9 +57,9 @@ func NewRouter(
 	r.Register("secret/static", new(secrets.StaticSecretHandler))
 
 	// VM tasks
-	r.Register("vm_init", vm.NewSetupHandler(taskContext, poolManager, stageOwnerStore, metrics))
-	r.Register("vm_execute", vm.NewExecHandler(taskContext, poolManager, stageOwnerStore, metrics))
-	r.Register("vm_cleanup", vm.NewCleanupHandler(poolManager, stageOwnerStore, metrics))
+	r.Register("vm_init", vm.NewSetupHandler(taskContext, poolManager, stageOwnerStore, vmmetrics))
+	r.Register("vm_execute", vm.NewExecHandler(taskContext, poolManager, stageOwnerStore, vmmetrics))
+	r.Register("vm_cleanup", vm.NewCleanupHandler(poolManager, stageOwnerStore, vmmetrics))
 
 	daemonSetTaskHandler := daemontask.NewDaemonSetTaskHandler(dsManager)
 	r.RegisterFunc("daemonset/upsert", daemonSetTaskHandler.HandleUpsert)
