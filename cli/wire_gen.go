@@ -39,7 +39,7 @@ func initSystem(ctx context.Context, config *delegate.Config) (*server.System, e
 	stageOwnerStore := store.ProvideStageOwnerStore(db)
 	iManager := pool.ProvideManager(ctx, instanceStore, stageOwnerStore, config)
 	metricsMetrics := metricsinjection.ProvideMetricsClient(config)
-	metricMetrics, err := metrics.ProvideVMMetrics(metricsMetrics)
+	metricMetrics, err := metrics.ProvideVMMetrics(ctx, metricsMetrics, instanceStore, config)
 	if err != nil {
 		return nil, err
 	}
