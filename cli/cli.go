@@ -8,6 +8,7 @@ package cli
 import (
 	"os"
 
+	"github.com/harness/runner/cli/install"
 	"github.com/harness/runner/cli/server"
 	"github.com/harness/runner/version"
 
@@ -22,6 +23,7 @@ func Command() {
 	app.Version(version.Version)
 	app.VersionFlag.Short('v')
 	server.Register(app, initSystem)
+	install.RegisterCommands(app)
 
 	kingpin.MustParse(app.Parse(os.Args[1:]))
 }
