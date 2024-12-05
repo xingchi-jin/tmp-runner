@@ -22,6 +22,9 @@ func ProvideVMMetrics(
 	instanceStore store.InstanceStore,
 	config *delegate.Config,
 ) (*metric.Metrics, error) {
+	if config.VM.Pool.File == "" {
+		return nil, nil
+	}
 	if pm, ok := m.(*prometheus.PrometheusMetrics); ok {
 		m := &metric.Metrics{
 			BuildCount:             pm.PipelineExecutionTotalCount,
@@ -44,5 +47,5 @@ func ProvideVMMetrics(
 		m.UpdateRunningCount(ctx)
 		return m, nil
 	}
-	return &metric.Metrics{}, errors.New("unsupported metrics provider for vm based builds")
+	return nil, errors.New("unsupported metrics provider for vm based builds")
 }
