@@ -76,6 +76,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 
 	// Setup the pool if it exists
 	if loadedConfig.VM.Pool.File != "" {
+		ctx = context.WithValue(ctx, types.Hosted, true)
 		_, err = harness.SetupPoolWithFile(ctx, c.poolFile, system.poolManager, types.Passwords{}, loadedConfig.Delegate.Name,
 			loadedConfig.VM.Pool.BusyMaxAge, loadedConfig.VM.Pool.FreeMaxAge, loadedConfig.VM.Pool.PurgerTimeMinutes, false)
 		defer harness.Cleanup(false, system.poolManager, false, true)
