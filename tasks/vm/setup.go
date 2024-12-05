@@ -3,7 +3,6 @@ package vm
 import (
 	"context"
 	"encoding/json"
-
 	"github.com/drone-runners/drone-runner-aws/app/drivers"
 	"github.com/drone-runners/drone-runner-aws/command/harness"
 	"github.com/drone-runners/drone-runner-aws/metric"
@@ -89,9 +88,10 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 	if req.Task.Logger != nil {
 		key = req.Task.Logger.Key
 		logConfig = api.LogConfig{
-			AccountID: req.Task.Logger.Account,
-			URL:       req.Task.Logger.Address,
-			Token:     req.Task.Logger.Token,
+			AccountID:      req.Task.Logger.Account,
+			URL:            req.Task.Logger.Address,
+			Token:          req.Task.Logger.Token,
+			IndirectUpload: req.Task.Logger.IndirectUpload,
 		}
 	}
 	setupReq := api.SetupRequest{

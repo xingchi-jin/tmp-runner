@@ -81,14 +81,14 @@ func (h *ExecHandler) Handle(ctx context.Context, req *task.Request) task.Respon
 		return task.Error(err)
 	}
 	execRequest.Sanitize()
+	if req.Task.Logger != nil {
+		execRequest.Request.LogKey = req.Task.Logger.Key
+	}
 	secrets := []string{}
 	for _, v := range req.Secrets {
 		secrets = append(secrets, *&v.Value)
 	}
-
-	// Use the context to set the stage runtime ID
-	// execRequest.Request.StageRuntimeID = execRequest.Metadata.StageRuntimeID
-
+	execRequest.Request.Secrets = secrets
 	// Generate a token so that the task can send back the response back to the manager directly
 	token, err := delegate.Token(audience, issuer, h.taskContext.AccountID, h.taskContext.Token, 10*time.Hour+tokenExpiryOffset)
 	if err != nil {
@@ -124,13 +124,14 @@ func (h *ExecHandler) Handle(ctx context.Context, req *task.Request) task.Respon
 	var resp VMTaskExecutionResponse
 	if async {
 		if pollStepResp.Error == "" {
-			// mark the response running
-			resp = VMTaskExecutionResponse{CommandExecutionStatus: RunningState}
+			// Do not send the response for a successful submit of the vm_execute task. The response will be sent by lite engine.
+			return nil
 		} else {
 			resp = VMTaskExecutionResponse{CommandExecutionStatus: Failure, ErrorMessage: pollStepResp.Error}
 		}
 		return task.Respond(resp)
 	}
+
 	// Construct final response
 	resp = convert(pollStepResp)
 	resp.DelegateMetaInfo.ID = delegateID

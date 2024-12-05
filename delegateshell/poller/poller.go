@@ -153,6 +153,10 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 		defer p.Metrics.DecrementTaskRunningCount(rv.AccountID, rv.TaskType, delegateName)
 
 		start_time := time.Now()
+
+		// TODO set the task id in runner request translator
+		// task id is required by the lite engine to send the response to the manager for hosted builds
+		request.Task.ID = rv.TaskID
 		resp := p.router.Handle(ctx, request)
 		p.Metrics.SetTaskExecutionTime(rv.AccountID, rv.TaskType, rv.TaskID, delegateName, metricsutils.CalculateDuration(start_time))
 		if resp == nil {

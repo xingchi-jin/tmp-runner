@@ -11,7 +11,7 @@ require (
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/drone-runners/drone-runner-aws v1.0.0-rc31.0.20241121230344-87f3402dcb2b
-	github.com/drone/go-task v0.0.0-20241105234651-c7a3aaa576a3
+	github.com/drone/go-task v0.0.0-20241205040233-8478a25d5ac3
 	github.com/drone/runner-go v1.12.0
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
