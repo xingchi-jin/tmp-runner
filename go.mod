@@ -16,7 +16,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/harness/godotenv/v3 v3.0.1
-	github.com/harness/lite-engine v0.5.85
+	github.com/harness/lite-engine v0.5.86
 	github.com/hashicorp/vault/api v1.12.2
 	github.com/icrowley/fake v0.0.0-20221112152111-d7b7e2276db2
 	github.com/jmoiron/sqlx v1.4.0
