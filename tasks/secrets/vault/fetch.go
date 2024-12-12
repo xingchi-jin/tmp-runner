@@ -8,6 +8,7 @@ import (
 
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/common"
+	"github.com/hashicorp/vault/api"
 )
 
 // Sample handler that reads a secret from vault.
@@ -33,17 +34,6 @@ import (
 //     }
 // }
 
-type vaultSecret struct {
-	Config *Config `json:"config"`
-	Base64 bool    `json:"base64"`
-	Path   string  `json:"path"`
-	Key    string  `json:"key"`
-}
-
-type input struct {
-	Secrets []*vaultSecret `json:"secrets"`
-}
-
 // FetchHandler returns a task handler that fetches a secret from vault.
 func FetchHandler(ctx context.Context, req *task.Request) task.Response {
 	in := new(input)
@@ -59,19 +49,40 @@ func FetchHandler(ctx context.Context, req *task.Request) task.Response {
 		return task.Error(err)
 	}
 
-	secret, err := client.Logical().Read(in.Secrets[0].Path)
+	secret, err := fetchSecret(client, in)
 	if err != nil {
 		return task.Error(err)
 	}
+
+	decodedSecret, err := getSecretKeyAndValue(in, secret)
+
+	if err != nil {
+		return task.Error(err)
+	}
+	return task.Respond(
+		&common.Secret{
+			Value: decodedSecret,
+		},
+	)
+}
+
+func fetchSecret(client *api.Client, in *input) (*api.Secret, error) {
+	secret, err := client.Logical().Read(in.Secrets[0].Path)
+	if err != nil {
+		return nil, err
+	}
 	if secret == nil || secret.Data == nil {
-		return task.Error(fmt.Errorf("could not find secret: %s", in.Secrets[0].Path))
+		return nil, fmt.Errorf("could not find secret: %s", in.Secrets[0].Path)
 	}
 
 	v := secret.Data["data"]
 	if data, ok := v.(map[string]interface{}); ok {
 		secret.Data = data
 	}
+	return secret, nil
+}
 
+func getSecretKeyAndValue(in *input, secret *api.Secret) (string, error) {
 	for k, v := range secret.Data {
 		s, ok := v.(string)
 		if !ok {
@@ -81,21 +92,16 @@ func FetchHandler(ctx context.Context, req *task.Request) task.Response {
 			return parse(s, in.Secrets[0].Base64)
 		}
 	}
-
-	return task.Error(fmt.Errorf("could not find secret key: %s", in.Secrets[0].Key))
+	return "", fmt.Errorf("could not find secret key: %s", in.Secrets[0].Key)
 }
 
-func parse(s string, decode bool) task.Response {
+func parse(s string, decode bool) (string, error) {
 	if decode {
 		decoded, err := base64.StdEncoding.DecodeString(s)
 		if err != nil {
-			return task.Error(fmt.Errorf("Error occurred when decoding base64 secret. %w", err))
+			return "", fmt.Errorf("error occurred when decoding base64 secret. %w", err)
 		}
 		s = string(decoded)
 	}
-	return task.Respond(
-		&common.Secret{
-			Value: s,
-		},
-	)
+	return s, nil
 }

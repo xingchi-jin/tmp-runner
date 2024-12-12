@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"net/http"
 
 	"github.com/harness/runner/logger"
 
@@ -11,30 +12,20 @@ import (
 	vault "github.com/hashicorp/vault/api"
 )
 
-type VaultSecretTaskRequest struct {
-	Action        string  `json:"action"`
-	Config        *Config `json:"config"`
-	EngineName    string  `json:"engine_name"`
-	EngineVersion uint8   `json:"engine_version"`
-	Key           string  `json:"key"`
-	Path          string  `json:"path"`
-	Value         string  `json:"value"`
-}
-
-type VaultSecretTaskResponse struct{}
-
 func Handler(ctx context.Context, req *task.Request) task.Response {
 	in := new(VaultSecretTaskRequest)
 
 	// decode the task input.
 	err := json.Unmarshal(req.Task.Data, in)
 	if err != nil {
-		return task.Error(err)
+		logger.Errorf("failed to unmarshal task input, %s", err)
+		return task.Respond(NewErrorResponse(err, "Failed to decode task input", http.StatusBadRequest))
 	}
 
 	client, err := New(in.Config)
 	if err != nil {
-		return task.Error(err)
+		logger.Errorf("failed to create vault client, %s", err)
+		return task.Respond(NewErrorResponse(err, "Failed to create Vault Client", http.StatusInternalServerError))
 	}
 
 	switch action := in.Action; action {
@@ -43,38 +34,56 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 	case "DELETE":
 		return handleDelete(in, client)
 	default:
-		err = fmt.Errorf("unsupported secret task action: %s", action)
-		logger.Error(err)
-		return task.Error(err)
+		logger.Error(fmt.Errorf("unsupported secret task action: %s", action))
+		return task.Respond(NewErrorResponse(fmt.Errorf("invalid action"), fmt.Sprintf("The specified action %s is not supported", action), http.StatusBadRequest))
 	}
 }
 
 func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	err := upsert(in.EngineVersion, in.EngineName, in.Path, in.Key, in.Value, client)
+	path, err := upsert(in.EngineVersion, in.EngineName, in.Path, in.Key, in.Value, client)
 	if err != nil {
 		logger.WithError(err).Errorf("failed upserting secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
-		return task.Error(err)
+		return task.Respond(VaultSecretOperationResponse{
+			Name:    in.Key,
+			Message: "Failed upserting secret value in Vault",
+			Error: &Error{
+				Message: "Failed upserting secret value in Vault",
+				Reason:  err.Error(),
+			},
+			OperationStatus: OperationStatusFailure,
+		})
 	}
-	return task.Respond(VaultSecretTaskResponse{})
+	logger.Infof("done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), path)
+	return task.Respond(VaultSecretOperationResponse{
+		Name:            in.Key,
+		Message:         "Secret upserted to vault",
+		OperationStatus: OperationStatusSuccess,
+	})
 }
 
 func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	path, err := getFullPathForDelete(in.EngineVersion, in.EngineName, in.Path)
+	path, err := delete(in.EngineVersion, in.EngineName, in.Path, client)
 	if err != nil {
-		logger.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]; EngineName: [%s]; EngineVersion: [%d]", client.Address(), in.Path, in.EngineName, in.EngineVersion)
-		return task.Error(err)
-	}
-	logger.Infof("deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
-	_, err = client.Logical().Delete(path)
-	if err != nil {
-		logger.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
-		return task.Error(err)
+		logger.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
+		return task.Respond(VaultSecretOperationResponse{
+			Name:    in.Key,
+			Message: "Failed deleting secret value in Vault",
+			Error: &Error{
+				Message: "Failed deleting secret value in Vault",
+				Reason:  err.Error(),
+			},
+			OperationStatus: OperationStatusFailure,
+		})
 	}
 	logger.Infof("done deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
-	return task.Respond(VaultSecretTaskResponse{})
+	return task.Respond(VaultSecretOperationResponse{
+		Name:            in.Key,
+		Message:         "Secret deleted from vault",
+		OperationStatus: OperationStatusSuccess,
+	})
 }
 
-func upsert(engineVersion uint8, engineName string, path string, key string, value string, client *vault.Client) error {
+func upsert(engineVersion uint8, engineName string, path string, key string, value string, client *vault.Client) (string, error) {
 	data := map[string]any{
 		"data": map[string]string{
 			key: value,
@@ -82,51 +91,24 @@ func upsert(engineVersion uint8, engineName string, path string, key string, val
 	}
 	fullPath, err := getFullPath(engineVersion, engineName, path)
 	if err != nil {
-		return err
+		return "", err
 	}
 	logger.Infof("writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
 	_, err = client.Logical().Write(fullPath, data)
-	if err != nil {
-		return err
-	}
-	logger.Infof("done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
-	return nil
+	return fullPath, err
 }
 
-func fetch(engineVersion uint8, engineName string, path string, key string, client *vault.Client) (string, error) {
-	logger.Infof("fetching secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
-	fullPath, err := getFullPath(engineVersion, engineName, path)
+func delete(engineVersion uint8, engineName, path string, client *vault.Client) (string, error) {
+	fullPath, err := getFullPathForDelete(engineVersion, engineName, path)
 	if err != nil {
 		return "", err
 	}
-	secret, err := client.Logical().Read(fullPath)
-	if err != nil {
-		return "", err
-	}
-	if secret == nil || secret.Data == nil {
-		err = fmt.Errorf("could not find secret. Url: [%s]; Path: [%s]", client.Address(), fullPath)
-		return "", err
-	}
-
-	v := secret.Data["data"]
-	if data, ok := v.(map[string]interface{}); ok {
-		secret.Data = data
-	}
-
-	for k, v := range secret.Data {
-		s, ok := v.(string)
-		if !ok {
-			continue
-		}
-		if k == key {
-			logger.Infof("done fetching secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
-			return s, nil
-		}
-	}
-	err = fmt.Errorf("could not find key [%s] in secret data", key)
-	return "", err
+	logger.Infof("deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
+	_, err = client.Logical().Delete(fullPath)
+	return path, err
 }
 
+// getFullPath returns the fullPath based on the engineVersion
 func getFullPath(engineVersion uint8, engineName string, path string) (string, error) {
 	switch engineVersion {
 	case 1:
@@ -138,6 +120,7 @@ func getFullPath(engineVersion uint8, engineName string, path string) (string, e
 	}
 }
 
+// getFullPathForDelete returns the fullPath based on the engineVersion for delete operation
 func getFullPathForDelete(engineVersion uint8, secretEngineName string, path string) (string, error) {
 	switch engineVersion {
 	case 1:
