@@ -286,6 +286,8 @@ github.com/harness/lite-engine v0.5.85 h1:lfwQcpl/gVutdjfxSaFZT9EBaNTkMfnEIAOpoO
 github.com/harness/lite-engine v0.5.85/go.mod h1:CwyhOnIA6XDt/U02eKUXwT0hIMK4Q9uKG9LM86j7qns=
 github.com/harness/lite-engine v0.5.86 h1:Dk7I+Xdd3YsnwMUiN6QCHKvAnlD1WklVndhxAFpE3uc=
 github.com/harness/lite-engine v0.5.86/go.mod h1:CwyhOnIA6XDt/U02eKUXwT0hIMK4Q9uKG9LM86j7qns=
+github.com/harness/lite-engine v0.5.88 h1:NmZkqC8hMvbCGrjItZSsU7RsLoReUX84pdrq+hJn/tk=
+github.com/harness/lite-engine v0.5.88/go.mod h1:apYUxCLi6V/t8yR++4i71e2IkG/MniUFKEXj9j2kMfo=
 github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2 h1:9QHzlirx9Lg77ohXYTOeC+3aDPG8ZeHTKI1iAN5+cIo=
 github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2/go.mod h1:/ow4f34mPgr5KPkzKxmBUB4cC09OjzStcLX6R8+43TI=
 github.com/hashicorp/consul/api v1.3.0/go.mod h1:MmDNSzIMUjNpY/mQ398R4bk2FnqQLoPndWW5VkKPlCE=
@@ -672,6 +674,8 @@ github.com/urfave/cli v1.20.0/go.mod h1:70zkFmudgCuE/ngEzBv17Jvp/497gISqfk5gWijb
 github.com/urfave/cli v1.22.1/go.mod h1:Gos4lmkARVdJ6EkW0WaNv/tZAAMe9V7XWyB60NtXRu0=
 github.com/wings-software/dlite v1.0.0-rc.11 h1:HnsXNfWkAq1MXi0O6IWLb4rZUL4su+KDkXeX+OKSdKg=
 github.com/wings-software/dlite v1.0.0-rc.11/go.mod h1:zZd6iaMk8Av1QSABGuDWdxBFO82MxE0r6PRoDsLDvCE=
+github.com/wings-software/dlite v1.0.0-rc.13 h1:p5cWaspKrSS9x9qheqf/yN9V39jnlMp82JR1p1tO0Ts=
+github.com/wings-software/dlite v1.0.0-rc.13/go.mod h1:zZd6iaMk8Av1QSABGuDWdxBFO82MxE0r6PRoDsLDvCE=
 github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 h1:nIPpBwaJSVYIxUFsDv3M8ofmx9yWTog9BfvIu0q41lo=
 github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8/go.mod h1:HUYIGzjTL3rfEspMxjDjgmT5uz5wzYJKVo23qUhYTos=
 github.com/xiang90/probing v0.0.0-20190116061207-43a291ad63a2/go.mod h1:UETIi67q53MR2AWcXfiuqkDkRtnGDLqkBTpCHuJHxtU=

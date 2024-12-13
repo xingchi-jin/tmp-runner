@@ -69,7 +69,7 @@ type Config struct {
 		}
 
 		BinaryURI struct {
-			LiteEngine    string `envconfig:"VM_BINARY_URI_LITE_ENGINE" default:"https://github.com/harness/lite-engine/releases/download/v0.5.86/"`
+			LiteEngine    string `envconfig:"VM_BINARY_URI_LITE_ENGINE" default:"https://github.com/harness/lite-engine/releases/download/v0.5.88/"`
 			Plugin        string `envconfig:"VM_BINARY_URI_PLUGIN" default:"https://github.com/drone/plugin/releases/download/v0.3.8-beta"`
 			AutoInjection string `envconfig:"VM_BINARY_AUTO_INJECTION" default:"https://app.harness.io/storage/harness-download/harness-ti/auto-injection/1.0.3"`
 			SplitTests    string `envconfig:"VM_BINARY_URI_SPLIT_TESTS" default:"https://app.harness.io/storage/harness-download/harness-ti/split_tests"`

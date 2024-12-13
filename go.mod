@@ -16,7 +16,7 @@ require (
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/harness/godotenv/v3 v3.0.1
-	github.com/harness/lite-engine v0.5.86
+	github.com/harness/lite-engine v0.5.88
 	github.com/hashicorp/vault/api v1.12.2
 	github.com/icrowley/fake v0.0.0-20221112152111-d7b7e2276db2
 	github.com/jmoiron/sqlx v1.4.0
@@ -141,7 +141,7 @@ require (
 	github.com/tklauser/go-sysconf v0.3.11 // indirect
 	github.com/tklauser/numcpus v0.6.0 // indirect
 	github.com/ulikunitz/xz v0.5.12 // indirect
-	github.com/wings-software/dlite v1.0.0-rc.11 // indirect
+	github.com/wings-software/dlite v1.0.0-rc.13 // indirect
 	github.com/xi2/xz v0.0.0-20171230120015-48954b6210f8 // indirect
 	github.com/yusufpapurcu/wmi v1.2.3 // indirect
 	go.opencensus.io v0.24.0 // indirect
