@@ -9,6 +9,7 @@ import (
 	"time"
 
 	gologger "github.com/drone/runner-go/logger"
+	"github.com/harness/runner/logger/customhooks"
 	"github.com/sirupsen/logrus"
 )
 
@@ -28,7 +29,11 @@ func ConfigureLogging(debug, trace bool) {
 	if trace {
 		logrus.SetLevel(logrus.TraceLevel)
 	}
-	AddHook(&CorrectCallerHook{})
+	// Adding hooks
+	AddHook(&customhooks.CorrectCallerHook{})
+	AddHook(&customhooks.ContextHook{})
+	AddHook(&customhooks.UTCHook{})
+
 	SetReportCaller(true)
 	SetFormatter(&logrus.JSONFormatter{
 		TimestampFormat: time.RFC3339,

@@ -43,14 +43,14 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	if c.envFile != "" {
 		loadEnvErr := godotenv.Load(c.envFile)
 		if loadEnvErr != nil {
-			logger.WithError(loadEnvErr).Errorln("cannot load env file")
+			logger.WithError(ctx, loadEnvErr).Errorln("cannot load env file")
 		}
 	}
 
 	// Read configs into memory
 	loadedConfig, err := delegate.FromEnviron()
 	if err != nil {
-		logger.WithError(err).Errorln("load runner config failed")
+		logger.WithError(ctx, err).Errorln("load runner config failed")
 	}
 
 	logger.ConfigureLogging(loadedConfig.Debug, loadedConfig.Trace)
@@ -70,7 +70,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	defer func() {
 		err := logger.CloseHooks()
 		if err != nil {
-			logger.WithError(err).Warnln("Error while stopping remote logger")
+			logger.WithError(ctx, err).Warnln("Error while stopping remote logger")
 		}
 	}()
 
@@ -81,7 +81,7 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 			loadedConfig.VM.Pool.BusyMaxAge, loadedConfig.VM.Pool.FreeMaxAge, loadedConfig.VM.Pool.PurgerTimeMinutes, false)
 		defer harness.Cleanup(false, system.poolManager, false, true)
 		if err != nil {
-			logger.WithError(err).Errorln("error while setting up pool")
+			logger.WithError(ctx, err).Errorln("error while setting up pool")
 			return fmt.Errorf("encountered an error while setting up pool: %w", err)
 		}
 	}
@@ -92,13 +92,13 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	go func() {
 		select {
 		case val := <-s:
-			logger.Infof("Received OS Signal to exit server: %s", val)
-			logRunnerResourceStats()
-			system.delegate.Shutdown()
+			logger.Infof(ctx, "Received OS Signal to exit server: %s", val)
+			logRunnerResourceStats(ctx)
+			system.delegate.Shutdown(ctx)
 			cancel()
 		case <-ctx.Done():
-			logger.Errorln("Received a done signal to exit server, this should not happen")
-			logRunnerResourceStats()
+			logger.Errorln(ctx, "Received a done signal to exit server, this should not happen")
+			logRunnerResourceStats(ctx)
 		}
 	}()
 	defer signal.Stop(s)
@@ -106,21 +106,23 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	// Start Metrics endpoint handler
 	system.metricsHandler.Handle()
 
+	logger.Infoln(ctx, "Runner configurations loaded")
+
 	runnerInfo, err := system.delegate.Register(ctx)
 	if err != nil {
-		logger.Errorf("Registering Runner with Harness manager failed. Error: %v", err)
+		logger.Errorf(ctx, "Registering Runner with Harness manager failed. Error: %v", err)
 		return err
 	}
 	loadedConfig.UpsertDelegateID(runnerInfo.ID)
-	logger.Infoln("Runner registered", runnerInfo)
+	logger.Infof(ctx, "Runner registered: %+v", *runnerInfo)
 
 	logger.UpdateContextInHooks(map[string]string{"runnerId": runnerInfo.ID})
 
 	defer func() {
-		logger.Infoln("Unregistering runner...")
+		logger.Infoln(ctx, "Unregistering runner...")
 		err = system.delegate.Unregister(context.Background())
 		if err != nil {
-			logger.Errorf("Error while unregistering runner: %v", err)
+			logger.Errorf(ctx, "Error while unregistering runner: %v", err)
 		}
 	}()
 
@@ -141,26 +143,26 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	g.Go(func() error {
 		if err := startHTTPServer(ctx, loadedConfig); err != nil {
 			if errors.Is(err, context.Canceled) || errors.Is(err, http.ErrServerClosed) {
-				logger.Infoln("Program gracefully terminated")
+				logger.Infoln(ctx, "Program gracefully terminated")
 				return nil
 			}
-			logger.Errorf("Program terminated with error: %s", err)
+			logger.Errorf(ctx, "Program terminated with error: %s", err)
 			return err
 		}
 		return nil
 	})
 
 	if err := g.Wait(); err != nil {
-		logger.WithError(err).Errorln("One or more runner processes failed")
+		logger.WithError(ctx, err).Errorln("One or more runner processes failed")
 		return err
 	}
 
-	logger.Infoln("All runner processes terminated")
+	logger.Infoln(ctx, "All runner processes terminated")
 	return err
 }
 
 func startHTTPServer(ctx context.Context, config *delegate.Config) error {
-	logger.Infoln("Starting HTTP server")
+	logger.Infoln(ctx, "Starting HTTP server")
 
 	serverInstance := Server{
 		Addr:     config.Server.Bind,

@@ -17,9 +17,9 @@ type StaticSecretHandler struct{}
 func (h *StaticSecretHandler) Handle(ctx context.Context, req *task.Request) task.Response {
 	var staticSecretSpec StaticSecretSpec
 	err := json.Unmarshal(req.Task.Data, &staticSecretSpec)
-	logger.Info("Processing static secrets", *req)
+	logger.Info(ctx, "Processing static secrets", *req)
 	if err != nil {
-		logger.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error(ctx, "Error occurred during unmarshalling. %w", err)
 	}
 	// TODO: support batch secrets
 	secretResponse := &common.Secret{}

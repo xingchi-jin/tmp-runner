@@ -30,10 +30,10 @@ func NewLocalDriver() *LocalDriver {
 	return &LocalDriver{client: client.NewClient("http://localhost:"), nextPort: 9000}
 }
 
-func (l *LocalDriver) StartDaemonSet(binpath string, ds *client.DaemonSet) (*client.DaemonSetServerInfo, error) {
+func (l *LocalDriver) StartDaemonSet(ctx context.Context, binpath string, ds *client.DaemonSet) (*client.DaemonSetServerInfo, error) {
 	port := l.getPort()
 
-	cmd, err := startProcess(ds.Config.Envs, binpath, port)
+	cmd, err := startProcess(ctx, ds.Config.Envs, binpath, port)
 	if err != nil {
 		return nil, err
 	}
@@ -93,7 +93,7 @@ func (l *LocalDriver) getPort() int {
 }
 
 // spawns daemon set process passing it the DAEMON_SERVER_PORT environment variable
-func startProcess(envs []string, binpath string, port int) (*exec.Cmd, error) {
+func startProcess(ctx context.Context, envs []string, binpath string, port int) (*exec.Cmd, error) {
 	cmd := exec.Command(binpath)
 
 	// set the environment variables
@@ -102,7 +102,7 @@ func startProcess(envs []string, binpath string, port int) (*exec.Cmd, error) {
 
 	// start the command
 	if err := cmd.Start(); err != nil {
-		logger.WithError(err).Error("error starting the command")
+		logger.WithError(ctx, err).Error("error starting the command")
 		return nil, err
 	}
 	return cmd, nil

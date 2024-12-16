@@ -12,9 +12,9 @@ import (
 	"github.com/drone/go-task/task"
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/runner/delegateshell/delegate"
+	"github.com/harness/runner/logger"
 	"github.com/harness/runner/tasks/local"
 	"github.com/harness/runner/tasks/local/utils"
-	"github.com/sirupsen/logrus"
 )
 
 var (
@@ -77,7 +77,7 @@ func (h *ExecHandler) Handle(ctx context.Context, req *task.Request) task.Respon
 	execRequest := new(ExecRequest)
 	err := json.Unmarshal(req.Task.Data, execRequest)
 	if err != nil {
-		logrus.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error(ctx, "Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	execRequest.Sanitize()

@@ -36,7 +36,7 @@ func NewTaskServiceClient(endpoint string, skipVerify bool, additionalCertsDir s
 
 func (c *TaskServiceClient) SendTask(ctx context.Context, data []byte) error {
 	if _, _, err := c.Do(ctx, "/api/tasks", "POST", map[string]string{"Content-Type": "application/x-kryo-v2"}, bytes.NewBuffer(data)); err != nil {
-		logger.Error("Sending request to task service failed with ", err)
+		logger.Error(ctx, "Sending request to task service failed with ", err)
 		return err
 	}
 	return nil

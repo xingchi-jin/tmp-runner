@@ -32,7 +32,7 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 	setupRequest := new(SetupRequest)
 	err := json.Unmarshal(req.Task.Data, setupRequest)
 	if err != nil {
-		logger.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error(ctx, "Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	logWriter := logstream.NewWriterWrapper(req.Logger)
@@ -45,10 +45,10 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 	resp, err := HandleSetup(ctx, setupRequest, delegateID, logWriter)
 	logWriter.Close()
 	if err != nil {
-		logger.Error("could not handle setup request: %w", err)
+		logger.Error(ctx, "could not handle setup request: %w", err)
 		return task.Error(err)
 	}
-	logger.Printf("setup response: %+v", resp)
+	logger.Printf(ctx, "setup response: %+v", resp)
 	return task.Respond(resp)
 }
 
@@ -76,8 +76,8 @@ type SetupResponse struct {
 
 // exampleSetupRequest(id) creates a Request object with the given id.
 // It sets the network as the same ID (stage runtime ID which is unique)
-func SampleSetupRequest(stageID string) SetupRequest {
-	logger.Printf("in setup request, id is: %s", stageID)
+func SampleSetupRequest(ctx context.Context, stageID string) SetupRequest {
+	logger.Printf(ctx, "in setup request, id is: %s", stageID)
 	return SetupRequest{
 		Network: spec.Network{
 			ID: utils.Sanitize(stageID),
@@ -98,7 +98,7 @@ func SampleSetupRequest(stageID string) SetupRequest {
 // TODO: Need to cleanup delegateID from here. Today, it's being used to route
 // the subsequent tasks to the same delegate.
 func HandleSetup(ctx context.Context, s *SetupRequest, delegateID string, logWriter io.Writer) (SetupResponse, error) {
-	logger.Printf("setup request: %+v\n", s)
+	logger.Printf(ctx, "setup request: %+v\n", s)
 	s.Sanitize()
 	s.Volumes = append(s.Volumes, getDockerSockVolume())
 	cfg := &spec.PipelineConfig{

@@ -12,7 +12,7 @@ import (
 
 type DaemonSetDriver interface {
 	// StartDaemonSet handles starting a daemon set server
-	StartDaemonSet(binpath string, ds *client.DaemonSet) (*client.DaemonSetServerInfo, error)
+	StartDaemonSet(ctx context.Context, binpath string, ds *client.DaemonSet) (*client.DaemonSetServerInfo, error)
 
 	// StopDaemonSet handles stopping a daemon set server
 	StopDaemonSet(ds *client.DaemonSet) error

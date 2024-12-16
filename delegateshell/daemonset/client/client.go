@@ -71,7 +71,7 @@ func (p *Client) doJson(ctx context.Context, path, method string, in, out interf
 	// to an io.ReadCloser.
 	if in != nil {
 		if err := json.NewEncoder(buf).Encode(in); err != nil {
-			logger.Errorf("could not encode input payload: %s", err)
+			logger.Errorf(ctx, "could not encode input payload: %s", err)
 		}
 	}
 	headers := make(map[string]string)

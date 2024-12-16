@@ -3,7 +3,6 @@ package local
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"runtime"
 
 	"github.com/drone/go-task/task"
@@ -21,7 +20,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	executeRequest := new(ExecRequest)
 	err := json.Unmarshal(req.Task.Data, executeRequest)
 	if err != nil {
-		runnerLogger.Error("Error occurred during unmarshalling. %w", err)
+		runnerLogger.Error(ctx, "Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	// Wrap the io.Writer to convert it into a logstream.Writer which is used by the lite-engine.
@@ -31,7 +30,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	// lite-engine's stepExecutor takes care of calling `logWriter.Close()`
 	resp, err := HandleExec(ctx, executeRequest, logWriter)
 	if err != nil {
-		runnerLogger.Error("could not handle exec request: %w", err)
+		runnerLogger.Error(ctx, "could not handle exec request: %w", err)
 		return task.Error(err)
 	}
 	// convert resp to bytes
@@ -39,7 +38,7 @@ func ExecHandler(ctx context.Context, req *task.Request) task.Response {
 	if err != nil {
 		return task.Error(err)
 	}
-	runnerLogger.Printf("exec response: %+v", resp)
+	runnerLogger.Printf(ctx, "exec response: %+v", resp)
 	return task.Respond(respBytes)
 }
 
@@ -127,7 +126,7 @@ func HandleExec(ctx context.Context, s *ExecRequest, writer logger.Writer) (api.
 		},
 	}
 	// TODO sanitize this to not print the script in logs, because it can contain secrets
-	fmt.Printf("exec request: %+v\n", s)
+	runnerLogger.Printf(ctx, "exec request: %+v\n", *s)
 	resp, err := stepExecutor.Run(ctx, &s.StartStepRequest, pipelineConfig, writer)
 	if err != nil {
 		return api.VMTaskExecutionResponse{}, err

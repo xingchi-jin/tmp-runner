@@ -78,10 +78,10 @@ func (p *KeepAlive) Register(ctx context.Context) (*DelegateInfo, error) {
 		return nil, errors.Wrap(err, "could not get host name")
 	}
 	host = "runner-" + strings.ReplaceAll(host, " ", "-")
-	ip := getOutboundIP()
+	ip := getOutboundIP(ctx)
 	id, err := p.register(ctx, ip, host, p.Capacity)
 	if err != nil {
-		logger.WithField("ip", ip).WithField("host", host).WithError(err).Error("could not register runner")
+		logger.WithField(ctx, "ip", ip).WithField("host", host).WithError(err).Error("could not register runner")
 		return nil, err
 	}
 	return &DelegateInfo{
@@ -101,7 +101,7 @@ func (p *KeepAlive) register(ctx context.Context, ip, host string, capacity dele
 		return "", errors.Wrap(err, "could not register the runner")
 	}
 	req.ID = resp.Resource.DelegateID
-	logger.WithField("id", req.ID).WithField("host", req.HostName).
+	logger.WithField(ctx, "id", req.ID).WithField("host", req.HostName).
 		WithField("ip", req.IP).Info("registered delegate successfully")
 	return resp.Resource.DelegateID, nil
 }
@@ -116,14 +116,14 @@ func (p *KeepAlive) Heartbeat(ctx context.Context, id, ip, host string) {
 			msgDelayTimer.Reset(hearbeatInterval)
 			select {
 			case <-ctx.Done():
-				logger.Infoln("context canceled, stopping heartbeat")
+				logger.Infoln(ctx, "context canceled, stopping heartbeat")
 				return
 			case <-msgDelayTimer.C:
 				req.LastHeartbeat = time.Now().UnixMilli()
 				heartbeatCtx, cancelFn := context.WithTimeout(ctx, heartbeatTimeout)
 				err := p.Client.Heartbeat(heartbeatCtx, req)
 				if err != nil && !errors.Is(err, context.Canceled) {
-					logger.WithError(err).Errorf("could not send heartbeat")
+					logger.WithError(ctx, err).Errorf("could not send heartbeat")
 					p.Metrics.IncrementHeartbeatFailureCount(req.AccountID, req.RunnerName)
 				}
 				cancelFn()
@@ -158,10 +158,10 @@ func (p *KeepAlive) getRegisterRequest(id, ip, host string, capacity *delegate.C
 }
 
 // Get preferred outbound ip of this machine. It returns a fake IP in case of errors.
-func getOutboundIP() string {
+func getOutboundIP(ctx context.Context) string {
 	conn, err := net.Dial("udp", "8.8.8.8:80")
 	if err != nil {
-		logger.WithError(err).Error("could not figure out an IP, using a randomly generated IP")
+		logger.WithError(ctx, err).Error("could not figure out an IP, using a randomly generated IP")
 		return "fake-" + fake.IPv4()
 	}
 	defer conn.Close()

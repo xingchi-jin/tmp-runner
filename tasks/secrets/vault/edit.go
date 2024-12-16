@@ -18,31 +18,31 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 	// decode the task input.
 	err := json.Unmarshal(req.Task.Data, in)
 	if err != nil {
-		logger.Errorf("failed to unmarshal task input, %s", err)
+		logger.Errorf(ctx, "failed to unmarshal task input, %s", err)
 		return task.Respond(NewErrorResponse(err, "Failed to decode task input", http.StatusBadRequest))
 	}
 
 	client, err := New(in.Config)
 	if err != nil {
-		logger.Errorf("failed to create vault client, %s", err)
+		logger.Errorf(ctx, "failed to create vault client, %s", err)
 		return task.Respond(NewErrorResponse(err, "Failed to create Vault Client", http.StatusInternalServerError))
 	}
 
 	switch action := in.Action; action {
 	case "UPSERT":
-		return handleUpsert(in, client)
+		return handleUpsert(ctx, in, client)
 	case "DELETE":
-		return handleDelete(in, client)
+		return handleDelete(ctx, in, client)
 	default:
-		logger.Error(fmt.Errorf("unsupported secret task action: %s", action))
+		logger.Error(ctx, fmt.Errorf("unsupported secret task action: %s", action))
 		return task.Respond(NewErrorResponse(fmt.Errorf("invalid action"), fmt.Sprintf("The specified action %s is not supported", action), http.StatusBadRequest))
 	}
 }
 
-func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	path, err := upsert(in.EngineVersion, in.EngineName, in.Path, in.Key, in.Value, client)
+func handleUpsert(ctx context.Context, in *VaultSecretTaskRequest, client *vault.Client) task.Response {
+	path, err := upsert(ctx, in.EngineVersion, in.EngineName, in.Path, in.Key, in.Value, client)
 	if err != nil {
-		logger.WithError(err).Errorf("failed upserting secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
+		logger.WithError(ctx, err).Errorf("failed upserting secret value in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 		return task.Respond(VaultSecretOperationResponse{
 			Name:    in.Key,
 			Message: "Failed upserting secret value in Vault",
@@ -53,7 +53,7 @@ func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 			OperationStatus: OperationStatusFailure,
 		})
 	}
-	logger.Infof("done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), path)
+	logger.Infof(ctx, "done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 	return task.Respond(VaultSecretOperationResponse{
 		Name:            in.Key,
 		Message:         "Secret upserted to vault",
@@ -61,10 +61,10 @@ func handleUpsert(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 	})
 }
 
-func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	path, err := delete(in.EngineVersion, in.EngineName, in.Path, client)
+func handleDelete(ctx context.Context, in *VaultSecretTaskRequest, client *vault.Client) task.Response {
+	path, err := delete(ctx, in.EngineVersion, in.EngineName, in.Path, client)
 	if err != nil {
-		logger.WithError(err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
+		logger.WithError(ctx, err).Errorf("failed deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 		return task.Respond(VaultSecretOperationResponse{
 			Name:    in.Key,
 			Message: "Failed deleting secret value in Vault",
@@ -75,7 +75,7 @@ func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 			OperationStatus: OperationStatusFailure,
 		})
 	}
-	logger.Infof("done deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
+	logger.Infof(ctx, "done deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 	return task.Respond(VaultSecretOperationResponse{
 		Name:            in.Key,
 		Message:         "Secret deleted from vault",
@@ -83,7 +83,7 @@ func handleDelete(in *VaultSecretTaskRequest, client *vault.Client) task.Respons
 	})
 }
 
-func upsert(engineVersion uint8, engineName string, path string, key string, value string, client *vault.Client) (string, error) {
+func upsert(ctx context.Context, engineVersion uint8, engineName string, path string, key string, value string, client *vault.Client) (string, error) {
 	data := map[string]any{
 		"data": map[string]string{
 			key: value,
@@ -93,17 +93,17 @@ func upsert(engineVersion uint8, engineName string, path string, key string, val
 	if err != nil {
 		return "", err
 	}
-	logger.Infof("writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
+	logger.Infof(ctx, "writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
 	_, err = client.Logical().Write(fullPath, data)
 	return fullPath, err
 }
 
-func delete(engineVersion uint8, engineName, path string, client *vault.Client) (string, error) {
+func delete(ctx context.Context, engineVersion uint8, engineName, path string, client *vault.Client) (string, error) {
 	fullPath, err := getFullPathForDelete(engineVersion, engineName, path)
 	if err != nil {
 		return "", err
 	}
-	logger.Infof("deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
+	logger.Infof(ctx, "deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
 	_, err = client.Logical().Delete(fullPath)
 	return path, err
 }

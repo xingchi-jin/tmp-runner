@@ -48,24 +48,24 @@ func (tokenManager *TokenManager) Token() (*oauth2.Token, error) {
 			return token, nil
 		}
 		// If typecast fails, log an error and proceed to refresh
-		logger.Errorln("Invalid token type in cache")
+		logger.Errorln(context.TODO(), "Invalid token type in cache")
 	}
-	logger.Infoln("Refreshing logging token")
+	logger.Infoln(context.TODO(), "Refreshing logging token")
 
 	var err error
 	for i := 0; i < 3; i++ {
 		token, err = tokenManager.setToken(context.Background())
 		if err != nil {
-			logger.WithError(err).Warnf("Failed to refresh token, attempt %d of 3", i+1)
+			logger.WithError(context.TODO(), err).Warnf("Failed to refresh token, attempt %d of 3", i+1)
 		} else if refreshedToken, ok := token.(*oauth2.Token); ok {
 			return refreshedToken, nil
 		} else {
-			logger.Warnf("Invalid token type in cache after refresh, attempt %d of 3", i+1)
+			logger.Warnf(context.TODO(), "Invalid token type in cache after refresh, attempt %d of 3", i+1)
 		}
 		time.Sleep(2 * time.Second)
 	}
 
-	logger.Errorln("Cannot refresh logging token after 3 attempts:", err)
+	logger.Errorln(context.TODO(), "Cannot refresh logging token after 3 attempts:", err)
 	return nil, err
 }
 
@@ -82,7 +82,7 @@ func (tokenManager *TokenManager) setToken(ctx context.Context) (*oauth2.Token, 
 	tokenManager.projectID = logCredentials.ProjectId
 	durationUntilExpiration := time.Duration((logCredentials.ExpirationTimeMillis-time.Now().UnixMilli())/2) * time.Millisecond
 	tokenManager.cache.Set(tokenKey, token, durationUntilExpiration)
-	logger.Printf("Logging token set for: %v", durationUntilExpiration)
+	logger.Printf(ctx, "Logging token set for: %v", durationUntilExpiration)
 	return token, nil
 }
 

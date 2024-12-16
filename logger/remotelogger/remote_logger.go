@@ -13,14 +13,14 @@ import (
 
 func Start(ctx context.Context, accountId, managerEndpoint, runnerToken, serviceName, entityName string, remoteLoggingEnabled, insecure bool) {
 	if !remoteLoggingEnabled {
-		logger.Info("Not pushing logs to remote. To enable remote logging, set environment variable ENABLE_REMOTE_LOGGING=true")
+		logger.Info(ctx, "Not pushing logs to remote. To enable remote logging, set environment variable ENABLE_REMOTE_LOGGING=true")
 		return
 	}
 	managerClient := client.NewManagerClient(managerEndpoint, accountId, runnerToken, insecure, "")
 
 	err := gcplogger.Initialize(ctx, managerClient)
 	if err != nil {
-		logger.WithError(err).Error("failed to start gcp logger. Disabling remote logging")
+		logger.WithError(ctx, err).Error("failed to start gcp logger. Disabling remote logging")
 		return
 	}
 

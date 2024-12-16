@@ -6,6 +6,7 @@
 package delegate
 
 import (
+	"context"
 	"time"
 
 	"github.com/harness/runner/logger"
@@ -44,12 +45,12 @@ func NewTokenCache(id, secret string) *TokenCache {
 // Get returns the value of the account token.
 // If the token is cached, it returns from there. Otherwise
 // it creates a new token with a new expiration time.
-func (t *TokenCache) Get() (string, error) {
+func (t *TokenCache) Get(ctx context.Context) (string, error) {
 	tv, found := t.c.Get(t.id)
 	if found {
 		return tv.(string), nil
 	}
-	logger.WithField("id", t.id).Infoln("refreshing token")
+	logger.WithField(ctx, "id", t.id).Infoln("refreshing token")
 	token, err := Token(audience, issuer, t.id, t.secret, t.expiry)
 	if err != nil {
 		return "", err

@@ -85,43 +85,74 @@ func UpdateContextInHooks(context map[string]string) {
 	for _, hook := range contextUpdatableHooks {
 		hook.UpdateContext(context)
 	}
-	return
 }
 
 // Log Methods
+// Context object is made mandatory to allow the logging framework
+// to use the fields provided in context
+// This allows easier implementation of passing log fields throughout
+func WithError(ctx context.Context, err error) *logrus.Entry {
+	return getLogger().WithContext(ctx).WithError(err)
+}
+func WithContext(ctx context.Context) *logrus.Entry {
+	return getLogger().WithContext(ctx).WithContext(ctx)
+}
+func WithField(ctx context.Context, key string, value interface{}) *logrus.Entry {
+	return getLogger().WithContext(ctx).WithField(key, value)
+}
+func WithFields(ctx context.Context, fields map[string]interface{}) *logrus.Entry {
+	return getLogger().WithContext(ctx).WithFields(fields)
+}
+func WithTime(ctx context.Context, t time.Time) *logrus.Entry {
+	return getLogger().WithContext(ctx).WithTime(t)
+}
 
-func WithError(err error) *logrus.Entry                      { return getLogger().WithError(err) }
-func WithContext(ctx context.Context) *logrus.Entry          { return getLogger().WithContext(ctx) }
-func WithField(key string, value interface{}) *logrus.Entry  { return getLogger().WithField(key, value) }
-func WithFields(fields map[string]interface{}) *logrus.Entry { return getLogger().WithFields(fields) }
-func WithTime(t time.Time) *logrus.Entry                     { return getLogger().WithTime(t) }
+func Trace(ctx context.Context, args ...interface{})   { getLogger().WithContext(ctx).Trace(args...) }
+func Debug(ctx context.Context, args ...interface{})   { getLogger().WithContext(ctx).Debug(args...) }
+func Print(ctx context.Context, args ...interface{})   { getLogger().WithContext(ctx).Print(args...) }
+func Info(ctx context.Context, args ...interface{})    { getLogger().WithContext(ctx).Info(args...) }
+func Warn(ctx context.Context, args ...interface{})    { getLogger().WithContext(ctx).Warn(args...) }
+func Warning(ctx context.Context, args ...interface{}) { getLogger().WithContext(ctx).Warning(args...) }
+func Error(ctx context.Context, args ...interface{})   { getLogger().WithContext(ctx).Error(args...) }
+func Panic(ctx context.Context, args ...interface{})   { getLogger().WithContext(ctx).Panic(args...) }
+func Fatal(ctx context.Context, args ...interface{})   { getLogger().WithContext(ctx).Fatal(args...) }
 
-func Trace(args ...interface{})   { getLogger().Trace(args...) }
-func Debug(args ...interface{})   { getLogger().Debug(args...) }
-func Print(args ...interface{})   { getLogger().Print(args...) }
-func Info(args ...interface{})    { getLogger().Info(args...) }
-func Warn(args ...interface{})    { getLogger().Warn(args...) }
-func Warning(args ...interface{}) { getLogger().Warning(args...) }
-func Error(args ...interface{})   { getLogger().Error(args...) }
-func Panic(args ...interface{})   { getLogger().Panic(args...) }
-func Fatal(args ...interface{})   { getLogger().Fatal(args...) }
+func Tracef(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Tracef(format, args...)
+}
+func Debugf(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Debugf(format, args...)
+}
+func Printf(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Printf(format, args...)
+}
+func Infof(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Infof(format, args...)
+}
+func Warnf(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Warnf(format, args...)
+}
+func Warningf(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Warningf(format, args...)
+}
+func Errorf(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Errorf(format, args...)
+}
+func Panicf(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Panicf(format, args...)
+}
+func Fatalf(ctx context.Context, format string, args ...interface{}) {
+	getLogger().WithContext(ctx).Fatalf(format, args...)
+}
 
-func Tracef(format string, args ...interface{})   { getLogger().Tracef(format, args...) }
-func Debugf(format string, args ...interface{})   { getLogger().Debugf(format, args...) }
-func Printf(format string, args ...interface{})   { getLogger().Printf(format, args...) }
-func Infof(format string, args ...interface{})    { getLogger().Infof(format, args...) }
-func Warnf(format string, args ...interface{})    { getLogger().Warnf(format, args...) }
-func Warningf(format string, args ...interface{}) { getLogger().Warningf(format, args...) }
-func Errorf(format string, args ...interface{})   { getLogger().Errorf(format, args...) }
-func Panicf(format string, args ...interface{})   { getLogger().Panicf(format, args...) }
-func Fatalf(format string, args ...interface{})   { getLogger().Fatalf(format, args...) }
-
-func Traceln(args ...interface{})   { getLogger().Traceln(args...) }
-func Debugln(args ...interface{})   { getLogger().Debugln(args...) }
-func Println(args ...interface{})   { getLogger().Println(args...) }
-func Infoln(args ...interface{})    { getLogger().Infoln(args...) }
-func Warnln(args ...interface{})    { getLogger().Warnln(args...) }
-func Warningln(args ...interface{}) { getLogger().Warningln(args...) }
-func Errorln(args ...interface{})   { getLogger().Errorln(args...) }
-func Panicln(args ...interface{})   { getLogger().Panicln(args...) }
-func Fatalln(args ...interface{})   { getLogger().Fatalln(args...) }
+func Traceln(ctx context.Context, args ...interface{}) { getLogger().WithContext(ctx).Traceln(args...) }
+func Debugln(ctx context.Context, args ...interface{}) { getLogger().WithContext(ctx).Debugln(args...) }
+func Println(ctx context.Context, args ...interface{}) { getLogger().WithContext(ctx).Println(args...) }
+func Infoln(ctx context.Context, args ...interface{})  { getLogger().WithContext(ctx).Infoln(args...) }
+func Warnln(ctx context.Context, args ...interface{})  { getLogger().WithContext(ctx).Warnln(args...) }
+func Warningln(ctx context.Context, args ...interface{}) {
+	getLogger().WithContext(ctx).Warningln(args...)
+}
+func Errorln(ctx context.Context, args ...interface{}) { getLogger().WithContext(ctx).Errorln(args...) }
+func Panicln(ctx context.Context, args ...interface{}) { getLogger().WithContext(ctx).Panicln(args...) }
+func Fatalln(ctx context.Context, args ...interface{}) { getLogger().WithContext(ctx).Fatalln(args...) }

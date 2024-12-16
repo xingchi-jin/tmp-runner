@@ -111,7 +111,7 @@ func (p *ManagerClient) GetExecutionPayload(ctx context.Context, delegateID, del
 	payload := &RunnerAcquiredTasks{}
 	_, err := p.doJson(ctx, path, "GET", nil, payload)
 	if err != nil {
-		logger.WithError(err).Error("Error making http call")
+		logger.WithError(ctx, err).Error("Error making http call")
 	}
 	return payload, err
 }
@@ -146,7 +146,7 @@ func (p *ManagerClient) retry(ctx context.Context, path, method string, in, out 
 		res, err := p.doJson(ctx, path, method, in, out)
 		// do not retry on Canceled or DeadlineExceeded
 		if ctxErr := ctx.Err(); ctxErr != nil {
-			logger.Errorf("http: context canceled")
+			logger.Errorf(ctx, "http: context canceled")
 			return res, ctxErr
 		}
 
@@ -158,18 +158,18 @@ func (p *ManagerClient) retry(ctx context.Context, path, method string, in, out 
 			// 500's are typically not permanent errors and may
 			// relate to outages on the server side.
 			if (ignoreStatusCode && err != nil) || res.StatusCode > 501 {
-				logger.Errorf("url: %s server error: re-connect and re-try: %s", path, err)
+				logger.Errorf(ctx, "url: %s server error: re-connect and re-try: %s", path, err)
 				if duration == backoff.Stop {
-					logger.Errorf("max retry limit reached, task status won't be updated")
+					logger.Errorf(ctx, "max retry limit reached, task status won't be updated")
 					return nil, err
 				}
 				time.Sleep(duration)
 				continue
 			}
 		} else if err != nil {
-			logger.Errorf("http: request error: %s", err)
+			logger.Errorf(ctx, "http: request error: %s", err)
 			if duration == backoff.Stop {
-				logger.Errorf("max retry limit reached, task status won't be updated")
+				logger.Errorf(ctx, "max retry limit reached, task status won't be updated")
 				return nil, err
 			}
 			time.Sleep(duration)
@@ -185,7 +185,7 @@ func (p *ManagerClient) doJson(ctx context.Context, path, method string, in, out
 	// to an io.ReadCloser.
 	if in != nil {
 		if err := json.NewEncoder(buf).Encode(in); err != nil {
-			logger.Errorf("could not encode input payload: %s", err)
+			logger.Errorf(ctx, "could not encode input payload: %s", err)
 		}
 	}
 	// the request should include the secret shared between
@@ -195,9 +195,9 @@ func (p *ManagerClient) doJson(ctx context.Context, path, method string, in, out
 	if p.Token != "" {
 		token = p.Token
 	} else {
-		token, err = p.TokenCache.Get()
+		token, err = p.TokenCache.Get(ctx)
 		if err != nil {
-			logger.Errorf("could not generate account token: %s", err)
+			logger.Errorf(ctx, "could not generate account token: %s", err)
 			return nil, err
 		}
 	}
@@ -224,7 +224,7 @@ func (p *ManagerClient) GetLoggingToken(ctx context.Context) (*AccessTokenBean, 
 	credentials := &AccessTokenBeanResource{}
 	_, err := p.doJson(ctx, path, "GET", nil, credentials)
 	if err != nil {
-		logger.WithError(err).Error("Error getting stack driver logging token")
+		logger.WithError(ctx, err).Error("Error getting stack driver logging token")
 	}
 	return credentials.AccessTokenBean, err
 }

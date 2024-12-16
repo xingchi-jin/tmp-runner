@@ -3,6 +3,7 @@ package vm
 import (
 	"context"
 	"encoding/json"
+
 	"github.com/drone-runners/drone-runner-aws/app/drivers"
 	"github.com/drone-runners/drone-runner-aws/command/harness"
 	"github.com/drone-runners/drone-runner-aws/metric"
@@ -12,8 +13,8 @@ import (
 	"github.com/harness/lite-engine/api"
 	"github.com/harness/lite-engine/engine/spec"
 	"github.com/harness/runner/delegateshell/delegate"
+	"github.com/harness/runner/logger"
 	"github.com/harness/runner/tasks/local/utils"
-	"github.com/sirupsen/logrus"
 )
 
 type SetupRequest struct {
@@ -75,7 +76,7 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 	setupRequest := new(SetupRequest)
 	err := json.Unmarshal(req.Task.Data, setupRequest)
 	if err != nil {
-		logrus.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error(ctx, "Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	setupRequest.Sanitize()

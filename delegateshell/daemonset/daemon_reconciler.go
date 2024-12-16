@@ -51,7 +51,7 @@ func NewDaemonSetReconciler(
 }
 
 // Start will start the daemon set reconciling job
-func (d *DaemonSetReconciler) Start(id string, interval time.Duration) error {
+func (d *DaemonSetReconciler) Start(ctx context.Context, id string, interval time.Duration) error {
 	// Task event poller
 	go func() {
 		timer := time.NewTimer(interval)
@@ -61,25 +61,25 @@ func (d *DaemonSetReconciler) Start(id string, interval time.Duration) error {
 			select {
 			case <-d.ctx.Done():
 				close(d.doneChannel)
-				logger.Info("stopped daemon set reconciliation job")
+				logger.Info(ctx, "Stopped daemon set reconciliation job")
 				return
 			case <-timer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(d.ctx, reconcileTimeout)
 				err := d.reconcile(taskEventsCtx, id)
 				if err != nil {
-					logger.WithError(err).Errorf("daemon set reconciliation failed")
+					logger.WithError(ctx, err).Errorf("daemon set reconciliation failed")
 				}
 				cancelFn()
 			}
 		}
 	}()
-	logger.Infof("initialized reconcile flow for daemon sets!")
+	logger.Infof(ctx, "Initialized reconcile flow for daemon sets!")
 	return nil
 }
 
 // Stop will stop the daemon set reconciling job
-func (d *DaemonSetReconciler) Stop() {
-	logger.Info("cancelling daemon set reconciliation job")
+func (d *DaemonSetReconciler) Stop(ctx context.Context) {
+	logger.Info(ctx, "Cancelling daemon set reconciliation job")
 	d.cancelCtx()
 	<-d.doneChannel // block until last reconciliation returns
 }
@@ -128,7 +128,7 @@ func (d *DaemonSetReconciler) syncWithHarnessServer(ctx context.Context, runnerI
 	dsTypesFromServer := getAllDaemonSetTypes(resp)
 	dsTypesToRemove, _ := compareSets(dsTypesFromServer, dsTypesFromRunner)
 	for _, dsType := range dsTypesToRemove {
-		d.daemonSetManager.RemoveDaemonSet(dsType)
+		d.daemonSetManager.RemoveDaemonSet(ctx, dsType)
 	}
 
 	// ensure all daemon sets reported by server are running
@@ -140,7 +140,7 @@ func (d *DaemonSetReconciler) syncWithHarnessServer(ctx context.Context, runnerI
 		dsType := e.Type
 		tasksFromRunner, err := d.daemonSetManager.UpsertDaemonSet(ctx, dsId, dsType, &e.Config)
 		if err != nil {
-			logger.WithError(err).Errorf("failed sync daemon set with server: id [%s]; type [%s]", dsId, dsType)
+			logger.WithError(ctx, err).Errorf("failed sync daemon set with server: id [%s]; type [%s]", dsId, dsType)
 			continue
 		}
 		taskIdsToRemove, taskIdsToAssign := compareTasks(e, tasksFromRunner)
@@ -158,7 +158,7 @@ func (d *DaemonSetReconciler) syncWithHarnessServer(ctx context.Context, runnerI
 func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, runnerId string, dsId string, dsType string, taskIds *[]string) {
 	resp, err := d.managerClient.AcquireDaemonTasks(ctx, runnerId, &client.DaemonTaskAcquireRequest{TaskIds: *taskIds})
 	if err != nil {
-		logger.WithError(err).Errorf("failed to acquire daemon task params during reconcile: id [%s]; type [%s]", dsId, dsType)
+		logger.WithError(ctx, err).Errorf("failed to acquire daemon task params during reconcile: id [%s]; type [%s]", dsId, dsType)
 	}
 
 	var daemonTasks []dsclient.DaemonTask
@@ -166,13 +166,14 @@ func (d *DaemonSetReconciler) acquireAndAssignDaemonTasks(ctx context.Context, r
 		taskAssignRequest := new(client.DaemonTaskAssignRequest)
 		err := json.Unmarshal(req.Task.Data, taskAssignRequest)
 		if err != nil {
-			logger.WithError(err).Errorf("failed parsing data for request [%s], skipping this request", req.ID)
+			logger.WithError(ctx, err).Errorf("failed parsing data for request [%s], skipping this request", req.ID)
 			continue
 		}
-		logger.Infof("resolving secrets for daemon task [%s]", taskAssignRequest.DaemonTaskId)
+		ctx = logger.AddLogLabelsToContext(ctx, map[string]string{"task_id": taskAssignRequest.DaemonTaskId})
+		logger.Infof(ctx, "resolving secrets for daemon task [%s]", taskAssignRequest.DaemonTaskId)
 		secrets, err := d.router.ResolveSecrets(ctx, req.Tasks)
 		if err != nil {
-			logger.WithError(err).Errorf("failed to resolve secrets for task [%s], skipping this task", taskAssignRequest.DaemonTaskId)
+			logger.WithError(ctx, err).Errorf("failed to resolve secrets for task [%s], skipping this task", taskAssignRequest.DaemonTaskId)
 			continue
 		}
 		daemonTasks = append(daemonTasks, dsclient.DaemonTask{ID: taskAssignRequest.DaemonTaskId, Params: taskAssignRequest.Params, Secrets: secrets})

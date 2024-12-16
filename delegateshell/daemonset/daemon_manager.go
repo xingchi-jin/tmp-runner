@@ -82,7 +82,7 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 		fmt.Sprintf("DIAL_HOME_TOKEN=%s", d.runnerToken),
 	)
 
-	d.setRemoteLoggingEnv(dsConfig)
+	d.setRemoteLoggingEnv(ctx, dsConfig)
 	// check if daemon set already exists in daemon set map
 	ds, ok := d.Get(dsType)
 	// if daemon set is running healthy with same config as requested,
@@ -94,7 +94,7 @@ func (d *DaemonSetManager) UpsertDaemonSet(ctx context.Context, dsId string, dsT
 			ds.DaemonSetId = dsId
 			return tasks, nil
 		}
-		dsLogger(ds).Error("failed to list tasks, respawning this daemon set")
+		dsLogger(ctx, ds).Error("failed to list tasks, respawning this daemon set")
 	}
 
 	ds = &dsclient.DaemonSet{DaemonSetId: dsId, Type: dsType, Config: dsConfig}
@@ -120,7 +120,7 @@ func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 	ds, ok := d.Get(dsType)
 	if !ok {
 		// daemon set does not exist
-		logger.Errorf("daemon set of type [%s] does not exist, skipping sync for it", dsType)
+		logger.Errorf(ctx, "daemon set of type [%s] does not exist, skipping sync for it", dsType)
 		return
 	}
 	// check if daemon set is running healthy
@@ -134,7 +134,7 @@ func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 		// daemon set is healthy and running
 		return
 	}
-	dsLogger(ds).Error("failed to list tasks, respawning this daemon set")
+	dsLogger(ctx, ds).Error("failed to list tasks, respawning this daemon set")
 
 	_, err = d.startDaemonSet(ctx, ds)
 	if err == nil {
@@ -146,7 +146,7 @@ func (d *DaemonSetManager) SyncDaemonSet(ctx context.Context, dsType string) {
 }
 
 // RemoveDaemonSet handles removing a daemon set
-func (d *DaemonSetManager) RemoveDaemonSet(dsType string) {
+func (d *DaemonSetManager) RemoveDaemonSet(ctx context.Context, dsType string) {
 	d.lock.Lock(dsType)
 	defer d.lock.Unlock(dsType)
 
@@ -154,14 +154,14 @@ func (d *DaemonSetManager) RemoveDaemonSet(dsType string) {
 	if ok {
 		err := d.driver.StopDaemonSet(ds)
 		if err != nil {
-			dsLogger(ds).WithError(err).Warn("failed to kill daemon set process")
+			dsLogger(ctx, ds).WithError(err).Warn("failed to kill daemon set process")
 		}
 		d.daemonsets.Delete(dsType)
 	}
 }
 
 // RemoveAllDaemonSets handles removing all daemon sets
-func (d *DaemonSetManager) RemoveAllDaemonSets() {
+func (d *DaemonSetManager) RemoveAllDaemonSets(ctx context.Context) {
 	d.lock.LockAll()
 	defer d.lock.UnlockAll()
 
@@ -170,7 +170,7 @@ func (d *DaemonSetManager) RemoveAllDaemonSets() {
 		if ok {
 			err := d.driver.StopDaemonSet(ds)
 			if err != nil {
-				dsLogger(ds).WithError(err).Warn("failed to kill daemon set process")
+				dsLogger(ctx, ds).WithError(err).Warn("failed to kill daemon set process")
 			}
 			d.daemonsets.Delete(dsType)
 		}
@@ -207,13 +207,13 @@ func (d *DaemonSetManager) AssignDaemonTasks(ctx context.Context, dsType string,
 	}
 
 	// assign the tasks
-	dsLogger(ds).Infof("assigning tasks %s to daemon set", taskIds)
+	dsLogger(ctx, ds).Infof("assigning tasks %s to daemon set", taskIds)
 	_, err := d.driver.AssignDaemonTasks(ctx, ds, tasks)
 	if err != nil {
-		dsLogger(ds).WithError(err).Errorf("failed to assign tasks %s to daemon set", taskIds)
+		dsLogger(ctx, ds).WithError(err).Errorf("failed to assign tasks %s to daemon set", taskIds)
 		return err
 	}
-	dsLogger(ds).Infof("assigned tasks %s to daemon set", taskIds)
+	dsLogger(ctx, ds).Infof("assigned tasks %s to daemon set", taskIds)
 
 	return nil
 }
@@ -225,13 +225,13 @@ func (d *DaemonSetManager) RemoveDaemonTasks(ctx context.Context, dsType string,
 		return fmt.Errorf("daemon set of type [%s] does not exist", dsType)
 	}
 
-	dsLogger(ds).Infof("removing tasks %s from daemon set", *taskIds)
+	dsLogger(ctx, ds).Infof("removing tasks %s from daemon set", *taskIds)
 	_, err := d.driver.RemoveDaemonTasks(ctx, ds, taskIds)
 	if err != nil {
-		dsLogger(ds).WithError(err).Errorf("failed to remove tasks %s from daemon set", *taskIds)
+		dsLogger(ctx, ds).WithError(err).Errorf("failed to remove tasks %s from daemon set", *taskIds)
 		return err
 	}
-	dsLogger(ds).Infof("removed tasks %s from daemon set", *taskIds)
+	dsLogger(ctx, ds).Infof("removed tasks %s from daemon set", *taskIds)
 
 	return nil
 }
@@ -253,12 +253,12 @@ func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.Daem
 	if ok {
 		err := d.driver.StopDaemonSet(oldDs)
 		if err != nil {
-			dsLogger(oldDs).WithError(err).Warn("failed to kill daemon set process")
+			dsLogger(ctx, oldDs).WithError(err).Warn("failed to kill daemon set process")
 		}
 		d.daemonsets.Delete(oldDs.Type)
 	}
 
-	serverInfo, err := d.driver.StartDaemonSet(binpath, ds)
+	serverInfo, err := d.driver.StartDaemonSet(ctx, binpath, ds)
 	if err != nil {
 		return tasks, err
 	}
@@ -269,25 +269,25 @@ func (d *DaemonSetManager) startDaemonSet(ctx context.Context, ds *dsclient.Daem
 		return tasks, err
 	}
 
-	dsLogger(ds).Info("started daemon set process")
+	dsLogger(ctx, ds).Info("started daemon set process")
 	return tasks, nil
 }
 
-func (d *DaemonSetManager) setRemoteLoggingEnv(dsConfig *dsclient.DaemonSetOperationalConfig) {
+func (d *DaemonSetManager) setRemoteLoggingEnv(ctx context.Context, dsConfig *dsclient.DaemonSetOperationalConfig) {
 	dsConfig.Envs = append(dsConfig.Envs, fmt.Sprintf("ENABLE_REMOTE_LOGGING=%t", d.enableRemoteLogging))
 
 	// this is used to initialize the manager client in daemon set to receive the refreshed logging token
 	if d.enableRemoteLogging {
 		if d.accountId == "" {
-			logger.Warnln("AccountID is not set. Cannot publish logs to remote")
+			logger.Warnln(ctx, "AccountID is not set. Cannot publish logs to remote")
 			return
 		}
 		if d.managerUrl == "" {
-			logger.Println("ManagerURL is not set. Cannot publish logs to remote")
+			logger.Println(ctx, "ManagerURL is not set. Cannot publish logs to remote")
 			return
 		}
 		if d.runnerToken == "" {
-			logger.Println("Runner token is not set. Cannot publish logs to remote")
+			logger.Println(ctx, "Runner token is not set. Cannot publish logs to remote")
 			return
 		}
 
@@ -306,7 +306,7 @@ func (d *DaemonSetManager) download(ctx context.Context, ds *dsclient.DaemonSet)
 	// set daemon set's version in ExecutableConfig
 	path, err := d.downloader.DownloadExecutable(ctx, ds.Type, ds.Config.ExecutableConfig)
 	if err != nil {
-		logger.WithError(err).Error("failed to download task executable file")
+		logger.WithError(ctx, err).Error("failed to download task executable file")
 		return "", err
 	}
 	return path, nil
@@ -366,8 +366,8 @@ func isConfigIdentical(config1 *dsclient.DaemonSetOperationalConfig, config2 *ds
 }
 
 // returns a logrus *Entry with daemon set's data as fields
-func dsLogger(ds *dsclient.DaemonSet) *logrus.Entry {
-	logger := logger.WithField("id", ds.DaemonSetId).
+func dsLogger(ctx context.Context, ds *dsclient.DaemonSet) *logrus.Entry {
+	logger := logger.WithField(ctx, "id", ds.DaemonSetId).
 		WithField("type", ds.Type)
 	if ds.ServerInfo != nil {
 		logger = logger.WithField("port", ds.ServerInfo.Port).

@@ -22,6 +22,6 @@ func Initialize(ctx context.Context, managerClient *client.ManagerClient) error 
 	}
 
 	logger.AddHook(hook)
-	logger.Infoln("GCP logging enabled")
+	logger.Infoln(ctx, "GCP logging enabled")
 	return nil
 }

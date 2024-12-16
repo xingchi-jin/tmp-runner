@@ -10,7 +10,7 @@ import (
 	"github.com/drone-runners/drone-runner-aws/metric"
 	"github.com/drone-runners/drone-runner-aws/store"
 	"github.com/drone/go-task/task"
-	"github.com/sirupsen/logrus"
+	"github.com/harness/runner/logger"
 )
 
 type CleanupType string
@@ -52,7 +52,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, req *task.Request) task.Res
 	cleanupRequest := new(CleanupRequest)
 	err := json.Unmarshal(req.Task.Data, cleanupRequest)
 	if err != nil {
-		logrus.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error(ctx, "Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	var cleanupType storage.CleanupType
@@ -73,7 +73,7 @@ func (h *CleanupHandler) Handle(ctx context.Context, req *task.Request) task.Res
 
 	err = harness.HandleDestroy(ctx, cleanupReq, h.stageOwnerStore, false, 0, h.poolManager, h.metrics)
 	if err != nil {
-		logrus.Error("could not handle cleanup request: %w", err)
+		logger.Error(ctx, "could not handle cleanup request: %w", err)
 		return task.Error(err)
 	}
 	return task.Respond(nil)

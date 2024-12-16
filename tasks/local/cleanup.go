@@ -17,12 +17,12 @@ func DestroyHandler(ctx context.Context, req *task.Request) task.Response {
 	var destroyRequest DestroyRequest
 	err := json.Unmarshal(req.Task.Data, &destroyRequest)
 	if err != nil {
-		logger.Error("Error occurred during unmarshalling. %w", err)
+		logger.Error(ctx, "Error occurred during unmarshalling. %w", err)
 		return task.Error(err)
 	}
 	resp, err := HandleDestroy(ctx, destroyRequest)
 	if err != nil {
-		logger.Error("could not handle destroy request: %w", err)
+		logger.Error(ctx, "could not handle destroy request: %w", err)
 		panic(err)
 	}
 	respBytes, err := json.Marshal(resp)

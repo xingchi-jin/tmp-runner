@@ -4,6 +4,7 @@ import (
 	"context"
 
 	"github.com/harness/runner/logger"
+	constant "github.com/harness/runner/logger/customhooks"
 	"github.com/sirupsen/logrus"
 
 	"cloud.google.com/go/logging"
@@ -36,7 +37,7 @@ func newGcpLoggingHook(ctx context.Context, logID string, projectId string, toke
 }
 
 func (hook *gcpLoggingHook) onError(err error) {
-	logger.WithError(err).Error("Error detected from stack driver")
+	logger.WithError(context.TODO(), err).Error("Error detected from stack driver")
 }
 
 func (hook *gcpLoggingHook) Close() error {
@@ -48,14 +49,20 @@ func (hook *gcpLoggingHook) Levels() []logrus.Level {
 }
 
 func (hook *gcpLoggingHook) Fire(entry *logrus.Entry) error {
+	// Remove inline log labels from remote logs
+	var payloadHarness map[string]string
+	if entry.Context != nil {
+		if contextlabels, ok := entry.Context.Value(constant.LogLabelsKey).(map[string]interface{}); ok {
+			if remoteLabels, ok := contextlabels[string(constant.RemoteLabelsKey)].(map[string]string); ok {
+				payloadHarness = remoteLabels
+			}
+		}
+	}
 
 	payload := map[string]interface{}{
 		"message": entry.Message,
-		"fields":  entry.Data,
-
-		// Adds extra fields specifically for improved filtering in Stack driver logs.
-		// This applies only to remote logging, keeping other log outputs uncluttered.
-		"labels": hook.context,
+		"harness": payloadHarness,
+		// "extraFields": entry.Data,
 	}
 
 	if entry.HasCaller() {
@@ -76,6 +83,9 @@ func (hook *gcpLoggingHook) Fire(entry *logrus.Entry) error {
 	hook.logger.Log(logging.Entry{
 		Payload:  payload,
 		Severity: severity,
+		// Adds extra fields specifically for improved filtering in Stack driver logs.
+		// This applies only to remote logging, keeping other log outputs uncluttered.
+		Labels: hook.context,
 	})
 
 	return nil

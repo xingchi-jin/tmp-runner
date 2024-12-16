@@ -77,10 +77,10 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, i
 			pollTimer.Reset(interval)
 			select {
 			case <-ctx.Done():
-				logger.Errorln("context canceled during task polling, this should not happen")
+				logger.Errorln(ctx, "context canceled during task polling, this should not happen")
 				return
 			case <-p.stopChannel:
-				logger.Infoln("Request received to stop the poller")
+				logger.Infoln(ctx, "Request received to stop the poller")
 				// Note: The goal here is to stop the poller from acquiring new tasks,
 				// but we want to allow any ongoing tasks that were already in progress to complete.
 				if !pollTimer.Stop() {
@@ -90,16 +90,16 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, i
 					// To ensure that no timer events are left unprocessed before stopping the poller,
 					// we need to drain the channel by waiting to receive the event from `pollTimer.C`
 
-					logger.Infoln("Waiting for any ongoing events to complete")
+					logger.Infoln(ctx, "Waiting for any ongoing events to complete")
 					<-pollTimer.C
 				}
-				logger.Infoln("Task polling has been stopped")
+				logger.Infoln(ctx, "Task polling has been stopped")
 				return
 			case <-pollTimer.C:
 				taskEventsCtx, cancelFn := context.WithTimeout(ctx, taskEventsTimeout)
 				tasks, err := p.Client.GetRunnerEvents(taskEventsCtx, id)
 				if err != nil {
-					logger.WithError(err).Errorf("could not query for task events")
+					logger.WithError(ctx, err).Errorf("could not query for task events")
 				}
 				cancelFn()
 
@@ -108,7 +108,7 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, i
 					case events <- e:
 						// Event successfully sent to the channel
 					case <-ctx.Done():
-						logger.Errorln("context canceled during event processing, this should not happen")
+						logger.Errorln(ctx, "context canceled during event processing, this should not happen")
 						return
 					}
 				}
@@ -121,14 +121,15 @@ func (p *Poller) PollRunnerEvents(ctx context.Context, n int, id, name string, i
 		go func(i int) {
 			defer wg.Done()
 			for acquiredTask := range events { // Read from events channel until it's closed
+				ctx = logger.AddLogLabelsToContext(ctx, map[string]string{"task_id": acquiredTask.TaskID})
 				err := p.process(ctx, id, name, *acquiredTask)
 				if err != nil {
-					logger.WithError(err).WithField("task_id", acquiredTask.TaskID).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
+					logger.WithError(ctx, err).Errorf("[Thread %d]: runner [%s] could not process request", i, id)
 				}
 			}
 		}(i)
 	}
-	logger.Infof("Initialized %d threads successfully and starting polling for tasks", n)
+	logger.Infof(ctx, "Initialized %d threads successfully and starting polling for tasks", n)
 	wg.Wait()
 	// After all tasks are processed, notify completion
 	close(p.doneChannel)
@@ -151,7 +152,6 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 	for _, request := range payloads.Requests {
 		p.Metrics.IncrementTaskRunningCount(rv.AccountID, rv.TaskType, delegateName)
 		defer p.Metrics.DecrementTaskRunningCount(rv.AccountID, rv.TaskType, delegateName)
-
 		start_time := time.Now()
 
 		// TODO set the task id in runner request translator
@@ -167,7 +167,7 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 
 		if resp.Error() != nil {
 			taskResponse.Code = "FAILED"
-			logger.WithError(resp.Error()).Error("Process task failed")
+			logger.WithError(ctx, resp.Error()).Error("Process task failed")
 			p.Metrics.IncrementTaskFailedCount(rv.AccountID, rv.TaskType, delegateName)
 			// TODO: a bug here. If the Data is nil, exception happen in cg manager.
 			// This will be taken care after integrating with new response workflow
@@ -199,11 +199,11 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 	return nil
 }
 
-func (p *Poller) Shutdown() {
+func (p *Poller) Shutdown(ctx context.Context) {
 	p.stopPollingForTasks()
-	logger.Infoln("Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
+	logger.Infoln(ctx, "Notified poller to stop acquiring new tasks, waiting for in progress tasks completion")
 	p.waitForTasks()
-	logger.Infoln("All tasks are completed, stopping task processor...")
+	logger.Infoln(ctx, "All tasks are completed, stopping task processor...")
 }
 
 func (p *Poller) stopPollingForTasks() {

@@ -56,7 +56,7 @@ func NewDelegateShell(
 }
 
 func (d *DelegateShell) Register(ctx context.Context) (*heartbeat.DelegateInfo, error) {
-	logger.Infoln("Registering runner")
+	logger.Infoln(ctx, "Registering runner")
 	// Register the poller with manager
 	runnerInfo, err := d.KeepAlive.Register(ctx)
 	if err != nil {
@@ -81,7 +81,7 @@ func (d *DelegateShell) StartRunnerProcesses(ctx context.Context) error {
 	var rg errgroup.Group
 
 	rg.Go(func() error {
-		return d.startDaemonSetReconcile()
+		return d.startDaemonSetReconcile(ctx)
 	})
 
 	rg.Go(func() error {
@@ -95,14 +95,14 @@ func (d *DelegateShell) StartRunnerProcesses(ctx context.Context) error {
 }
 
 func (d *DelegateShell) sendHeartbeat(ctx context.Context) error {
-	logger.Infoln("Started sending heartbeat to manager...")
+	logger.Infoln(ctx, "Started sending heartbeat to manager...")
 	d.KeepAlive.Heartbeat(ctx, d.Info.ID, d.Info.IP, d.Info.Host)
 	return nil
 }
 
-func (d *DelegateShell) startDaemonSetReconcile() error {
-	if err := d.DaemonSetReconciler.Start(d.Info.ID, time.Minute*1); err != nil {
-		logger.WithError(err).Errorln("Error starting reconcile for daemon sets")
+func (d *DelegateShell) startDaemonSetReconcile(ctx context.Context) error {
+	if err := d.DaemonSetReconciler.Start(ctx, d.Info.ID, time.Minute*1); err != nil {
+		logger.WithError(ctx, err).Errorln("Error starting reconcile for daemon sets")
 		return err
 	}
 	return nil
@@ -110,14 +110,14 @@ func (d *DelegateShell) startDaemonSetReconcile() error {
 
 func (d *DelegateShell) startPoller(ctx context.Context) error {
 	if err := d.Poller.PollRunnerEvents(ctx, d.Config.Delegate.ParallelWorkers, d.Info.ID, d.Info.Name, time.Duration(d.Config.Delegate.PollIntervalMilliSecs)*time.Millisecond); err != nil {
-		logger.WithError(err).Errorln("Error when polling task events")
+		logger.WithError(ctx, err).Errorln("Error when polling task events")
 		return err
 	}
 	return nil
 }
 
-func (d *DelegateShell) Shutdown() {
-	d.DaemonSetReconciler.Stop()
-	d.Poller.Shutdown()
-	d.DaemonSetManager.RemoveAllDaemonSets()
+func (d *DelegateShell) Shutdown(ctx context.Context) {
+	d.DaemonSetReconciler.Stop(ctx)
+	d.Poller.Shutdown(ctx)
+	d.DaemonSetManager.RemoveAllDaemonSets(ctx)
 }
