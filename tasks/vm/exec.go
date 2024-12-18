@@ -106,6 +106,7 @@ func (h *ExecHandler) Handle(ctx context.Context, req *task.Request) task.Respon
 		DelegateID: delegateID,
 		Token:      token,
 		// RunnerResponse: execRequest.Request.StepStatus.RunnerResponse, ---- what is this needed for?
+		TaskStatusV2: true, // use V2 task response endpoint for Runner VM Tasks
 	}
 
 	execVMRequest := &harness.ExecuteVMRequest{

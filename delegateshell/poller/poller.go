@@ -43,13 +43,12 @@ type Poller struct {
 	m sync.Map
 }
 
-func New(c client.Client, router *task.Router, metrics metrics.Metrics, useV2, remoteLogging bool) *Poller {
+func New(c client.Client, router *task.Router, metrics metrics.Metrics, remoteLogging bool) *Poller {
 	p := &Poller{
 		Client:        c,
 		router:        router,
 		Metrics:       metrics,
 		m:             sync.Map{},
-		UseV2Status:   useV2,
 		RemoteLogging: remoteLogging,
 	}
 	p.stopChannel = make(chan struct{})
@@ -162,11 +161,11 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 		if resp == nil {
 			continue
 		}
-		taskResponse := &client.TaskResponse{ID: rv.TaskID, Type: "CI_EXECUTE_STEP"}
+		taskResponse := &client.TaskResponse{ID: rv.TaskID, Type: request.Task.Type}
 		p.Metrics.IncrementTaskCompletedCount(rv.AccountID, rv.TaskType, delegateName)
 
 		if resp.Error() != nil {
-			taskResponse.Code = "FAILED"
+			taskResponse.Code = client.StatusCodeFailed
 			logger.WithError(ctx, resp.Error()).Error("Process task failed")
 			p.Metrics.IncrementTaskFailedCount(rv.AccountID, rv.TaskType, delegateName)
 			// TODO: a bug here. If the Data is nil, exception happen in cg manager.
@@ -177,23 +176,11 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 				return err
 			}
 		} else {
-			taskResponse.Code = "OK"
+			taskResponse.Code = client.StatusCodeSuccess
 			taskResponse.Data = resp.Body()
 		}
-		if p.UseV2Status {
-			taskResponseV2 := &client.TaskResponseV2{
-				ID:   taskResponse.ID,
-				Data: taskResponse.Data,
-				Type: request.Task.Type,
-				Code: client.StatusCode(taskResponse.Code),
-			}
-			if err := p.Client.SendStatusV2(ctx, delegateID, rv.TaskID, taskResponseV2); err != nil {
-				return err
-			}
-		} else {
-			if err := p.Client.SendStatus(ctx, delegateID, rv.TaskID, taskResponse); err != nil {
-				return err
-			}
+		if err := p.Client.SendStatus(ctx, delegateID, rv.TaskID, taskResponse); err != nil {
+			return err
 		}
 	}
 	return nil

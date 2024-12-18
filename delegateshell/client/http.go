@@ -24,10 +24,9 @@ const (
 	registerEndpoint                = "/api/agent/delegates/register?accountId=%s"
 	unregisterEndpoint              = "/api/agent/delegates/unregister?accountId=%s"
 	heartbeatEndpoint               = "/api/agent/delegates/heartbeat-with-polling?accountId=%s"
-	taskStatusEndpoint              = "/api/agent/v2/tasks/%s/delegates/%s?accountId=%s"
 	runnerEventsPollEndpoint        = "/api/executions/%s/runner-events?accountId=%s"
 	executionPayloadEndpoint        = "/api/executions/%s/request?delegateId=%s&accountId=%s&delegateInstanceId=%s&delegateName=%s"
-	taskStatusEndpointV2            = "/api/executions/%s/task-response?runnerId=%s&accountId=%s"
+	taskStatusEndpoint              = "/api/executions/%s/task-response?runnerId=%s&accountId=%s"
 	daemonSetReconcileEndpoint      = "/api/daemons/%s/reconcile?accountId=%s"
 	acquireDaemonTasksEndpoint      = "/api/daemons/%s/tasks?accountId=%s"
 	stackDriverLoggingTokenEndpoint = "/api/agent/infra-download/delegate-auth/delegate/logging-token?accountId=%s"
@@ -119,23 +118,6 @@ func (p *ManagerClient) GetExecutionPayload(ctx context.Context, delegateID, del
 // SendStatus updates the status of a task
 func (p *ManagerClient) SendStatus(ctx context.Context, delegateID, taskID string, r *TaskResponse) error {
 	path := fmt.Sprintf(taskStatusEndpoint, taskID, delegateID, p.AccountID)
-	req := r
-	retryNumber := 0
-	var err error
-	for retryNumber < sendStatusRetryTimes {
-		_, err = p.retry(ctx, path, "POST", req, nil, createBackoff(ctx, taskEventsTimeout), true) //nolint: bodyclose
-		if err == nil {
-			return nil
-		}
-		retryNumber++
-	}
-	return err
-}
-
-// SendStatusV2 updates the status of a task using the v2 endpoint which submits task
-// responses via events framework.
-func (p *ManagerClient) SendStatusV2(ctx context.Context, delegateID, taskID string, r *TaskResponseV2) error {
-	path := fmt.Sprintf(taskStatusEndpointV2, taskID, delegateID, p.AccountID)
 	req := r
 	_, err := p.doJson(ctx, path, "POST", req, nil)
 	return err

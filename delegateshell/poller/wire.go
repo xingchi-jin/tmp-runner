@@ -20,5 +20,5 @@ func ProvidePoller(
 	config *delegate.Config,
 	metrics metrics.Metrics,
 ) *Poller {
-	return New(client, router, metrics, config.Delegate.TaskStatusV2, config.EnableRemoteLogging)
+	return New(client, router, metrics, config.EnableRemoteLogging)
 }

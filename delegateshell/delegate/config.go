@@ -45,7 +45,6 @@ type Config struct {
 		ParallelWorkers       int `envconfig:"PARALLEL_WORKERS" default:"100"`
 		PollIntervalMilliSecs int `envconfig:"POLL_INTERVAL_MILLISECS" default:"3000"`
 
-		TaskStatusV2   bool       `envconfig:"DELEGATE_TASK_STATUS_V2" default:"true"`
 		TaskServiceURL string     `envconfig:"TASK_SERVICE_URL" default:"http://localhost:3461"`
 		Type           RunnerType `envconfig:"DELEGATE_TYPE"`
 		RunnerType     RunnerType `envconfig:"RUNNER_TYPE"`

@@ -91,13 +91,6 @@ type (
 	}
 
 	TaskResponse struct {
-		ID   string          `json:"id"`
-		Data json.RawMessage `json:"data"`
-		Type string          `json:"type"`
-		Code string          `json:"code"` // OK, FAILED
-	}
-
-	TaskResponseV2 struct {
 		ID    string     `json:"id"`
 		Data  []byte     `json:"data"`
 		Error string     `json:"error"`
