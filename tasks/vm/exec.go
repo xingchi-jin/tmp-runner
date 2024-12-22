@@ -88,7 +88,7 @@ func (h *ExecHandler) Handle(ctx context.Context, req *task.Request) task.Respon
 	for _, v := range req.Secrets {
 		secrets = append(secrets, *&v.Value)
 	}
-	execRequest.Request.Secrets = secrets
+	execRequest.Request.Secrets = append(execRequest.Request.Secrets, secrets...)
 	// Generate a token so that the task can send back the response back to the manager directly
 	token, err := delegate.Token(audience, issuer, h.taskContext.AccountID, h.taskContext.Token, 10*time.Hour+tokenExpiryOffset)
 	if err != nil {
