@@ -81,6 +81,11 @@ type Config struct {
 			FreeMaxAge        int64               `envconfig:"VM_POOL_FREE_MAX_AGE" default:"720"`
 			PurgerTimeMinutes int64               `envconfig:"VM_POOL_PURGER_TIME_MINUTES" default:"30"`
 		}
+
+		Password struct {
+			Tart      string `envconfig:"VM_PASSWORD_TART"`
+			AnkaToken string `envconfig:"VM_PASSWORD_ANKA_TOKEN"`
+		}
 	}
 
 	Metrics struct {

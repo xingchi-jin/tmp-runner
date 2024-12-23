@@ -1,0 +1,739 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: runner
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- if .Values.global.commonLabels }}
+    {{- include "harnesscommon.tplvalues.render" ( dict "value" .Values.global.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.commonAnnotations }}
+  annotations: {{- include "harnesscommon.tplvalues.render" ( dict "value" .Values.global.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+data:
+  pool: |-
+    version: "1"
+    instances:
+    - name: linux-amd64
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.paid.hibernate}}
+    - name: linux-amd64-hw
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_hw.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_hw.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_hw.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_hw.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_hw.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_hw.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_hw.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_hw.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_hw.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.paid_hw.hibernate}}
+        enable_nested_virtualization: true
+    {{- if .Values.instances.linux.amd64.free_fallback_enable}}
+    - name: linux-amd64-free
+      type: google
+      pool: {{int .Values.instances.linux.amd64.free_fallback.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.free_fallback.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.free_fallback.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.free_fallback.image}}
+        machine_type: {{.Values.instances.linux.amd64.free_fallback.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.free_fallback.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.free_fallback.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.free_fallback.network}}
+        subnetwork: {{.Values.instances.linux.amd64.free_fallback.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.free_fallback.hibernate}}
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.fallback_enable}}
+    - name: linux-amd64-fallback
+      type: google
+      pool: {{int .Values.instances.linux.amd64.fallback.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.fallback.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.fallback.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.fallback.image}}
+        machine_type: {{.Values.instances.linux.amd64.fallback.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.fallback.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.fallback.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.fallback.network}}
+        subnetwork: {{.Values.instances.linux.amd64.fallback.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.fallback.hibernate}}
+    - name: linux-amd64-fallback-hw
+      type: google
+      pool: {{int .Values.instances.linux.amd64.fallback_hw.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.fallback_hw.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.fallback_hw.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.fallback_hw.image}}
+        machine_type: {{.Values.instances.linux.amd64.fallback_hw.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.fallback_hw.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.fallback_hw.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.fallback_hw.network}}
+        subnetwork: {{.Values.instances.linux.amd64.fallback_hw.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.fallback_hw.hibernate}}
+        enable_nested_virtualization: true
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.additionalFallback}}
+    - name: linux-amd64-west4
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_west4.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_west4.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_west4.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_west4.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_west4.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_west4.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_west4.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_west4.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_west4.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.paid_west4.hibernate}}
+    - name: linux-amd64-west4-hw
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_west4_hw.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_west4_hw.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_west4_hw.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_west4_hw.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_west4_hw.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_west4_hw.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_west4_hw.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_west4_hw.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_west4_hw.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.paid_west4_hw.hibernate}}
+        enable_nested_virtualization: true
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.additionalFallback}}
+    - name: linux-amd64-east5
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_east5.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_east5.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_east5.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_east5.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_east5.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_east5.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_east5.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_east5.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_east5.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.paid_east5.hibernate}}
+    - name: linux-amd64-east5-hw
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_east5_hw.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_east5_hw.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_east5_hw.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_east5_hw.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_east5_hw.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_east5_hw.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_east5_hw.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_east5_hw.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_east5_hw.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.paid_east5_hw.hibernate}}
+        enable_nested_virtualization: true
+    {{- end}}
+    - name: linux-arm64
+      type: google
+      pool: {{int .Values.instances.linux.arm64.paid.pool_size}}
+      limit: {{int .Values.instances.linux.arm64.paid.pool_limit}}
+      platform:
+        os: linux
+        arch: arm64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.arm64.paid.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.arm64.paid.image}}
+        machine_type: {{.Values.instances.linux.arm64.paid.machine_type}}
+        zone: {{ .Values.instances.linux.arm64.paid.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.arm64.paid.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.arm64.paid.network}}
+        subnetwork: {{.Values.instances.linux.arm64.paid.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.arm64.paid.hibernate}}
+    {{- if .Values.instances.linux.arm64.enable_us_west}}
+    - name: linux-arm64-us-west
+      type: google
+      pool: {{int .Values.instances.linux.arm64.us_west.pool_size}}
+      limit: {{int .Values.instances.linux.arm64.us_west.pool_limit}}
+      platform:
+        os: linux
+        arch: arm64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.arm64.us_west.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.arm64.us_west.image}}
+        machine_type: {{.Values.instances.linux.arm64.us_west.machine_type}}
+        zone: {{ .Values.instances.linux.arm64.us_west.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.arm64.us_west.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.arm64.us_west.network}}
+        subnetwork: {{.Values.instances.linux.arm64.us_west.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.arm64.us_west.hibernate}}
+    {{- end}}
+    - name: windows-amd64
+      type: google
+      pool: {{int .Values.instances.windows.amd64.paid.pool_size}}
+      limit: {{int .Values.instances.windows.amd64.paid.pool_limit}}
+      platform:
+        os: windows
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.windows.amd64.paid.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.windows.amd64.paid.image}}
+        machine_type: {{.Values.instances.windows.amd64.paid.machine_type}}
+        zone: {{ .Values.instances.windows.amd64.paid.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.windows.amd64.paid.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.windows.amd64.paid.network}}
+        subnetwork: {{.Values.instances.windows.amd64.paid.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.windows.amd64.paid.hibernate}}
+    {{- if .Values.instances.mac.arm64.common}}
+    - name: macos-arm64-tart
+      type: nomad
+      pool: {{.Values.instances.mac.arm64.tart.pool_size}}
+      limit: {{.Values.instances.mac.arm64.tart.pool_limit}}
+      platform:
+        os: darwin
+        arch: arm64
+      spec:
+        server:
+          address: {{.Values.bare_metal.address}}
+          client_key_path: /etc/dlite/ca.bundle
+          client_cert_path: /etc/dlite/ca.bundle
+          ca_cert_path: /etc/dlite/ca.bundle
+        vm:
+          account:
+            username: {{.Values.instances.mac.arm64.tart.account.username}}
+          image: {{.Values.instances.mac.arm64.tart.vm_id}}
+          cpus: {{.Values.instances.mac.arm64.tart.cpu | quote}}
+          mem_gb: {{.Values.instances.mac.arm64.tart.memory | quote}}
+          disk_size: {{.Values.instances.mac.arm64.tart.disk_size | quote}}
+          enablePinning:
+            GLOBAL_ACCOUNT_ID_MAC_APTOS: "82alj-w-QGSN-OFFBTv9Ew"
+            GLOBAL_ACCOUNT_ID_MAC_OLD: "stc0xaFyQAWI5m9ztSscTQ,oEWs6wr7QvOW8d0ISfhttQ,ngDRzuBUQZGu6HZ6SxEDXQ"
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.split}}
+    - name: linux-free-amd64
+      type: google
+      pool: {{int .Values.instances.linux.amd64.free.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.free.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.free.project_id}}
+          json_path: /var/run/secret/free/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.free.image}}
+        machine_type: {{.Values.instances.linux.amd64.free.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.free.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.free.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.free.network}}
+        subnetwork: {{.Values.instances.linux.amd64.free.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.free.hibernate}}
+    {{- end}}
+    {{- if .Values.instances.linux.arm64.split}}
+    - name: linux-free-arm64
+      type: google
+      pool: {{int .Values.instances.linux.arm64.free.pool_size}}
+      limit: {{int .Values.instances.linux.arm64.free.pool_limit}}
+      platform:
+        os: linux
+        arch: arm64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.arm64.free.project_id}}
+          json_path: /var/run/secret/free/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.arm64.free.image}}
+        machine_type: {{.Values.instances.linux.arm64.free.machine_type}}
+        zone: {{ .Values.instances.linux.arm64.free.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.arm64.free.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.arm64.free.network}}
+        subnetwork: {{.Values.instances.linux.arm64.free.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.arm64.free.hibernate}}
+    {{- end}}
+    {{- if .Values.instances.windows.amd64.split}}
+    - name: windows-free-amd64
+      type: google
+      pool: {{int .Values.instances.windows.amd64.free.pool_size}}
+      limit: {{int .Values.instances.windows.amd64.free.pool_limit}}
+      platform:
+        os: windows
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.windows.amd64.free.project_id}}
+          json_path: /var/run/secret/free/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.windows.amd64.free.image}}
+        machine_type: {{.Values.instances.windows.amd64.free.machine_type}}
+        zone: {{ .Values.instances.windows.amd64.free.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.windows.amd64.free.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.windows.amd64.free.network}}
+        subnetwork: {{.Values.instances.windows.amd64.free.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.windows.amd64.free.hibernate}}
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.bare_metal_enabled}}
+    - name: linux-amd64-bare-metal
+      type: nomad
+      pool: {{int .Values.bare_metal.pool}}
+      limit: {{int .Values.bare_metal.limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        server:
+          address: {{.Values.bare_metal.address}}
+          client_key_path: /etc/dlite/ca.bundle
+          client_cert_path: /etc/dlite/ca.bundle
+          ca_cert_path: /etc/dlite/ca.bundle
+        vm:
+          image: {{.Values.instances.linux.amd64.bare_metal.image}}
+          cpus: {{.Values.instances.linux.amd64.bare_metal.cpus | quote}}
+          mem_gb: {{.Values.instances.linux.amd64.bare_metal.mem_gb | quote}}
+          disk_size: {{.Values.instances.linux.amd64.bare_metal.disk_size | quote}}
+          enablePinning:
+            eePXQ4FFQj6zWprgXPZ2yQ: "eePXQ4FFQj6zWprgXPZ2yQ"
+            WhitelistedPool: "stc0xaFyQAWI5m9ztSscTQ,dqAWlhDWTjGn0Rie85EwwA,AHn6O7saTFOHakniOX3Mrg,7_LU_MsxRum1b06IWeZhEQ,wBqrjr1wRaWBc2AWxWsV1g,_-ITnAA2Sg6fPowwXWzlxg,0iQojjIqSaGHhDRhDhukaQ,WLh9EopjQkCLAMp5z1pUVg,uLyRQTI6TN-x1Uud-KdgLg,Bg1R1_mrQgiQJashU77JdQ,QbXF1VIZTIC2-ueN1uTWHQ,oP3BKzKwSDe_4hCFYw_UWA,CFTmwhHwQuehera-INaXCg,HgTKqISVTX-kQSVsWCHEcA,_jSG_Yh_Q3KBN0kzULN6ag,ZQy3irdlSiWY9RPptmHKNw,9Tf5SOrkQiOE3mUSxGz0LQ"
+            SanvyPool: "MDNhNjZlODgtODYzZi00Nz"
+            free: "free"
+          resource:
+            {{- toYaml .Values.instances.linux.amd64.bare_metal.resource | nindent 12 }}
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.bare_metal_enabled}}
+    - name: linux-amd64-bare-metal-large
+      type: nomad
+      pool: {{int .Values.bare_metal.pool}}
+      limit: {{int .Values.bare_metal.limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        server:
+          address: {{.Values.bare_metal.address}}
+          client_key_path: /etc/dlite/ca.bundle
+          client_cert_path: /etc/dlite/ca.bundle
+          ca_cert_path: /etc/dlite/ca.bundle
+        vm:
+          image: {{.Values.instances.linux.amd64.bare_metal.image}}
+          cpus: {{.Values.instances.linux.amd64.bare_metal.cpus | quote}}
+          mem_gb: {{.Values.instances.linux.amd64.bare_metal.mem_gb | quote}}
+          disk_size: {{.Values.instances.linux.amd64.bare_metal.disk_size | quote}}
+          enablePinning:
+            BareMetalLarge: "dqAWlhDWTjGn0Rie85EwwA"
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.small}}
+    - name: linux-amd64-small
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_small.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_small.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_small.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_small.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_small.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_small.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_small.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_small.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_small.subnetwork}}
+        tags:
+          - "allow-dlite"
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.small_c2}}
+    - name: linux-amd64-small-c2
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_small_c2.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_small_c2.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_small_c2.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_small_c2.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_small_c2.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_small_c2.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_small_c2.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_small_c2.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_small_c2.subnetwork}}
+        tags:
+          - "allow-dlite"
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.large}}
+    - name: linux-amd64-large
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_large.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_large.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_large.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_large.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_large.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_large.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_large.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_large.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_large.subnetwork}}
+        hibernate: {{.Values.instances.linux.amd64.paid_large.hibernate}}
+        tags:
+          - "allow-dlite"
+    - name: linux-amd64-large-hw
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_large_hw.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_large_hw.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_large_hw.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_large_hw.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_large_hw.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_large_hw.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_large_hw.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_large_hw.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_large_hw.subnetwork}}
+        hibernate: {{.Values.instances.linux.amd64.paid_large_hw.hibernate}}
+        enable_nested_virtualization: true
+        tags:
+          - "allow-dlite"
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.large_pool_fallback_enabled}}
+    - name: linux-amd64-large-fallback
+      type: google
+      pool: {{int .Values.instances.linux.amd64.large_fallback.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.large_fallback.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.large_fallback.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.large_fallback.image}}
+        machine_type: {{.Values.instances.linux.amd64.large_fallback.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.large_fallback.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.large_fallback.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.large_fallback.network}}
+        subnetwork: {{.Values.instances.linux.amd64.large_fallback.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.large_fallback.hibernate}}
+    - name: linux-amd64-large-fbhw
+      type: google
+      pool: {{int .Values.instances.linux.amd64.large_fallback_hw.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.large_fallback_hw.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.large_fallback_hw.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.large_fallback_hw.image}}
+        machine_type: {{.Values.instances.linux.amd64.large_fallback_hw.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.large_fallback_hw.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.large_fallback_hw.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.large_fallback_hw.network}}
+        subnetwork: {{.Values.instances.linux.amd64.large_fallback_hw.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.large_fallback_hw.hibernate}}
+        enable_nested_virtualization: true
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.xlarge}}
+    - name: linux-amd64-xlarge
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_xlarge.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_xlarge.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_xlarge.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_xlarge.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_xlarge.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_xlarge.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_xlarge.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_xlarge.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_xlarge.subnetwork}}
+        hibernate: {{.Values.instances.linux.amd64.paid_xlarge.hibernate}}
+        tags:
+          - "allow-dlite"
+    - name: linux-amd64-xlarge-hw
+      type: google
+      pool: {{int .Values.instances.linux.amd64.paid_xlarge_hw.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.paid_xlarge_hw.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.paid_xlarge_hw.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.paid_xlarge_hw.image}}
+        machine_type: {{.Values.instances.linux.amd64.paid_xlarge_hw.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.paid_xlarge_hw.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.paid_xlarge_hw.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.paid_xlarge_hw.network}}
+        subnetwork: {{.Values.instances.linux.amd64.paid_xlarge_hw.subnetwork}}
+        hibernate: {{.Values.instances.linux.amd64.paid_xlarge_hw.hibernate}}
+        enable_nested_virtualization: true
+        tags:
+          - "allow-dlite"
+    {{- end}}
+    {{- if .Values.instances.linux.amd64.xlarge_pool_fallback_enabled}}
+    - name: linux-amd64-xlarge-fallback
+      type: google
+      pool: {{int .Values.instances.linux.amd64.xlarge_fallback.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.xlarge_fallback.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.xlarge_fallback.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.xlarge_fallback.image}}
+        machine_type: {{.Values.instances.linux.amd64.xlarge_fallback.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.xlarge_fallback.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.xlarge_fallback.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.xlarge_fallback.network}}
+        subnetwork: {{.Values.instances.linux.amd64.xlarge_fallback.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.xlarge_fallback.hibernate}}
+    - name: linux-amd64-xlarge-fbhw
+      type: google
+      pool: {{int .Values.instances.linux.amd64.xlarge_fallback_hw.pool_size}}
+      limit: {{int .Values.instances.linux.amd64.xlarge_fallback_hw.pool_limit}}
+      platform:
+        os: linux
+        arch: amd64
+      spec:
+        account:
+          project_id: {{.Values.instances.linux.amd64.xlarge_fallback_hw.project_id}}
+          json_path: /var/run/secret/cloud.google.com/service-account
+          no_service_account: true
+        image: {{.Values.instances.linux.amd64.xlarge_fallback_hw.image}}
+        machine_type: {{.Values.instances.linux.amd64.xlarge_fallback_hw.machine_type}}
+        zone: {{ .Values.instances.linux.amd64.xlarge_fallback_hw.zones | toYaml | nindent 10 }}
+        disk:
+          size: {{int .Values.instances.linux.amd64.xlarge_fallback_hw.disk_size}}
+          type: "pd-balanced"
+        private_ip: true
+        network: {{.Values.instances.linux.amd64.xlarge_fallback_hw.network}}
+        subnetwork: {{.Values.instances.linux.amd64.xlarge_fallback_hw.subnetwork}}
+        tags:
+          - "allow-dlite"
+        hibernate: {{.Values.instances.linux.amd64.xlarge_fallback_hw.hibernate}}
+        enable_nested_virtualization: true
+    {{- end}}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: runner-config
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- if .Values.global.commonLabels }}
+    {{- include "harnesscommon.tplvalues.render" ( dict "value" .Values.global.commonLabels "context" $ ) | nindent 4 }}
+    {{- end }}
+  {{- if .Values.global.commonAnnotations }}
+  annotations: {{- include "harnesscommon.tplvalues.render" ( dict "value" .Values.global.commonAnnotations "context" $ ) | nindent 4 }}
+  {{- end }}
+data:
+ {{- include "harnesscommon.tplvalues.render" ( dict "value" .Values.config "context" $) | nindent 2}}

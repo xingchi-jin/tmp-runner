@@ -2,3 +2,5 @@
 .env
 tasks/sample/sample
 .vscode/
+release/*
+

@@ -1,0 +1,3 @@
+DOCKER_FILE_PATH: /harness/runner/docker/Dockerfile
+HELM_CHART_SOURCE_DIRECTORY: runner/chart
+CONTEXT_PATH: /harness/runner

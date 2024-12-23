@@ -1,0 +1,460 @@
+# Default values for ci-manager
+# This is a YAML-formatted file.
+# Declare variables to be passed into your templates.
+
+global:
+  commonAnnotations: {}
+  commonLabels: {}
+  loadbalancerURL: ""
+  airgap: false
+  imagePullSecrets: []
+  stackDriverLoggingEnabled: false
+  database:
+    postgres:
+      ## - installed = true if installed within cluster
+      installed: true
+      ## - protocol to use for connection
+      protocol: postgres
+      ## - host array for external
+      hosts:
+        - postgres:5432
+      ## - secret name containing external values
+      secretName: ""
+      ## - key within secret containing username
+      userKey: ""
+      ## - key within secret containing password
+      passwordKey: ""
+      ## - extra arguments set to connection string
+      extraArgs: ""
+      secrets:
+        kubernetesSecrets:
+          - secretName: ""
+            keys:
+              POSTGRES_USER: ""
+              POSTGRES_PASSWORD: ""
+        secretManagement:
+          externalSecretsOperator:
+            - secretStore:
+                name: ""
+                kind: ""
+              remoteKeys:
+                POSTGRES_USER:
+                  name: ""
+                  property: ""
+                POSTGRES_PASSWORD:
+                  name: ""
+                  property: ""
+  waitForInitContainer:
+    image:
+      registry: docker.io
+      repository: harness/helm-init-container
+      pullPolicy: IfNotPresent
+      tag: "latest"
+      digest: ""
+      imagePullSecrets: []
+enableAuth: true
+port: 3000
+name: runner
+replicas: 1
+image:
+  registry: docker.io
+  repository: vistaarjuneja/runner
+  pullPolicy: Always
+  # Overrides the image tag whose default is the chart appVersion.
+  tag: "test"
+  digest: ""
+  imagePullSecrets: []
+podAnnotations: {}
+podSecurityContext: {}
+affinity: {}
+nodeSelector: {}
+tolerations: []
+waitForInitContainer:
+  image:
+    registry: docker.io
+    repository: harness/helm-init-container
+    pullPolicy: IfNotPresent
+    tag: "latest"
+    digest: ""
+    imagePullSecrets: []
+  resources:
+    limits:
+      cpu: 128m
+      memory: 128Mi
+    requests:
+      cpu: 128m
+      memory: 128Mi
+  containerSecurityContext:
+    runAsUser: 65534
+    runAsNonRoot: true
+
+securityContext:
+  runAsUser: 65534
+  runAsNonRoot: true
+config:
+  DEBUG: "true"
+  TRACE: "true"
+  NAME: runner-linux
+  URL: "{{.Values.global.loadbalancerURL}}"
+  POLL_INTERVAL_MILLISECS: "1000"
+  PARALLEL_WORKERS: "10000"
+  SKIP_PREPARE_SERVER: "true"
+runner:
+  cname: "harness"
+  accName: "HarnessGlobalDelegate"
+instances:
+  linux:
+    amd64:
+      split: envSpecific
+      fallback_enable: envSpecific
+      free_fallback_enable: envSpecific
+      additionalFallback: envSpecific
+      small_c2: envSpecific
+      bare_metal_enabled: envSpecific
+      large: envSpecific
+      large_pool_fallback_enabled: envSpecific
+      xlarge: envSpecific
+      xlarge_pool_fallback_enabled: envSpecific
+      paid:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_hw:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      fallback:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      fallback_hw:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      large_fallback:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      large_fallback_hw:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_xlarge:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_xlarge_hw:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      xlarge_fallback:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      xlarge_fallback_hw:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      free_fallback:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_west4:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_west4_hw:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_east5:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_east5_hw:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_small_c2:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      free:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      bare_metal:
+        image: envSpecific
+        cpus: envSpecific
+        mem_gb: envSpecific
+        disk_size: envSpecific
+    arm64:
+      split: envSpecific
+      enable_us_west: false
+      paid:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      free:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      us_west:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+  windows:
+    amd64:
+      split: envSpecific
+      paid:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      free:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+  mac:
+    arm64:
+      pool_size: envSpecific
+      pool_limit: envSpecific
+      vm_id: envSpecific
+      registry_url: envSpecific
+      node_id: envSpecific
+      auth_token: envSpecific
+      group_id: envSpecific
+      account:
+        username: envSpecific
+        password: envSpecific
+      common: envSpecific
+      disk_size: 280G
+      tart:
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        vm_id: envSpecific
+        cpu: envSpecific
+        memory: envSpecific
+        disk_size: envSpecific
+        account:
+          username: envSpecific
+          password: envSpecific
+service:
+  enabled: true
+  annotations: {}
+  type: ClusterIP
+  port: 80
+  targetPort: 9090
+serviceAccount:
+  # Specifies whether a service account should be created
+  create: false
+  # Annotations to add to the service account
+  annotations: {}
+  # The name of the service account to use.
+  # If not set and create is true, a name is generated using the fullname template
+  name: "harness-default"
+
+secrets:
+  fileSecret:
+    - volumeMountPath: "/etc/dlite"
+      keys:
+        - key: NOMAD_BARE_METAL_CERTS
+          path: "ca.bundle"
+  default:
+    NOMAD_BARE_METAL_CERTS: ""
+    ACCOUNT_ID: "__GLOBAL_DELEGATE_ACCOUNT_ID__"
+  kubernetesSecrets:
+    - secretName: ""
+      keys:
+        NOMAD_BARE_METAL_CERTS: ""
+  secretManagement:
+    externalSecretsOperator:
+      - secretStore:
+          name: ""
+          kind: ""
+        remoteKeys:
+          NOMAD_BARE_METAL_CERTS:
+            name: ""
+            property: ""
+
+postgres:
+  ## - protocol to use for connection
+  protocol: ""
+  ## - host array for external
+  hosts: []
+  extraArgs: ""
+  secrets:
+    kubernetesSecrets:
+      - secretName: ""
+        keys:
+          POSTGRES_USER: ""
+          POSTGRES_PASSWORD: ""
+    secretManagement:
+      externalSecretsOperator:
+        - secretStore:
+            name: ""
+            kind: ""
+          remoteKeys:
+            POSTGRES_USER:
+              name: ""
+              property: ""
+            POSTGRES_PASSWORD:
+              name: ""
+              property: ""
+bare_metal:
+  address: NOMAD_URL
+  certs: ""
+  enabled: true
