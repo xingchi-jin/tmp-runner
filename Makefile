@@ -6,7 +6,7 @@ ifndef GOBIN # derive value from gopath (default to first entry, similar to 'go 
 endif
 
 tools = $(addprefix $(GOBIN)/, golangci-lint goimports gci)
-deps = $(addprefix $(GOBIN)/, wire dbmate)
+deps = $(addprefix $(GOBIN)/, wire)
 
 ifneq (,$(wildcard ./.local_runner.env))
     include ./.local_runner.env
@@ -33,6 +33,24 @@ tools: $(tools) ## Install tools required for the build
 	@echo "Installed tools"
 
 ###############################################################################
+# Code Generation
+#
+# Some code generation can be slow, so we only run it if
+# the source file has changed.
+###############################################################################
+
+generate: wire
+	@echo "Generated Code"
+
+wire: cli/wire_gen.go
+
+force-wire: ## Force wire code generation
+	@sh ./scripts/wire/runner.sh
+
+cli/wire_gen.go: cli/wire.go
+	@sh ./scripts/wire/runner.sh
+
+###############################################################################
 #
 # Runner Build and testing rules
 #
@@ -41,6 +59,7 @@ tools: $(tools) ## Install tools required for the build
 build: ## Build the all-in-one Harness binary
 	@echo "Building Harness Runner"
 	go build -o ./runner
+
 
 test:  ## Run the go tests
 	@echo "Running tests"
@@ -94,3 +113,14 @@ help: ## show help message
 	@awk 'BEGIN {FS = ":.*##"; printf "\nUsage:\n  make \033[36m\033[0m\n"} /^[$$()% 0-9a-zA-Z_-]+:.*?##/ { printf "  \033[36m%-15s\033[0m %s\n", $$1, $$2 } /^##@/ { printf "\n\033[1m%s\033[0m\n", substr($$0, 5) } ' $(MAKEFILE_LIST)
 
 .PHONY: delete-tools update-tools help format lint
+
+###############################################################################
+# Install Tools and deps
+#
+# These targets specify the full path to where the tool is installed
+# If the tool already exists it wont be re-installed.
+###############################################################################
+
+# Install wire to generate dependency injection
+$(GOBIN)/wire:
+	go install github.com/google/wire/cmd/wire@latest

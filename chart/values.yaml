@@ -58,10 +58,10 @@ name: runner
 replicas: 1
 image:
   registry: docker.io
-  repository: vistaarjuneja/runner
+  repository: us.gcr.io/platform-205701/runner:1.0.0-build.in.dockerfile-8b7d51
   pullPolicy: Always
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "test"
+  tag: "latest"
   digest: ""
   imagePullSecrets: []
 podAnnotations: {}
@@ -182,6 +182,28 @@ instances:
         zones: envSpecific
         hibernate: envSpecific
       paid_xlarge:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_large:
+        project_id: envSpecific
+        pool_size: envSpecific
+        pool_limit: envSpecific
+        image: envSpecific
+        machine_type: envSpecific
+        disk_size: envSpecific
+        network: envSpecific
+        subnetwork: envSpecific
+        zones: envSpecific
+        hibernate: envSpecific
+      paid_large_hw:
         project_id: envSpecific
         pool_size: envSpecific
         pool_limit: envSpecific
