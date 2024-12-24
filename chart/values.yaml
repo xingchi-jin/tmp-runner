@@ -57,11 +57,11 @@ port: 3000
 name: runner
 replicas: 1
 image:
-  registry: docker.io
-  repository: us.gcr.io/platform-205701/runner:1.0.0-build.in.dockerfile-8b7d51
-  pullPolicy: Always
+  registry: us-west1-docker.pkg.dev/gar-setup/docker
+  repository: runner
+  pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "latest"
+  tag: "1.0.0-build.in.dockerfile-9a5c2b"
   digest: ""
   imagePullSecrets: []
 podAnnotations: {}
