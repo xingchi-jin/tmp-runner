@@ -102,7 +102,7 @@ config:
 runner:
   cname: "harness"
   accName: "HarnessGlobalDelegate"
-instances:
+vm_instances:
   linux:
     amd64:
       split: envSpecific
