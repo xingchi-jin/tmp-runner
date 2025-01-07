@@ -61,11 +61,14 @@ build: ## Build the all-in-one Harness binary
 	go build -o ./runner
 
 
-test:  ## Run the go tests
+test:  ## Run the go tests and open test coverage report
 	@echo "Running tests"
 	go test -v -coverprofile=coverage.out ./...
 	go tool cover -html=coverage.out
 
+coverage:  ## Output total test coverage
+	@go test -coverprofile=coverage.out ./... > /dev/null 2>&1
+	@go tool cover -func=./coverage.out | grep total | awk '{print $$3}'
 
 ###############################################################################
 #
@@ -106,7 +109,7 @@ $(GOBIN)/goimports:
 	@go install golang.org/x/tools/cmd/goimports
 
 $(GOBIN)/gci:
-	go install github.com/daixiang0/gci@v0.13.1	
+	go install github.com/daixiang0/gci@v0.13.1
 
 
 help: ## show help message
