@@ -49,12 +49,12 @@ func FetchHandler(ctx context.Context, req *task.Request) task.Response {
 		return task.Error(err)
 	}
 
-	secret, err := fetchSecret(client, in)
+	secret, err := fetchSecret(client, in.Secrets[0].Path)
 	if err != nil {
 		return task.Error(err)
 	}
 
-	decodedSecret, err := getSecretKeyAndValue(in, secret)
+	decodedSecret, err := getSecretKeyAndValue(in.Secrets[0].Key, in.Secrets[0].Base64, secret)
 
 	if err != nil {
 		return task.Error(err)
@@ -66,13 +66,13 @@ func FetchHandler(ctx context.Context, req *task.Request) task.Response {
 	)
 }
 
-func fetchSecret(client *api.Client, in *input) (*api.Secret, error) {
-	secret, err := client.Logical().Read(in.Secrets[0].Path)
+func fetchSecret(client *api.Client, path string) (*api.Secret, error) {
+	secret, err := client.Logical().Read(path)
 	if err != nil {
 		return nil, err
 	}
 	if secret == nil || secret.Data == nil {
-		return nil, fmt.Errorf("could not find secret: %s", in.Secrets[0].Path)
+		return nil, fmt.Errorf("could not find secret: %s", path)
 	}
 
 	v := secret.Data["data"]
@@ -82,17 +82,17 @@ func fetchSecret(client *api.Client, in *input) (*api.Secret, error) {
 	return secret, nil
 }
 
-func getSecretKeyAndValue(in *input, secret *api.Secret) (string, error) {
+func getSecretKeyAndValue(key string, base64 bool, secret *api.Secret) (string, error) {
 	for k, v := range secret.Data {
 		s, ok := v.(string)
 		if !ok {
 			continue
 		}
-		if k == in.Secrets[0].Key {
-			return parse(s, in.Secrets[0].Base64)
+		if k == key {
+			return parse(s, base64)
 		}
 	}
-	return "", fmt.Errorf("could not find secret key: %s", in.Secrets[0].Key)
+	return "", fmt.Errorf("could not find secret key: %s", key)
 }
 
 func parse(s string, decode bool) (string, error) {

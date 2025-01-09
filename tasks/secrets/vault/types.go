@@ -40,6 +40,11 @@ type VaultSecretResponse struct {
 	Error *Error `json:"error"`
 }
 
+type ValidationResponse struct {
+	IsValid bool   `json:"valid"`
+	Error   *Error `json:"error"`
+}
+
 type ErrorResponse struct {
 	Message string `json:"message"`
 	Error   string `json:"error"`

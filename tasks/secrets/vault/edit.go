@@ -33,6 +33,8 @@ func Handler(ctx context.Context, req *task.Request) task.Response {
 		return handleUpsert(ctx, in, client)
 	case "DELETE":
 		return handleDelete(ctx, in, client)
+	case "VALIDATE":
+		return handleValidateRef(ctx, in, client)
 	default:
 		logger.Error(ctx, fmt.Errorf("unsupported secret task action: %s", action))
 		return task.Respond(NewErrorResponse(fmt.Errorf("invalid action"), fmt.Sprintf("The specified action %s is not supported", action), http.StatusBadRequest))
@@ -83,6 +85,25 @@ func handleDelete(ctx context.Context, in *VaultSecretTaskRequest, client *vault
 	})
 }
 
+func handleValidateRef(ctx context.Context, in *VaultSecretTaskRequest, client *vault.Client) task.Response {
+	path, err := validate(in.EngineVersion, in.EngineName, in.Path, client)
+	if err != nil {
+		logger.WithError(ctx, err).Errorf("failed finding secret secret reference in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
+		return task.Respond(ValidationResponse{
+			IsValid: false,
+			Error: &Error{
+				Message: "Failed finding secret reference in Vault",
+				Reason:  err.Error(),
+			},
+		})
+	}
+
+	logger.Infof(ctx, "secret reference found in vault. Url: [%s]; Path: [%s]", client.Address(), path)
+	return task.Respond(ValidationResponse{
+		IsValid: true,
+	})
+}
+
 func upsert(ctx context.Context, engineVersion uint8, engineName string, path string, key string, value string, client *vault.Client) (string, error) {
 	data := map[string]any{
 		"data": map[string]string{
@@ -106,6 +127,17 @@ func delete(ctx context.Context, engineVersion uint8, engineName, path string, c
 	logger.Infof(ctx, "deleting secret value from Vault. Url: [%s]; Path: [%s]", client.Address(), fullPath)
 	_, err = client.Logical().Delete(fullPath)
 	return path, err
+}
+
+func validate(engineVersion uint8, engineName, path string, client *vault.Client) (string, error) {
+	fullPath, err := getFullPath(engineVersion, engineName, path)
+	if err != nil {
+		return "", err
+	}
+	if _, err := fetchSecret(client, fullPath); err != nil {
+		return "", err
+	}
+	return fullPath, nil
 }
 
 // getFullPath returns the fullPath based on the engineVersion
