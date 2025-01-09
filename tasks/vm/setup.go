@@ -3,7 +3,6 @@ package vm
 import (
 	"context"
 	"encoding/json"
-
 	"github.com/drone-runners/drone-runner-aws/app/drivers"
 	"github.com/drone-runners/drone-runner-aws/command/harness"
 	"github.com/drone-runners/drone-runner-aws/metric"
@@ -14,15 +13,18 @@ import (
 	"github.com/harness/lite-engine/engine/spec"
 	"github.com/harness/runner/delegateshell/delegate"
 	"github.com/harness/runner/logger"
+	"github.com/harness/runner/tasks/local"
 	"github.com/harness/runner/tasks/local/utils"
+	"time"
 )
 
 type SetupRequest struct {
-	Network  spec.Network      `json:"network"`
-	Volumes  []*spec.Volume    `json:"volumes"`
-	Envs     map[string]string `json:"envs"`
-	VMConfig VMConfig          `json:"vm_config"`
-	Metadata Metadata          `json:"metadata"`
+	Network  spec.Network         `json:"network"`
+	Volumes  []*spec.Volume       `json:"volumes"`
+	Envs     map[string]string    `json:"envs"`
+	VMConfig VMConfig             `json:"vm_config"`
+	Metadata Metadata             `json:"metadata"`
+	Services []*local.ExecRequest `json:"services"`
 }
 
 type GitspaceAgentConfig struct {
@@ -123,10 +125,55 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 	if err != nil {
 		return task.Respond(failedResponse(err.Error()))
 	}
+
 	var delegateID string
 	if h.taskContext.DelegateId != nil {
 		delegateID = *h.taskContext.DelegateId
 	}
+	serviceStatuses := []VMServiceStatus{}
+	if len(setupRequest.Services) > 0 {
+		var status VMServiceStatus
+		// Generate a token so that the task can send back the response back to the manager directly
+		token, err := delegate.Token(audience, issuer, h.taskContext.AccountID, h.taskContext.Token, 10*time.Hour+tokenExpiryOffset)
+		if err != nil {
+			return task.Respond(failedResponse(err.Error()))
+		}
+
+		execVMRequest := &harness.ExecuteVMRequest{
+			StageRuntimeID: setupRequest.Metadata.StageRuntimeID,
+			InstanceID:     setupResp.InstanceID,
+			IPAddress:      setupResp.IPAddress,
+			Distributed:    true,
+			CorrelationID:  req.Task.ID,
+		}
+
+		// Start all the services
+		for _, s := range setupRequest.Services {
+			utils.Sanitize(s.StartStepRequest.ID)
+			utils.Sanitize(s.StartStepRequest.Network)
+			execVMRequest.StartStepRequest = s.StartStepRequest
+			execVMRequest.StartStepRequest.StepStatus = api.StepStatusConfig{
+				Endpoint:     h.taskContext.ManagerEndpoint,
+				AccountID:    h.taskContext.AccountID,
+				TaskID:       req.Task.ID,
+				DelegateID:   delegateID,
+				Token:        token,
+				TaskStatusV2: true, // use V2 task response endpoint for Runner VM Tasks
+			}
+			execVMRequest.StartStepRequest.LogKey = s.LogKey
+			status = VMServiceStatus{ID: s.ID, Name: s.Name, Image: s.Image, LogKey: s.LogKey, Status: Running, ErrorMessage: ""}
+			pollStepResp, err := harness.HandleStep(ctx, execVMRequest, h.stageOwnerStore, []string{}, false, 0, h.poolManager, h.metrics, async)
+			if err != nil {
+				status.Status = Error
+				status.ErrorMessage = err.Error()
+			} else if pollStepResp.Error != "" {
+				status.Status = Error
+				status.ErrorMessage = pollStepResp.Error
+			}
+			serviceStatuses = append(serviceStatuses, status)
+		}
+	}
+
 	// Construct final response
 	resp := VMTaskExecutionResponse{
 		IPAddress:              setupResp.IPAddress,
@@ -136,6 +183,7 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 		},
 		PoolDriverUsed:        selectedPoolDriver,
 		GitspacesPortMappings: setupResp.GitspacesPortMappings,
+		ServiceStatuses:       serviceStatuses,
 	}
 	return task.Respond(resp)
 }
