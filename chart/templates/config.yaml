@@ -317,6 +317,26 @@ data:
           - "allow-dlite"
         hibernate: {{.Values.vm_instances.windows.amd64.paid.hibernate}}
     {{- if .Values.vm_instances.mac.arm64.common}}
+    - name: macos-arm64
+      type: nomad
+      pool: {{.Values.vm_instances.mac.arm64.tart.pool_size}}
+      limit: {{.Values.vm_instances.mac.arm64.tart.pool_limit}}
+      platform:
+        os: darwin
+        arch: arm64
+      spec:
+        server:
+          address: {{.Values.bare_metal.address}}
+          client_key_path: /etc/dlite/ca.bundle
+          client_cert_path: /etc/dlite/ca.bundle
+          ca_cert_path: /etc/dlite/ca.bundle
+        vm:
+          account:
+            username: {{.Values.vm_instances.mac.arm64.tart.account.username}}
+          image: {{.Values.vm_instances.mac.arm64.tart.vm_id}}
+          cpus: {{.Values.vm_instances.mac.arm64.tart.cpu | quote}}
+          mem_gb: {{.Values.vm_instances.mac.arm64.tart.memory | quote}}
+          disk_size: {{.Values.vm_instances.mac.arm64.tart.disk_size | quote}}
     - name: macos-arm64-tart
       type: nomad
       pool: {{.Values.vm_instances.mac.arm64.tart.pool_size}}
@@ -340,6 +360,26 @@ data:
           enablePinning:
             GLOBAL_ACCOUNT_ID_MAC_APTOS: "82alj-w-QGSN-OFFBTv9Ew"
             GLOBAL_ACCOUNT_ID_MAC_OLD: "stc0xaFyQAWI5m9ztSscTQ,oEWs6wr7QvOW8d0ISfhttQ,ngDRzuBUQZGu6HZ6SxEDXQ"
+    - name: macos-arm64-tart-limited
+      type: nomad
+      pool: {{.Values.vm_instances.mac.arm64.tart.pool_size}}
+      limit: {{.Values.vm_instances.mac.arm64.tart.pool_limit}}
+      platform:
+        os: darwin
+        arch: arm64
+      spec:
+        server:
+          address: {{.Values.bare_metal.address}}
+          client_key_path: /etc/dlite/ca.bundle
+          client_cert_path: /etc/dlite/ca.bundle
+          ca_cert_path: /etc/dlite/ca.bundle
+        vm:
+          account:
+            username: {{.Values.vm_instances.mac.arm64.tart.account.username}}
+          image: {{.Values.vm_instances.mac.arm64.tart.vm_id}}
+          cpus: "3"
+          mem_gb: "6"
+          disk_size: {{.Values.vm_instances.mac.arm64.tart.disk_size | quote}}
     {{- end}}
     {{- if .Values.vm_instances.linux.amd64.split}}
     - name: linux-free-amd64

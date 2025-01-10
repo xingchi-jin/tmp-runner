@@ -63,12 +63,7 @@ spec:
         securityContext:
           {{- toYaml .Values.securityContext | nindent 12 }}
         resources:
-          limits:
-            memory: 2Gi
-            cpu: 1
-          requests:
-            memory: 2Gi
-            cpu: 1
+          {{- toYaml .Values.resources | nindent 12 }}
         envFrom:
         - configMapRef:
             name: runner-config

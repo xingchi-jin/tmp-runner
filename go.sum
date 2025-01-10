@@ -137,6 +137,8 @@ github.com/docker/go-units v0.5.0 h1:69rxXcBk27SvSaaxTtLh/8llcHD8vYHT7WSdRZ/jvr4
 github.com/docker/go-units v0.5.0/go.mod h1:fgPhTUdO+D/Jk86RDLlptpiXQzgHJF7gydDDbaIK4Dk=
 github.com/drone-runners/drone-runner-aws v1.0.0-rc.172 h1:CHhsVKtB0ruh+N1GA0eG8ccjlwXnRPIygTtj8w54Qag=
 github.com/drone-runners/drone-runner-aws v1.0.0-rc.172/go.mod h1:P8LdlF0ATkHxKTxaTy3UWPN74KZzvwZ1l0MJBwquUao=
+github.com/drone-runners/drone-runner-aws v1.0.0-rc.173 h1:WUtiooR19f8R6rzJvknFzwFdvbAk0HSPu35n7PxZpoY=
+github.com/drone-runners/drone-runner-aws v1.0.0-rc.173/go.mod h1:qz0QlssKVZFPPEBKPl0gLYFXwZ13LVDBk7BC1DRhvPw=
 github.com/drone-runners/drone-runner-aws v1.0.0-rc31.0.20241121230344-87f3402dcb2b h1:BzfK6birCihtEk87rxecDtcvi5C1srNwZvq1Ye7iPqY=
 github.com/drone-runners/drone-runner-aws v1.0.0-rc31.0.20241121230344-87f3402dcb2b/go.mod h1:P8LdlF0ATkHxKTxaTy3UWPN74KZzvwZ1l0MJBwquUao=
 github.com/drone/drone-go v1.7.1 h1:ZX+3Rs8YHUSUQ5mkuMLmm1zr1ttiiE2YGNxF3AnyDKw=
@@ -294,8 +296,12 @@ github.com/harness/lite-engine v0.5.88 h1:NmZkqC8hMvbCGrjItZSsU7RsLoReUX84pdrq+h
 github.com/harness/lite-engine v0.5.88/go.mod h1:apYUxCLi6V/t8yR++4i71e2IkG/MniUFKEXj9j2kMfo=
 github.com/harness/lite-engine v0.5.89 h1:4FVnnGKJUDVVDSLDbeweGtmsnj1Ia/Wpywghs8uupnU=
 github.com/harness/lite-engine v0.5.89/go.mod h1:Wf7YWBRYKvUuS5l7GrWtW0h19vhWqZDfUu3BNDyKrE0=
+github.com/harness/lite-engine v0.5.91 h1:c32Ju0+rzJ2sDLzZnknHzVwHqdF6zR9QVLzWLtiXQAs=
+github.com/harness/lite-engine v0.5.91/go.mod h1:1jk1kygLSoZZDXIdR7M5O145eN4uFatoqU3tJups59o=
 github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2 h1:9QHzlirx9Lg77ohXYTOeC+3aDPG8ZeHTKI1iAN5+cIo=
 github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2/go.mod h1:/ow4f34mPgr5KPkzKxmBUB4cC09OjzStcLX6R8+43TI=
+github.com/harness/ti-client v0.0.0-20250104064648-cba197bedd61 h1:y8CWfjrKjLjbKPRqlmCYT3dj4S2lC5T17/l5qA7T1vc=
+github.com/harness/ti-client v0.0.0-20250104064648-cba197bedd61/go.mod h1:/ow4f34mPgr5KPkzKxmBUB4cC09OjzStcLX6R8+43TI=
 github.com/hashicorp/consul/api v1.3.0/go.mod h1:MmDNSzIMUjNpY/mQ398R4bk2FnqQLoPndWW5VkKPlCE=
 github.com/hashicorp/consul/sdk v0.3.0/go.mod h1:VKf9jXwCTEY1QZP2MOLRhb5i/I/ssyNV1vwHyQBF0x8=
 github.com/hashicorp/cronexpr v1.1.1 h1:NJZDd87hGXjoZBdvyCF9mX4DCq5Wy7+A/w+A7q0wn6c=

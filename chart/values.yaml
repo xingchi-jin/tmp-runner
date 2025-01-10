@@ -52,6 +52,13 @@ global:
       tag: "latest"
       digest: ""
       imagePullSecrets: []
+resources:
+  limits:
+    memory: 1Gi
+    cpu: 1
+  requests:
+    cpu: 1
+    memory: 1Gi
 enableAuth: true
 port: 3000
 name: runner
@@ -61,7 +68,7 @@ image:
   repository: runner
   pullPolicy: IfNotPresent
   # Overrides the image tag whose default is the chart appVersion.
-  tag: "1.0.0-build.in.dockerfile-9a5c2b"
+  tag: "1.1.0"
   digest: ""
   imagePullSecrets: []
 podAnnotations: {}

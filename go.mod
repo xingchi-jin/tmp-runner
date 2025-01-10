@@ -10,13 +10,13 @@ require (
 	github.com/cenkalti/backoff/v4 v4.2.1
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.5.0
-	github.com/drone-runners/drone-runner-aws v1.0.0-rc.172
+	github.com/drone-runners/drone-runner-aws v1.0.0-rc.173
 	github.com/drone/go-task v0.0.0-20241205040233-8478a25d5ac3
 	github.com/drone/runner-go v1.12.0
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
 	github.com/harness/godotenv/v3 v3.0.1
-	github.com/harness/lite-engine v0.5.89
+	github.com/harness/lite-engine v0.5.91
 	github.com/hashicorp/vault/api v1.12.2
 	github.com/icrowley/fake v0.0.0-20221112152111-d7b7e2276db2
 	github.com/jmoiron/sqlx v1.4.0
@@ -92,7 +92,7 @@ require (
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
 	github.com/harness/godotenv/v2 v2.0.0 // indirect
-	github.com/harness/ti-client v0.0.0-20240617230757-1e90e7e3ada2 // indirect
+	github.com/harness/ti-client v0.0.0-20250104064648-cba197bedd61 // indirect
 	github.com/hashicorp/cronexpr v1.1.1 // indirect
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-cleanhttp v0.5.2 // indirect
