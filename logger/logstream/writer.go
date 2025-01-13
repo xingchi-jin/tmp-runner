@@ -22,6 +22,7 @@ func LogWriter(req *task.Request) logstream.Writer {
 		cfg.Token = req.Task.Logger.Token
 		cfg.URL = req.Task.Logger.Address
 		cfg.IndirectUpload = true
+		cfg.SkipOpeningStream = req.Task.Logger.SkipOpeningStream
 		key = req.Task.Logger.Key
 	}
 	secrets := []string{}
