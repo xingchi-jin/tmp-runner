@@ -35,6 +35,7 @@ type (
 		HeartbeatAsObject bool                 `json:"heartbeatAsObject,omitempty"` // TODO: legacy to remove
 		Version           string               `json:"version,omitempty"`
 		CapacityConfig    RunnerCapacityConfig `json:"capacityConfig,omitempty"`
+		IsRunner          bool                 `json:"runner"`
 	}
 
 	// Used in the java codebase :'(

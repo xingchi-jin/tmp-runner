@@ -147,6 +147,7 @@ func (p *KeepAlive) getRegisterRequest(id, ip, host string, capacity *delegate.C
 		Tags:              p.Tags,
 		Version:           "v0.1",
 		HeartbeatAsObject: true,
+		IsRunner:          true,
 	}
 	if capacity != nil {
 		req.CapacityConfig = client.RunnerCapacityConfig{MaxStages: capacity.MaxStages}
