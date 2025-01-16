@@ -17,6 +17,17 @@ endif
 
 ###############################################################################
 #
+# Version consistency checks
+#
+###############################################################################
+
+check-versions: ## Check if versions match between go.mod and config.go
+	@echo "🔍 Checking lite-engine version consistency..."
+	@sh scripts/version/lite-engine.sh check
+
+
+###############################################################################
+#
 # Initialization
 #
 ###############################################################################
@@ -40,7 +51,7 @@ tools: $(tools) ## Install tools required for the build
 ###############################################################################
 
 generate: wire
-	@echo "Generated Code"
+	@echo "✅ Generated code"
 
 wire: cli/wire_gen.go
 
@@ -56,7 +67,7 @@ cli/wire_gen.go: cli/wire.go
 #
 ###############################################################################
 
-build: ## Build the all-in-one Harness binary
+build: generate check-versions ## Build the all-in-one Harness binary
 	@echo "Building Harness Runner"
 	go build -o ./runner
 
