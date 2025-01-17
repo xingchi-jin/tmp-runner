@@ -15,11 +15,12 @@ import (
 )
 
 type installCommand struct {
-	account string
-	token   string
-	url     string
-	name    string
-	tags    string
+	account        string
+	token          string
+	url            string
+	name           string
+	tags           string
+	configFilePath string
 }
 
 type handler interface {
@@ -31,7 +32,7 @@ type handler interface {
 func RegisterCommands(app *kingpin.Application) {
 	// register install command
 	c := new(installCommand)
-	cmd := app.Command("install", "generates the config.env file for runner").
+	cmd := app.Command("install", "Generates the config.env file for the runner.").
 		Action(c.install)
 	cmd.Flag("account", "account ID").
 		Required().StringVar(&c.account)
@@ -47,26 +48,34 @@ func RegisterCommands(app *kingpin.Application) {
 	cmd.Flag("tags", "runner tags").
 		Default("").
 		StringVar(&c.tags)
+	cmd.Flag("config-file", "Path of generated config.env file.").
+		Default(getDefaultConfigFilePath()).
+		StringVar(&c.configFilePath)
 
-		// register start command
-	app.Command("start", "start runner as a service").
-		Action(start)
+	// register start command
+	startCmd := app.Command("start", "Start runner as a service").
+		Action(c.start)
+	startCmd.Flag("config-file", "Path of the config.env file.").
+		Default(getDefaultConfigFilePath()).
+		StringVar(&c.configFilePath)
 
 		// register stop command
-	app.Command("stop", "stop runner service").
-		Action(stop)
+	app.Command("stop", "Stop the runner service").
+		Action(c.stop)
 
 }
 
 func (c *installCommand) install(*kingpin.ParseContext) error {
 	setLogrusForCli()
 
-	handler, err := getHandler()
+	handler, err := getHandler(c.configFilePath)
 	if err != nil {
 		logrus.Fatalf("Error: %v", err)
 	}
 
-	configFilePath, err := getConfigFilePath()
+	configFileDir := filepath.Dir(c.configFilePath)
+	// Create the directory if it doesn't exist
+	err = os.MkdirAll(configFileDir, os.ModePerm)
 	if err != nil {
 		logrus.Fatalf("Error: %v", err)
 	}
@@ -78,9 +87,9 @@ func (c *installCommand) install(*kingpin.ParseContext) error {
 		"URL":        c.url,
 		"NAME":       c.name,
 		"TAGS":       c.tags,
-	}, configFilePath)
+	}, c.configFilePath)
 	if err != nil {
-		logrus.Fatalf("Error creating config file in %s : %v", configFilePath, err)
+		logrus.Fatalf("Error creating config file in %s : %v", c.configFilePath, err)
 	}
 
 	err = handler.Install()
@@ -89,14 +98,14 @@ func (c *installCommand) install(*kingpin.ParseContext) error {
 	}
 	logrus.Infof(
 		"Installation completed successfully (config.env file created at %s)",
-		filepath.Dir(configFilePath),
+		filepath.Dir(c.configFilePath),
 	)
 	return nil
 }
 
-func start(*kingpin.ParseContext) error {
+func (c *installCommand) start(*kingpin.ParseContext) error {
 	setLogrusForCli()
-	handler, err := getHandler()
+	handler, err := getHandler(c.configFilePath)
 	if err != nil {
 		logrus.Fatalf("Error: %v", err)
 	}
@@ -108,9 +117,9 @@ func start(*kingpin.ParseContext) error {
 	return nil
 }
 
-func stop(*kingpin.ParseContext) error {
+func (c *installCommand) stop(*kingpin.ParseContext) error {
 	setLogrusForCli()
-	handler, err := getHandler()
+	handler, err := getHandler(c.configFilePath)
 	if err != nil {
 		logrus.Fatalf("Error: %v", err)
 	}
@@ -122,12 +131,8 @@ func stop(*kingpin.ParseContext) error {
 	return nil
 }
 
-func getHandler() (handler, error) {
+func getHandler(configFilePath string) (handler, error) {
 	executablePath, err := os.Executable()
-	if err != nil {
-		logrus.Fatalf("Error: %v", err)
-	}
-	configFilePath, err := getConfigFilePath()
 	if err != nil {
 		logrus.Fatalf("Error: %v", err)
 	}
@@ -139,15 +144,14 @@ func getHandler() (handler, error) {
 	}
 }
 
-func getConfigFilePath() (string, error) {
-	executablePath, err := os.Executable()
+func getDefaultConfigFilePath() string {
+	homeDir, err := os.UserHomeDir()
 	if err != nil {
-		return "", err
+		logrus.Fatal("Error fetching home directory: ", err)
+		return ""
 	}
-	executableFolder := filepath.Dir(executablePath)
-	// create the config.env file
-	configFilePath := filepath.Join(executableFolder, "config.env")
-	return configFilePath, nil
+	// Construct the path for "config.env"
+	return filepath.Join(homeDir, ".harness-runner/config.env")
 }
 
 func setLogrusForCli() {
