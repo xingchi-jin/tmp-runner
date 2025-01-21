@@ -465,6 +465,10 @@ postgres:
   ## - host array for external
   hosts: []
   extraArgs: ""
+  ## needs to be different for each environment as all the dlite's are installed
+  ## in the same project
+  database: "dlite"
+  sslVerify: false
   secrets:
     kubernetesSecrets:
       - secretName: ""
@@ -487,3 +491,11 @@ bare_metal:
   address: NOMAD_URL
   certs: ""
   enabled: true
+busybox:
+  image:
+    registry: docker.io
+    repository: busybox
+    pullPolicy: IfNotPresent
+    tag: "1.35.0"
+    digest: ""
+    imagePullSecrets: []
