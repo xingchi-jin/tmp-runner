@@ -52,6 +52,9 @@ func (c *serverCommand) run(*kingpin.ParseContext) error {
 	if err != nil {
 		logger.WithError(ctx, err).Errorln("load runner config failed")
 	}
+	if err = delegate.CheckInstallationConfig(loadedConfig); err != nil {
+		logger.WithError(ctx, err).Fatal("Invalid configurations")
+	}
 
 	logger.ConfigureLogging(loadedConfig.Debug, loadedConfig.Trace)
 

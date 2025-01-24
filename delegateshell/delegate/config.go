@@ -8,6 +8,7 @@ package delegate
 import (
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"regexp"
 	"strings"
@@ -164,6 +165,22 @@ func FromEnviron() (*Config, error) {
 	}
 
 	return &config, nil
+}
+
+func CheckInstallationConfig(config *Config) error {
+	if len(config.GetHarnessUrl()) == 0 {
+		return errors.New("empty URL of Harnesss Platform")
+	}
+	if len(config.GetToken()) == 0 {
+		return errors.New("empty Token value")
+	}
+	if len(config.GetName()) == 0 {
+		return errors.New("empty runner name")
+	}
+	if len(config.Delegate.AccountID) == 0 {
+		return errors.New("empty account ID")
+	}
+	return nil
 }
 
 // Upsert updates any fields in the config which are set after reading from
