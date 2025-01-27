@@ -39,7 +39,6 @@ require (
 	cloud.google.com/go/auth/oauth2adapt v0.2.4 // indirect
 	cloud.google.com/go/compute/metadata v0.5.2 // indirect
 	cloud.google.com/go/longrunning v0.6.1 // indirect
-	github.com/99designs/basicauth-go v0.0.0-20230316000542-bf6f9cbbf0f8 // indirect
 	github.com/99designs/httpsignatures-go v0.0.0-20170731043157-88528bf4ca7e // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azcore v1.5.0 // indirect
 	github.com/Azure/azure-sdk-for-go/sdk/azidentity v1.2.2 // indirect
@@ -69,7 +68,6 @@ require (
 	github.com/docker/go-units v0.5.0 // indirect
 	github.com/drone/drone-go v1.7.1 // indirect
 	github.com/drone/envsubst v1.0.3 // indirect
-	github.com/drone/signal v1.0.0 // indirect
 	github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 // indirect
 	github.com/felixge/httpsnoop v1.0.4 // indirect
 	github.com/ghodss/yaml v1.0.0 // indirect
@@ -87,7 +85,6 @@ require (
 	github.com/golang/snappy v0.0.4 // indirect
 	github.com/google/go-querystring v1.1.0 // indirect
 	github.com/google/s2a-go v0.1.8 // indirect
-	github.com/google/subcommands v1.2.0 // indirect
 	github.com/googleapis/enterprise-certificate-proxy v0.3.4 // indirect
 	github.com/googleapis/gax-go/v2 v2.13.0 // indirect
 	github.com/gorilla/websocket v1.5.0 // indirect
@@ -131,7 +128,6 @@ require (
 	github.com/pierrec/lz4 v2.6.1+incompatible // indirect
 	github.com/pierrec/lz4/v4 v4.1.17 // indirect
 	github.com/pkg/browser v0.0.0-20210911075715-681adbf594b8 // indirect
-	github.com/pmezard/go-difflib v1.0.0 // indirect
 	github.com/power-devops/perfstat v0.0.0-20210106213030-5aafc221ea8c // indirect
 	github.com/prometheus/client_model v0.3.0 // indirect
 	github.com/prometheus/common v0.42.0 // indirect
@@ -168,5 +164,4 @@ require (
 	google.golang.org/grpc v1.67.1 // indirect
 	google.golang.org/protobuf v1.35.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/utils v0.0.0-20230406110748-d93618cff8a2 // indirect
 )
