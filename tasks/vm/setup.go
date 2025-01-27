@@ -96,6 +96,7 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 			Token:          req.Task.Logger.Token,
 			IndirectUpload: req.Task.Logger.IndirectUpload,
 		}
+		secrets = append(req.Task.Logger.Masks, secrets...)
 	}
 	setupReq := api.SetupRequest{
 		Network:   setupRequest.Network,
