@@ -3,6 +3,8 @@ package vm
 import (
 	"context"
 	"encoding/json"
+	"time"
+
 	"github.com/drone-runners/drone-runner-aws/app/drivers"
 	"github.com/drone-runners/drone-runner-aws/command/harness"
 	"github.com/drone-runners/drone-runner-aws/metric"
@@ -15,7 +17,6 @@ import (
 	"github.com/harness/runner/logger"
 	"github.com/harness/runner/tasks/local"
 	"github.com/harness/runner/tasks/local/utils"
-	"time"
 )
 
 type SetupRequest struct {
@@ -105,6 +106,12 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 		Secrets:   secrets,
 		LogConfig: logConfig,
 	}
+
+	if setupRequest.VMConfig.Tags == nil {
+		setupRequest.VMConfig.Tags = make(map[string]string)
+	}
+
+	setupRequest.VMConfig.Tags["isRunner"] = "true"
 
 	setupVmRequest := &harness.SetupVMRequest{
 		ID:                  setupRequest.Metadata.StageRuntimeID,
