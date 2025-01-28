@@ -21,7 +21,7 @@ func LogWriter(req *task.Request) logstream.Writer {
 		cfg.AccountID = req.Task.Logger.Account
 		cfg.Token = req.Task.Logger.Token
 		cfg.URL = req.Task.Logger.Address
-		cfg.IndirectUpload = true
+		cfg.IndirectUpload = req.Task.Logger.IndirectUpload
 		cfg.SkipOpeningStream = req.Task.Logger.SkipOpeningStream
 		key = req.Task.Logger.Key
 	}
