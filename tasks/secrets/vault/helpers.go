@@ -49,7 +49,7 @@ func getSecretValue(key string, base64 bool, data map[string]interface{}) (strin
 
 // parseSecretString will decode the secret string
 func parseSecretString(s string, decode bool) (string, error) {
-	if !decode {
+	if decode {
 		decoded, err := base64.StdEncoding.DecodeString(s)
 		if err != nil {
 			return "", fmt.Errorf("error occurred when decoding base64 secret. %w", err)

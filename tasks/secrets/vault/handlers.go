@@ -132,7 +132,7 @@ func handleUpsert(ctx context.Context, in *VaultSecretTaskRequest, client *vault
 	}
 	logger.Infof(ctx, "done writing secret value to Vault. Url: [%s]; Path: [%s]", client.Address(), path)
 	return task.Respond(VaultSecretOperationResponse{
-		Name:            in.Key,
+		Name:            in.Path,
 		Message:         "Secret upserted to vault",
 		OperationStatus: OperationStatusSuccess,
 	})
@@ -161,7 +161,7 @@ func handleDelete(ctx context.Context, in *VaultSecretTaskRequest, client *vault
 }
 
 func handleValidateRef(ctx context.Context, in *VaultSecretTaskRequest, client *vault.Client) task.Response {
-	path, err := validate(in.EngineVersion, in.EngineName, in.Path, client)
+	path, err := validate(client, in.EngineVersion, in.EngineName, in.Path)
 	if err != nil {
 		logger.WithError(ctx, err).Errorf("failed finding secret secret reference in Vault. Url: [%s]; Path: [%s]", client.Address(), in.Path)
 		return task.Respond(ValidationResponse{

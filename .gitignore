@@ -3,4 +3,4 @@
 tasks/sample/sample
 .vscode/
 release/*
-
+__debug_bin*

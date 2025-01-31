@@ -8,7 +8,7 @@ import (
 	vault "github.com/hashicorp/vault/api"
 )
 
-func upsert(ctx context.Context, client *vault.Client, engineVersion uint8, engineName string, path string, key string, value string) (string, error) {
+func upsert(ctx context.Context, client *vault.Client, engineVersion uint8, engineName, path, key, value string) (string, error) {
 	data := map[string]any{
 		"data": map[string]string{
 			key: value,
@@ -33,7 +33,7 @@ func delete(ctx context.Context, client *vault.Client, engineVersion uint8, engi
 	return path, err
 }
 
-func validate(engineVersion uint8, engineName, path string, client *vault.Client) (string, error) {
+func validate(client *vault.Client, engineVersion uint8, engineName, path string) (string, error) {
 	fullPath, err := getFullPath(engineVersion, engineName, path)
 	if err != nil {
 		return "", err
