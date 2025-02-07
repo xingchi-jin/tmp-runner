@@ -48,6 +48,7 @@ type VMConfig struct {
 	GitspaceAgentConfig GitspaceAgentConfig `json:"gitspace_agent_config"`
 	StorageConfig       StorageConfig       `json:"storage_config"`
 	ResourceClass       string              `json:"resource_class"`
+	ImageName           string              `json:"image_name"`
 }
 
 type SetupHandler struct {
@@ -118,6 +119,7 @@ func (h *SetupHandler) Handle(ctx context.Context, req *task.Request) task.Respo
 		PoolID:              setupRequest.VMConfig.PoolID,
 		FallbackPoolIDs:     setupRequest.VMConfig.FallbackPoolIDs,
 		ResourceClass:       setupRequest.VMConfig.ResourceClass,
+		ImageName:           setupRequest.VMConfig.ImageName,
 		Tags:                setupRequest.VMConfig.Tags,
 		LogKey:              key,
 		CorrelationID:       req.Task.ID,
