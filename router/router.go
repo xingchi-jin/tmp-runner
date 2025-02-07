@@ -11,6 +11,7 @@ import (
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/downloader"
 	"github.com/drone/go-task/task/drivers/cgi"
+	"github.com/drone/go-task/task/packaged"
 
 	"github.com/harness/runner/delegateshell/daemonset"
 	"github.com/harness/runner/delegateshell/delegate"
@@ -40,6 +41,7 @@ func convert(config *delegate.Config) *delegate.TaskContext {
 func NewRouter(
 	taskContext *delegate.TaskContext,
 	d downloader.Downloader,
+	pl packaged.PackageLoader,
 	dsManager *daemonset.DaemonSetManager,
 	poolManager drivers.IManager,
 	stageOwnerStore store.StageOwnerStore,
@@ -65,6 +67,6 @@ func NewRouter(
 	r.RegisterFunc("daemonset/upsert", daemonSetTaskHandler.HandleUpsert)
 	r.RegisterFunc("daemonset/tasks/assign", daemonSetTaskHandler.HandleTaskAssign)
 
-	r.NotFound(cgi.New(d))
+	r.NotFound(cgi.New(d, pl))
 	return r
 }

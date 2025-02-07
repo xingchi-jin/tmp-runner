@@ -139,8 +139,8 @@ github.com/drone/drone-go v1.7.1/go.mod h1:fxCf9jAnXDZV1yDr0ckTuWd1intvcQwfJmTRp
 github.com/drone/envsubst v1.0.2/go.mod h1:bkZbnc/2vh1M12Ecn7EYScpI4YGYU0etwLJICOWi8Z0=
 github.com/drone/envsubst v1.0.3 h1:PCIBwNDYjs50AsLZPYdfhSATKaRg/FJmDc2D6+C2x8g=
 github.com/drone/envsubst v1.0.3/go.mod h1:N2jZmlMufstn1KEqvbHjw40h1KyTmnVzHcSc9bFiJ2g=
-github.com/drone/go-task v0.0.0-20250124231545-13ee955ae81b h1:cJeKVBtm9+QY2moCutJphxhOr1z68g33VlujNn9Jr0Q=
-github.com/drone/go-task v0.0.0-20250124231545-13ee955ae81b/go.mod h1:D8P4goS46h4JtGzHT7NDLlE5Ad29nj6Lfl8yb6qMDMs=
+github.com/drone/go-task v0.0.0-20250207171956-d26a8c016b07 h1:LIB9PsdwY/EGjcy/h7mJS3nCMVyFVDR/kWaUyFBvHBs=
+github.com/drone/go-task v0.0.0-20250207171956-d26a8c016b07/go.mod h1:D8P4goS46h4JtGzHT7NDLlE5Ad29nj6Lfl8yb6qMDMs=
 github.com/drone/runner-go v1.12.0 h1:zUjDj9ylsJ4n4Mvy4znddq/Z4EBzcUXzTltpzokKtgs=
 github.com/drone/runner-go v1.12.0/go.mod h1:vu4pPPYDoeN6vdYQAY01GGGsAIW4aLganJNaa8Fx8zE=
 github.com/dsnet/compress v0.0.2-0.20210315054119-f66993602bf5 h1:iFaUwBSo5Svw6L7HYpRu/0lE3e0BaElwnNO1qkNQxBY=

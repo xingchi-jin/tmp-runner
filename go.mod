@@ -11,7 +11,7 @@ require (
 	github.com/docker/docker v23.0.1+incompatible
 	github.com/docker/go-connections v0.5.0
 	github.com/drone-runners/drone-runner-aws v1.0.0-rc.178
-	github.com/drone/go-task v0.0.0-20250124231545-13ee955ae81b
+	github.com/drone/go-task v0.0.0-20250207171956-d26a8c016b07
 	github.com/drone/runner-go v1.12.0
 	github.com/google/uuid v1.6.0
 	github.com/google/wire v0.6.0
@@ -21,6 +21,7 @@ require (
 	github.com/icrowley/fake v0.0.0-20221112152111-d7b7e2276db2
 	github.com/jmoiron/sqlx v1.4.0
 	github.com/kelseyhightower/envconfig v1.4.0
+	github.com/mitchellh/go-homedir v1.1.0
 	github.com/patrickmn/go-cache v2.1.0+incompatible
 	github.com/pkg/errors v0.9.1
 	github.com/prometheus/client_golang v1.16.0
@@ -119,7 +120,6 @@ require (
 	github.com/matttproud/golang_protobuf_extensions v1.0.4 // indirect
 	github.com/mholt/archiver v3.1.1+incompatible // indirect
 	github.com/mholt/archiver/v3 v3.5.1 // indirect
-	github.com/mitchellh/go-homedir v1.1.0 // indirect
 	github.com/mitchellh/mapstructure v1.5.0 // indirect
 	github.com/natessilva/dag v0.0.0-20180124060714-7194b8dcc5c4 // indirect
 	github.com/nwaples/rardecode v1.1.3 // indirect

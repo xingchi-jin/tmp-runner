@@ -10,11 +10,13 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"path/filepath"
 	"regexp"
 	"strings"
 
 	"github.com/drone-runners/drone-runner-aws/command/config"
 	"github.com/kelseyhightower/envconfig"
+	"github.com/mitchellh/go-homedir"
 )
 
 const (
@@ -103,10 +105,14 @@ type Config struct {
 	// will prefix the intended env name with the name of the struct. For example, if we define "Token" inside "Delegate" struct with flag
 	// 'envconfig:"TOKEN"', it will be loaded by environment variable "DELEGATE_TOKEN"
 
+	// Required
 	Token      string `envconfig:"TOKEN"`
-	Selectors  string `envconfig:"TAGS"`
 	RunnerName string `envconfig:"NAME"`
 	HarnessUrl string `envconfig:"URL"`
+
+	// Optional
+	Selectors     string `envconfig:"TAGS"`
+	CacheLocation string `envconfig:"CACHE_LOCATION"` // Cache location for artifacts and files downloaded/created by Runner.
 }
 
 type TaskContext struct {
@@ -163,7 +169,13 @@ func FromEnviron() (*Config, error) {
 	if err != nil {
 		return &config, err
 	}
-
+	if len(config.CacheLocation) == 0 {
+		if homedir, err := homedir.Dir(); err != nil {
+			return nil, err
+		} else {
+			config.CacheLocation = filepath.Join(homedir, ".harness-runner")
+		}
+	}
 	return &config, nil
 }
 

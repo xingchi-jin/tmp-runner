@@ -1,11 +1,12 @@
 package delegateshell
 
 import (
-	"os"
+	"path/filepath"
 
 	"github.com/drone/go-task/task"
 	"github.com/drone/go-task/task/cloner"
 	"github.com/drone/go-task/task/downloader"
+	"github.com/drone/go-task/task/packaged"
 	"github.com/google/wire"
 	"github.com/harness/runner/delegateshell/client"
 	"github.com/harness/runner/delegateshell/daemonset"
@@ -17,14 +18,15 @@ import (
 var WireSet = wire.NewSet(
 	ProvideDelegateShell,
 	ProvideDownloader,
+	ProvidePackageLoader,
 )
 
-func ProvideDownloader() (downloader.Downloader, error) {
-	cache, err := os.UserCacheDir()
-	if err != nil {
-		return downloader.Downloader{}, err
-	}
-	return downloader.New(cloner.Default(), cache), nil
+func ProvideDownloader(config *delegate.Config) (downloader.Downloader, error) {
+	return downloader.New(cloner.Default(), filepath.Join(config.CacheLocation, "download")), nil
+}
+
+func ProvidePackageLoader(config *delegate.Config) (packaged.PackageLoader, error) {
+	return packaged.New(filepath.Join(config.CacheLocation, "default")), nil
 }
 
 func ProvideDelegateShell(

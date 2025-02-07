@@ -167,10 +167,11 @@ func (p *Poller) process(ctx context.Context, delegateID, delegateName string, r
 		if resp.Error() != nil {
 			taskResponse.Code = client.StatusCodeFailed
 			logger.WithError(ctx, resp.Error()).Error("Process task failed")
+			taskResponse.Error = resp.Error().Error()
 			p.Metrics.IncrementTaskFailedCount(rv.AccountID, rv.TaskType, delegateName)
 			// TODO: a bug here. If the Data is nil, exception happen in cg manager.
 			// This will be taken care after integrating with new response workflow
-			if respBytes, err := json.Marshal(&api.VMTaskExecutionResponse{ErrorMessage: resp.Error().Error()}); err != nil {
+			if respBytes, err := json.Marshal(&api.VMTaskExecutionResponse{ErrorMessage: resp.Error().Error()}); err == nil {
 				taskResponse.Data = respBytes
 			} else {
 				return err

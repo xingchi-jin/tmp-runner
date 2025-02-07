@@ -8,7 +8,6 @@ package cli
 
 import (
 	"context"
-
 	"github.com/harness/runner/cli/server"
 	"github.com/harness/runner/delegateshell"
 	"github.com/harness/runner/delegateshell/client"
@@ -19,7 +18,7 @@ import (
 	"github.com/harness/runner/delegateshell/vm/metrics"
 	"github.com/harness/runner/delegateshell/vm/pool"
 	"github.com/harness/runner/delegateshell/vm/store"
-	metricsinjection "github.com/harness/runner/metrics/injection"
+	"github.com/harness/runner/metrics/injection"
 	"github.com/harness/runner/router"
 )
 
@@ -27,7 +26,11 @@ import (
 
 func initSystem(ctx context.Context, config *delegate.Config) (*server.System, error) {
 	clientClient := client.ProvideManagerClient(config)
-	downloader, err := delegateshell.ProvideDownloader()
+	downloader, err := delegateshell.ProvideDownloader(config)
+	if err != nil {
+		return nil, err
+	}
+	packageLoader, err := delegateshell.ProvidePackageLoader(config)
 	if err != nil {
 		return nil, err
 	}
@@ -44,7 +47,7 @@ func initSystem(ctx context.Context, config *delegate.Config) (*server.System, e
 	if err != nil {
 		return nil, err
 	}
-	taskRouter := router.ProvideRouter(config, downloader, daemonSetManager, iManager, stageOwnerStore, metricMetrics)
+	taskRouter := router.ProvideRouter(config, downloader, packageLoader, daemonSetManager, iManager, stageOwnerStore, metricMetrics)
 	daemonSetReconciler := daemonset.ProvideDaemonSetReconciler(daemonSetManager, taskRouter, clientClient, metricsMetrics)
 	pollerPoller := poller.ProvidePoller(clientClient, taskRouter, config, metricsMetrics)
 	keepAlive := heartbeat.ProvideKeepAlive(config, clientClient, metricsMetrics)
